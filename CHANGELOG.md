@@ -37,6 +37,9 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
 - Nuevos tipos de error: límite de peticiones (429), proveedor no disponible (5xx u otro estado) y
   respuesta ilegible, además de sin conexión y sesión vencida. Cada uno tiene su texto.
 - Una respuesta sin ventanas no se guarda como "consumo vacío": es un error.
+- Codex: una respuesta HTTP del servidor (429, 5xx, página de desafío de Cloudflare) ya no se
+  informa como "sin conexión" ni cierra la sesión; solo un 401, un 403 de la API o un error
+  terminal de OAuth piden volver a iniciar sesión.
 - Widget: nombre del proveedor, "· disponible" ("· left") en cada campo, hora de los datos, estado
   con el tipo de error, valores atenuados cuando no son actuales, ventanas agotadas visibles como 0 %, mensaje en
   lugar de celdas vacías, botón de actualización manual.
@@ -63,7 +66,8 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
 ### Compilación y verificación
 - La firma de release se lee de fuera del repositorio; sin ella el release queda sin firmar.
 - `scripts/build-release.sh`, `scripts/sign-exported-apk.sh`, workflow de CI y workflow manual de
-  exportación del release sin firmar.
+  exportación del release sin firmar (con `scripts/extract-exported-apk.py` para reconstruirlo desde
+  los registros).
 - Workflow manual de verificación en emulador (`scripts/ci/emulator_smoke.py`) y prueba
   instrumentada que renderiza todos los estados del widget.
 

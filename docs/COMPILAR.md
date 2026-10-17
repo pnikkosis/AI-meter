@@ -52,8 +52,16 @@ preparar la versión 1.0.0).
    deseado. El workflow compila el APK release **sin firmar**, imprime su SHA-256 y escribe en los
    registros de sus jobs el APK (en 8 partes) y el `apksigner.jar` de build-tools 37.0.0, codificados
    en base64. No usa secretos.
-2. Reconstruir los archivos desde los registros (decodificar las partes en orden) y comprobar que los
-   SHA-256 coinciden con los impresos por el job.
+2. Obtener los dos archivos: desde un navegador, descargar el artefacto `export` de la ejecución
+   (se conserva 3 días); si la descarga no es posible, guardar los registros de los jobs
+   *Print part 0* a *Print part 8* y reconstruirlos con
+
+   ```bash
+   python3 -I scripts/extract-exported-apk.py export/ part0.log part1.log ... part8.log
+   ```
+
+   Comprobar que los SHA-256 coinciden con los impresos por el paso *Describe outputs* del job de
+   compilación.
 3. Firmar y verificar con la clave local:
 
    ```bash

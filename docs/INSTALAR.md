@@ -18,8 +18,8 @@ CodexMeter si estuviera instalado.
 La interfaz está en español cuando el teléfono está en español (en otros idiomas, en inglés o
 chino). Abajo se citan los textos en español y, entre paréntesis, en inglés.
 
-1. Abrir la app → **Agregar cuenta** (*Add account*, o el botón **+** de la barra inferior) →
-   **Codex**.
+1. Abrir la app → **Agregar cuenta** (*Add account*; también el botón **+** arriba a la derecha en
+   la pestaña **Cuentas**) → **Codex**.
 2. **Iniciar sesión en Codex**: la app muestra un código (**Copiar** lo copia).
 3. **Abrir la página de verificación de Codex** e iniciar sesión en OpenAI en el navegador.
    Introducir el código y aprobar el acceso.
@@ -56,7 +56,8 @@ Cómo leer un widget:
 
 - Encabezado: proveedor (y cuenta en los tamaños anchos).
 - Línea de estado: estado y hora de los datos, por ejemplo `Normal · Actualizado 14:05`
-  (*Normal · Updated 14:05*). Si los datos no son de hoy, incluye la fecha.
+  (*Normal · Updated 14:05*). Si los datos no son de hoy, incluye el día de la semana (o la fecha,
+  si tienen más de una semana); la hora sigue el formato de 12 o 24 horas del teléfono.
 - Cada campo: ventana y la palabra **disponible** (`5 horas · disponible`, en inglés
   `5h quota · left`), el porcentaje **disponible** (no el consumido) y el reinicio informado por el
   proveedor (solo la hora si es hoy). Una ventana agotada se ve como `0%` en rojo.

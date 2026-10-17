@@ -34,6 +34,9 @@ externa ni una garantía.
   diagnósticos que se pueden copiar desde Ajustes pasan por un redactor de secretos.
 - No se implementó criptografía propia: se usan `javax.crypto` (AES/GCM/NoPadding) y el Android
   Keystore.
+- La app no usa WebView, así que no tiene cookies ni almacenamiento web propios que borrar. Las
+  cookies de las páginas de inicio de sesión quedan en el navegador del usuario; la app no las lee ni
+  las borra (cerrar esas sesiones se hace desde el navegador).
 
 ## Conexiones de red
 

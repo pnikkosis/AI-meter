@@ -10,8 +10,8 @@ import java.net.URLEncoder
  *
  * Scope: only `user:profile`, which is what the usage endpoint needs. Claude Code itself also asks
  * for `user:inference` (send messages billed to the plan), `org:create_api_key` and others; this app
- * never requests them, so its token cannot be used to chat or to create API keys. It is still a
- * credential for the Claude account: it can read the account profile and its usage limits.
+ * never requests them. Anthropic does not document everything `user:profile` allows, so the token is
+ * handled as a full credential for the Claude account, never as a read-only one.
  */
 object ClaudeOAuthConfig {
     /** Public OAuth client id of Claude Code (no client secret exists for it). */
