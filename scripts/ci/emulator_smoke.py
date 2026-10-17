@@ -78,10 +78,10 @@ def find(labels, timeout=15):
         time.sleep(1)
 
 
-def tap_label(labels, what, required=True, timeout=15):
+def tap_label(labels, what, required=True, timeout=15, scroll=True):
     """Taps the first node showing one of `labels`, scrolling down when it is below the screen."""
     height = screen_height()
-    for _ in range(6):
+    for _ in range(6 if scroll else 1):
         node = find(labels, timeout=timeout)
         if node is not None:
             x1, y1, x2, y2 = bounds(node)
@@ -90,8 +90,9 @@ def tap_label(labels, what, required=True, timeout=15):
                 time.sleep(2)
                 print(f"  tapped {what}")
                 return True
-        adb("shell", "input", "swipe", "360", str(int(height * 0.75)), "360", str(int(height * 0.3)), "300")
-        time.sleep(1)
+        if scroll:
+            adb("shell", "input", "swipe", "360", str(int(height * 0.75)), "360", str(int(height * 0.3)), "300")
+            time.sleep(1)
         timeout = 3
     message = f"{what}: none of {labels} reachable on screen"
     print(f"  {message}")
@@ -163,6 +164,10 @@ def back_to_app():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    # Root (allowed on google_apis images) is only needed to read the app's sockets in /proc/net.
+    adb("root", check=False)
+    time.sleep(3)
+    adb("wait-for-device")
     print("== install")
     print("  " + adb("install", "-r", APK).strip().splitlines()[-1])
     print(f"  system locale: {adb('shell', 'getprop', 'persist.sys.locale').strip() or 'default'}")
@@ -206,7 +211,11 @@ def main():
         shot("claude-disclosure")
         listening_before = listening_ports(uid) if uid else set()
         if tap_label(continue_browser, "continue in browser"):
-            time.sleep(10)
+            time.sleep(6)
+            # A fresh emulator shows Chrome's first-run screens before the custom tab.
+            for labels in (["Usar sin una cuenta", "Use without an account"], ["No, gracias", "No thanks"]):
+                tap_label(labels, "Chrome first-run screen", required=False, timeout=5, scroll=False)
+            time.sleep(8)
             top = [line.strip() for line in adb("shell", "dumpsys", "activity", "activities").splitlines()
                    if "topResumedActivity" in line or "mResumedActivity" in line]
             print(f"  resumed activity: {top[:1]}")
@@ -259,21 +268,16 @@ def main():
         tap_label(home_tab, "home tab", required=False)
         tap_label(add_account, "add account", required=False)
     if tap_label(["Codex"], "Codex provider"):
-        shot("codex-start")
-        start = ["Iniciar sesión en Codex"] if es else ["Start Codex sign-in"]
-        if tap_label(start, "start Codex sign-in", required=False):
-            time.sleep(12)
-            # The user code is an authorization code: report whether it is shown, never capture it.
-            code_shown = code_visible()
-            print(f"  Codex device code shown: {'yes (not captured)' if code_shown else 'no'}")
-            if not code_shown:
-                shot("codex-no-code")
-            tap_label(cancel_sign_in, "cancel Codex sign-in", required=False)
-            time.sleep(2)
-            if code_visible():
-                print("  the code is still on screen after cancelling: no screenshot")
-            else:
-                shot("codex-cancelled")
+        # The screen asks for a device code as soon as it opens. The user code is an authorization
+        # code: no screenshot is taken while a sign-in may be showing one, only whether it appeared.
+        time.sleep(12)
+        print(f"  Codex device code shown: {'yes (not captured)' if code_visible() else 'no'}")
+        tap_label(cancel_sign_in, "cancel Codex sign-in", required=False)
+        time.sleep(3)
+        if code_visible():
+            print("  a code is still on screen after cancelling: no screenshot")
+        else:
+            shot("codex-cancelled")
 
     print("== crashes")
     check(alive(), "app process is still running at the end")
