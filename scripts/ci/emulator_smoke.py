@@ -110,7 +110,8 @@ def alive():
 
 
 def app_uid():
-    match = re.search(r"userId=(\d+)", adb("shell", "dumpsys", "package", PKG))
+    # Android 12 prints userId=, newer releases appId=.
+    match = re.search(r"(?:userId|appId)=(\d+)", adb("shell", "dumpsys", "package", PKG))
     return int(match.group(1)) if match else None
 
 
@@ -213,7 +214,10 @@ def main():
         if tap_label(continue_browser, "continue in browser"):
             time.sleep(6)
             # A fresh emulator shows Chrome's first-run screens before the custom tab.
-            for labels in (["Usar sin una cuenta", "Use without an account"], ["No, gracias", "No thanks"]):
+            for labels in (
+                ["Usar sin una cuenta", "Use without an account", "Aceptar y continuar", "Accept & continue"],
+                ["No, gracias", "No thanks"],
+            ):
                 tap_label(labels, "Chrome first-run screen", required=False, timeout=5, scroll=False)
             time.sleep(8)
             top = [line.strip() for line in adb("shell", "dumpsys", "activity", "activities").splitlines()
@@ -271,7 +275,20 @@ def main():
         # The screen asks for a device code as soon as it opens. The user code is an authorization
         # code: no screenshot is taken while a sign-in may be showing one, only whether it appeared.
         time.sleep(12)
-        print(f"  Codex device code shown: {'yes (not captured)' if code_visible() else 'no'}")
+        shown = code_visible()
+        if not shown:
+            # Name what the screen reports (an error message, never a code) and check name resolution.
+            texts = [n.get("text") for n in nodes() if (n.get("text") or "").strip()]
+            texts = [re.sub(r"\b[A-Z0-9]{4}-[A-Z0-9]{4,5}\b", "<masked>", t) for t in texts]
+            print(f"  Codex screen says: {texts[:6]}")
+            for host in ("auth.openai.com", "chatgpt.com"):
+                ping = adb("shell", "ping", "-c", "1", "-W", "5", host, check=False, timeout=30)
+                print(f"  ping {host}: {(ping.splitlines() or ['no output'])[0]}")
+            start = ["Iniciar sesión en Codex"] if es else ["Start Codex sign-in"]
+            if tap_label(start, "retry Codex sign-in", required=False, scroll=False):
+                time.sleep(12)
+                shown = code_visible()
+        print(f"  Codex device code shown: {'yes (not captured)' if shown else 'no'}")
         tap_label(cancel_sign_in, "cancel Codex sign-in", required=False)
         time.sleep(3)
         if code_visible():
