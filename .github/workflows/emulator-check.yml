@@ -5,13 +5,19 @@
 # 2. Installs the R8-processed RELEASE build, signed with a throwaway key generated in this job (the
 #    release key never reaches GitHub), and drives it with scripts/ci/emulator_smoke.py.
 # A separate job prints the format of auth.openai.com's device-code answer with every value masked.
-# Screenshots are printed base64-encoded at the end of the log. No credentials exist here: the Codex
-# screen asks auth.openai.com for a device code (not captured) and the Claude screen opens claude.ai
-# in the browser, as a user starting a sign-in would; both attempts are cancelled.
+# Screenshots are printed base64-encoded at the end of the log. No credentials exist here: the Claude
+# and Codex screens open claude.ai and auth.openai.com in the browser, and the Codex device-code
+# screen asks auth.openai.com for a code (not captured), as a user starting a sign-in would; every
+# attempt is cancelled.
 name: Emulator check (manual)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: 'Emulators to run, as JSON (one entry per job, each costs ~20 runner minutes)'
+        required: false
+        default: '[{"api":35,"locale":"es-AR"},{"api":31,"locale":"en-US"}]'
 
 permissions:
   contents: read
@@ -35,11 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - api: 35
-            locale: es-AR
-          - api: 31
-            locale: en-US
+        include: ${{ fromJSON(inputs.targets) }}
     env:
       PKG: io.github.pnikkosis.aiusagewidget
       ANDROID_AVD_HOME: ${{ github.workspace }}/.avd
