@@ -4,10 +4,6 @@ import androidx.room.Room
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
 import com.kmnexus.codexmeter.data.local.entity.RefreshAttemptEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.domain.model.LocalAccountId
-import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.ui.settings.SettingsBackgroundRefreshStatus
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
@@ -24,9 +20,8 @@ import org.robolectric.annotation.Config
 class SettingsBackgroundRefreshStatusRepositoryTest {
     @Test
     fun `latest background refresh status ignores newer manual attempts`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
+        withRepository { db, repository ->
             db.providerAccountDao().upsert(account())
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
             db.refreshAttemptDao().insert(
                 attempt(id = "periodic", trigger = "periodic", status = "success", startedAt = "2026-05-24T09:00:00Z"),
             )
@@ -40,9 +35,8 @@ class SettingsBackgroundRefreshStatusRepositoryTest {
 
     @Test
     fun `missing background refresh attempt reports no attempts`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
+        withRepository { db, repository ->
             db.providerAccountDao().upsert(account())
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
 
             assertEquals(SettingsBackgroundRefreshStatus.NoAttempts, repository.latestBackgroundRefreshStatus())
         }
@@ -50,9 +44,8 @@ class SettingsBackgroundRefreshStatusRepositoryTest {
 
     @Test
     fun `retryable background refresh failure reports retrying instead of terminal failure`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
+        withRepository { db, repository ->
             db.providerAccountDao().upsert(account())
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
             db.refreshAttemptDao().insert(
                 attempt(
                     id = "periodic-retryable",
@@ -70,9 +63,8 @@ class SettingsBackgroundRefreshStatusRepositoryTest {
 
     @Test
     fun `terminal background refresh failure still reports failed`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
+        withRepository { db, repository ->
             db.providerAccountDao().upsert(account())
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
             db.refreshAttemptDao().insert(
                 attempt(
                     id = "periodic-auth",
@@ -88,40 +80,63 @@ class SettingsBackgroundRefreshStatusRepositoryTest {
         }
     }
 
+    @Test
+    fun `no saved account reports no accounts`() = runTest {
+        withRepository { _, repository ->
+            assertEquals(SettingsBackgroundRefreshStatus.NoAccounts, repository.latestBackgroundRefreshStatus())
+        }
+    }
+
+    @Test
+    fun `one account's failed background refresh outweighs another's success`() = runTest {
+        withRepository { db, repository ->
+            db.providerAccountDao().upsert(account(localAccountId = "local-1"))
+            db.providerAccountDao().upsert(account(localAccountId = "local-2"))
+            db.refreshAttemptDao().insert(
+                attempt(id = "ok", trigger = "periodic", status = "success", startedAt = "2026-05-24T09:00:00Z"),
+            )
+            db.refreshAttemptDao().insert(
+                attempt(
+                    id = "auth",
+                    trigger = "periodic",
+                    status = "failed",
+                    startedAt = "2026-05-24T09:00:00Z",
+                    retryable = false,
+                    userActionRequired = true,
+                    localAccountId = "local-2",
+                ),
+            )
+
+            assertEquals(SettingsBackgroundRefreshStatus.Failed, repository.latestBackgroundRefreshStatus())
+        }
+    }
+
     private suspend fun withRepository(
-        block: suspend (CodexMeterDatabase, InMemoryCurrentAccountReader, SettingsBackgroundRefreshStatusRepository) -> Unit,
+        block: suspend (CodexMeterDatabase, SettingsBackgroundRefreshStatusRepository) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
             CodexMeterDatabase::class.java,
         ).build()
-        val currentAccountReader = InMemoryCurrentAccountReader()
         val repository = SettingsBackgroundRefreshStatusRepository(
-            currentAccountReader = currentAccountReader,
             providerAccountDao = db.providerAccountDao(),
             refreshAttemptDao = db.refreshAttemptDao(),
         )
 
         try {
-            block(db, currentAccountReader, repository)
+            block(db, repository)
         } finally {
             db.close()
         }
     }
 
-    private class InMemoryCurrentAccountReader : CurrentAccountReader {
-        var selection: CurrentAccountSelection? = null
-
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
-    }
-
-    private fun account() = ProviderAccountEntity(
-        localAccountId = "local-1",
+    private fun account(localAccountId: String = "local-1") = ProviderAccountEntity(
+        localAccountId = localAccountId,
         providerId = "codex",
-        providerAccountId = "acct-1",
+        providerAccountId = "acct-$localAccountId",
         displayName = "Work",
         avatarInitial = "W",
-        avatarColorKey = "local-1",
+        avatarColorKey = localAccountId,
         status = "active",
         createdAt = Instant.parse("2026-05-23T11:00:00Z").toEpochMilli(),
         updatedAt = Instant.parse("2026-05-23T11:30:00Z").toEpochMilli(),
@@ -135,10 +150,11 @@ class SettingsBackgroundRefreshStatusRepositoryTest {
         startedAt: String,
         retryable: Boolean? = null,
         userActionRequired: Boolean? = null,
+        localAccountId: String = "local-1",
     ) = RefreshAttemptEntity(
         attemptId = "attempt-$id",
         providerId = "codex",
-        localAccountId = "local-1",
+        localAccountId = localAccountId,
         trigger = trigger,
         startedAt = Instant.parse(startedAt).toEpochMilli(),
         finishedAt = Instant.parse(startedAt).plusSeconds(5).toEpochMilli(),

@@ -158,7 +158,7 @@
     <string name="settings_quota_alerts_title">Quota alerts</string>
     <string name="settings_quota_alerts_description">Notify on tight and exhausted states for the primary quota window.</string>
     <string name="settings_account_errors_title">Account and error alerts</string>
-    <string name="settings_account_errors_description">Notify when the current account needs re-login or repeated refreshes fail.</string>
+    <string name="settings_account_errors_description">Notify when an account needs to sign in again or several refreshes in a row fail.</string>
     <string name="settings_notification_permission_title">Allow AIMeter notifications?</string>
     <string name="settings_notification_permission_description">Used only for the optional status, quota alerts, and account-error alerts. The app and widget work without it.</string>
     <string name="settings_notification_permission_allow">Allow notifications</string>
@@ -256,7 +256,7 @@
     <string name="settings_refresh_interval_15min">Every 15 min</string>
     <string name="settings_refresh_interval_30min">Every 30 min</string>
     <string name="settings_refresh_interval_manual">Manual only</string>
-    <string name="settings_refresh_last_result_no_account">No current account</string>
+    <string name="settings_refresh_last_result_no_accounts">No accounts connected</string>
     <string name="settings_refresh_last_result_no_attempts">No background refresh yet</string>
     <string name="settings_refresh_last_result_success">Succeeded</string>
     <string name="settings_refresh_last_result_failed">Failed</string>
@@ -272,14 +272,10 @@
     <string name="settings_retention_30_days">30 days</string>
     <string name="settings_retention_90_days">90 days</string>
     <string name="settings_retention_forever">Forever</string>
-    <string name="settings_data_clear_current_title">Clear current account history</string>
-    <string name="settings_data_clear_current_description">Removes this account\'s quota history; keeps the account and session.</string>
     <string name="settings_data_clear_all_title">Clear all account history</string>
     <string name="settings_data_clear_all_description">Removes all quota history; keeps accounts and sessions.</string>
     <string name="settings_data_clear_action">Clear</string>
     <string name="settings_data_confirm_clear">Clear</string>
-    <string name="settings_data_clear_current_confirm_title">Clear current history?</string>
-    <string name="settings_data_clear_current_confirm_message">This clears local quota history for the current account. The account and session stay on this device.</string>
     <string name="settings_data_clear_all_confirm_title">Clear all history?</string>
     <string name="settings_data_clear_all_confirm_message">This clears local quota history for all accounts. Accounts and encrypted sessions stay on this device.</string>
     <string name="settings_diagnostics_title">Redacted diagnostics</string>

@@ -221,7 +221,6 @@ fun SettingsRoute(
         onRefreshIntervalSelected = viewModel::updateRefreshInterval,
         onThemeModeSelected = viewModel::updateThemeMode,
         onRetentionSelected = viewModel::updateRetention,
-        onClearCurrentHistoryClick = viewModel::requestClearCurrentHistory,
         onClearAllHistoryClick = viewModel::requestClearAllHistory,
         onDataActionConfirm = viewModel::confirmDataAction,
         onDataActionDismiss = viewModel::cancelDataAction,
@@ -280,7 +279,6 @@ fun SettingsScreen(
     onRefreshIntervalSelected: (SettingsRefreshInterval) -> Unit = {},
     onThemeModeSelected: (ThemeMode) -> Unit = {},
     onRetentionSelected: (SettingsRetentionOption) -> Unit = {},
-    onClearCurrentHistoryClick: () -> Unit = {},
     onClearAllHistoryClick: () -> Unit = {},
     onDataActionConfirm: () -> Unit = {},
     onDataActionDismiss: () -> Unit = {},
@@ -331,7 +329,6 @@ fun SettingsScreen(
         DataCard(
             data = uiState.data,
             onRetentionClick = { onChoiceDialogRequested(SettingsChoiceDialog.Retention) },
-            onClearCurrentHistoryClick = onClearCurrentHistoryClick,
             onClearAllHistoryClick = onClearAllHistoryClick,
         )
         SettingsSectionLabel(R.string.settings_group_diagnostics)

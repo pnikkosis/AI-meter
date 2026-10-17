@@ -281,7 +281,6 @@ internal fun RefreshCard(
 internal fun DataCard(
     data: SettingsDataUi,
     onRetentionClick: () -> Unit,
-    onClearCurrentHistoryClick: () -> Unit,
     onClearAllHistoryClick: () -> Unit,
 ) {
     SettingsSurfaceCard {
@@ -291,11 +290,6 @@ internal fun DataCard(
                 descriptionResId = R.string.settings_retention_description,
                 valueResId = data.retention.labelResId,
                 onClick = onRetentionClick,
-            )
-            DestructiveActionRow(
-                titleResId = R.string.settings_data_clear_current_title,
-                descriptionResId = R.string.settings_data_clear_current_description,
-                onClick = onClearCurrentHistoryClick,
             )
             DestructiveActionRow(
                 titleResId = R.string.settings_data_clear_all_title,

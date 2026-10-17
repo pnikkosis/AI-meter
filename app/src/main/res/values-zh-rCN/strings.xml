@@ -156,7 +156,7 @@
     <string name="settings_quota_alerts_title">额度告警</string>
     <string name="settings_quota_alerts_description">主额度进入紧张或耗尽状态时提醒。</string>
     <string name="settings_account_errors_title">账号与错误提醒</string>
-    <string name="settings_account_errors_description">当前账号需要重新登录或连续刷新失败时提醒。</string>
+    <string name="settings_account_errors_description">某个账号需要重新登录或连续刷新失败时提醒。</string>
     <string name="settings_notification_permission_title">允许 AIMeter 发送通知？</string>
     <string name="settings_notification_permission_description">仅用于可选的状态提示、额度告警和账号错误提醒；不授予也不影响 App 与微件。</string>
     <string name="settings_notification_permission_allow">允许通知</string>
@@ -254,7 +254,7 @@
     <string name="settings_refresh_interval_15min">每 15 分钟</string>
     <string name="settings_refresh_interval_30min">每 30 分钟</string>
     <string name="settings_refresh_interval_manual">仅手动</string>
-    <string name="settings_refresh_last_result_no_account">暂无当前账号</string>
+    <string name="settings_refresh_last_result_no_accounts">暂无已连接账号</string>
     <string name="settings_refresh_last_result_no_attempts">暂无后台刷新</string>
     <string name="settings_refresh_last_result_success">成功</string>
     <string name="settings_refresh_last_result_failed">失败</string>
@@ -270,14 +270,10 @@
     <string name="settings_retention_30_days">30 天</string>
     <string name="settings_retention_90_days">90 天</string>
     <string name="settings_retention_forever">永久</string>
-    <string name="settings_data_clear_current_title">清空当前账号历史</string>
-    <string name="settings_data_clear_current_description">清除当前账号的额度历史，保留账号与会话。</string>
     <string name="settings_data_clear_all_title">清空全部账号历史</string>
     <string name="settings_data_clear_all_description">清除所有账号的额度历史，保留账号与会话。</string>
     <string name="settings_data_clear_action">清空</string>
     <string name="settings_data_confirm_clear">清空</string>
-    <string name="settings_data_clear_current_confirm_title">清空当前历史？</string>
-    <string name="settings_data_clear_current_confirm_message">这会清空当前账号的本地额度历史。账号和会话会保留在本设备。</string>
     <string name="settings_data_clear_all_confirm_title">清空全部历史？</string>
     <string name="settings_data_clear_all_confirm_message">这会清空所有账号的本地额度历史。账号和加密会话会保留在本设备。</string>
     <string name="settings_diagnostics_title">脱敏诊断</string>

@@ -344,10 +344,7 @@ class AppContainer private constructor(
                     ),
                 ),
                 retentionCleanupRepository = RetentionCleanupRepository(database),
-                quotaHistoryClearRepository = QuotaHistoryClearRepository(
-                    database = database,
-                    currentAccountReader = currentAccountPreferences,
-                ),
+                quotaHistoryClearRepository = QuotaHistoryClearRepository(database = database),
                 currentQuotaStateFactory = currentQuotaStateFactory,
                 widgetQuotaStateRepository = widgetQuotaStateRepository,
                 defaultAccountDisplayName = defaultAccountDisplayName,
@@ -507,7 +504,6 @@ class AppContainer private constructor(
                 displayPreferences = accountDisplayPreferences,
             )
             val backgroundRefreshStatusRepository = SettingsBackgroundRefreshStatusRepository(
-                currentAccountReader = currentAccountReader,
                 providerAccountDao = database.providerAccountDao(),
                 refreshAttemptDao = database.refreshAttemptDao(),
             )

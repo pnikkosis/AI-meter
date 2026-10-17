@@ -374,22 +374,6 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `confirming clear current history invokes clear use case and clears pending action`() = runTest {
-        val clearUseCase = RecordingQuotaHistoryClearUseCase()
-        val viewModel = SettingsViewModel(quotaHistoryClearUseCase = clearUseCase)
-
-        viewModel.requestClearCurrentHistory()
-
-        viewModel.confirmDataAction()
-        runCurrent()
-
-        val data = viewModel.uiState.value.data
-        assertEquals(listOf(SettingsPendingDataAction.ClearCurrentHistory), clearUseCase.requests)
-        assertEquals(SettingsPendingDataAction.ClearCurrentHistory, data.confirmedAction)
-        assertNull(data.pendingAction)
-    }
-
-    @Test
     fun `confirming clear all history invokes clear use case and clears pending action`() = runTest {
         val clearUseCase = RecordingQuotaHistoryClearUseCase()
         val viewModel = SettingsViewModel(quotaHistoryClearUseCase = clearUseCase)
@@ -616,11 +600,6 @@ class SettingsViewModelTest {
 
     private class RecordingQuotaHistoryClearUseCase : QuotaHistoryClearUseCase {
         val requests = mutableListOf<SettingsPendingDataAction>()
-
-        override suspend fun clearCurrentAccountHistory(): QuotaHistoryClearResult {
-            requests += SettingsPendingDataAction.ClearCurrentHistory
-            return QuotaHistoryClearResult(deletedQuotaSnapshots = 1, deletedRefreshAttempts = 1)
-        }
 
         override suspend fun clearAllHistory(): QuotaHistoryClearResult {
             requests += SettingsPendingDataAction.ClearAllHistory

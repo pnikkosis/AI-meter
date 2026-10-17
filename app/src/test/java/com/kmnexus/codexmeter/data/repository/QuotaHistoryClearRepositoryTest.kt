@@ -6,10 +6,6 @@ import com.kmnexus.codexmeter.data.local.entity.AlertStateEntity
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
 import com.kmnexus.codexmeter.data.local.entity.QuotaSnapshotEntity
 import com.kmnexus.codexmeter.data.local.entity.RefreshAttemptEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.domain.model.LocalAccountId
-import com.kmnexus.codexmeter.domain.model.ProviderId
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -23,28 +19,8 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class QuotaHistoryClearRepositoryTest {
     @Test
-    fun `clearing current account history keeps accounts and sessions boundary intact`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
-            seedAccountGraph(db, localAccountId = "target")
-            seedAccountGraph(db, localAccountId = "other")
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("target"))
-
-            repository.clearCurrentAccountHistory()
-
-            assertEquals(1, countRows(db, "provider_accounts", "target"))
-            assertEquals(1, countRows(db, "provider_accounts", "other"))
-            assertEquals(0, countRows(db, "quota_snapshots", "target"))
-            assertEquals(0, countRows(db, "refresh_attempts", "target"))
-            assertEquals(0, countRows(db, "alert_states", "target"))
-            assertEquals(1, countRows(db, "quota_snapshots", "other"))
-            assertEquals(1, countRows(db, "refresh_attempts", "other"))
-            assertEquals(1, countRows(db, "alert_states", "other"))
-        }
-    }
-
-    @Test
     fun `clearing all history keeps all account records`() = runTest {
-        withRepository { db, _, repository ->
+        withRepository { db, repository ->
             seedAccountGraph(db, localAccountId = "target")
             seedAccountGraph(db, localAccountId = "other")
 
@@ -59,28 +35,18 @@ class QuotaHistoryClearRepositoryTest {
     }
 
     private suspend fun withRepository(
-        block: suspend (CodexMeterDatabase, InMemoryCurrentAccountReader, QuotaHistoryClearRepository) -> Unit,
+        block: suspend (CodexMeterDatabase, QuotaHistoryClearRepository) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
             CodexMeterDatabase::class.java,
         ).build()
-        val currentAccountReader = InMemoryCurrentAccountReader()
-        val repository = QuotaHistoryClearRepository(
-            database = db,
-            currentAccountReader = currentAccountReader,
-        )
+        val repository = QuotaHistoryClearRepository(database = db)
         try {
-            block(db, currentAccountReader, repository)
+            block(db, repository)
         } finally {
             db.close()
         }
-    }
-
-    private class InMemoryCurrentAccountReader : CurrentAccountReader {
-        var selection: CurrentAccountSelection? = null
-
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
     }
 
     private suspend fun seedAccountGraph(db: CodexMeterDatabase, localAccountId: String) {

@@ -11,9 +11,6 @@ internal class RepublishingQuotaHistoryClearUseCase(
     private val states: suspend () -> List<CurrentQuotaState>,
     private val currentQuotaStatePublisher: CurrentQuotaStatePublisher,
 ) : QuotaHistoryClearUseCase {
-    override suspend fun clearCurrentAccountHistory(): QuotaHistoryClearResult =
-        clearAndRepublish { delegate.clearCurrentAccountHistory() }
-
     override suspend fun clearAllHistory(): QuotaHistoryClearResult =
         clearAndRepublish { delegate.clearAllHistory() }
 

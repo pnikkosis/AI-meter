@@ -158,7 +158,7 @@
     <string name="settings_quota_alerts_title">Alertas de límite</string>
     <string name="settings_quota_alerts_description">Avisar cuando la ventana principal quede escasa o agotada.</string>
     <string name="settings_account_errors_title">Alertas de cuenta y errores</string>
-    <string name="settings_account_errors_description">Avisar cuando la cuenta actual requiera iniciar sesión o fallen varias actualizaciones seguidas.</string>
+    <string name="settings_account_errors_description">Avisar cuando una cuenta requiera volver a iniciar sesión o fallen varias actualizaciones seguidas.</string>
     <string name="settings_notification_permission_title">¿Permitir notificaciones de AIMeter?</string>
     <string name="settings_notification_permission_description">Solo se usan para el estado opcional, las alertas de límite y las alertas de errores de cuenta. La app y el widget funcionan sin ellas.</string>
     <string name="settings_notification_permission_allow">Permitir notificaciones</string>
@@ -256,7 +256,7 @@
     <string name="settings_refresh_interval_15min">Cada 15 min</string>
     <string name="settings_refresh_interval_30min">Cada 30 min</string>
     <string name="settings_refresh_interval_manual">Solo manual</string>
-    <string name="settings_refresh_last_result_no_account">No hay cuenta actual</string>
+    <string name="settings_refresh_last_result_no_accounts">No hay cuentas conectadas</string>
     <string name="settings_refresh_last_result_no_attempts">Todavía no hubo actualizaciones en segundo plano</string>
     <string name="settings_refresh_last_result_success">Correcta</string>
     <string name="settings_refresh_last_result_failed">Fallida</string>
@@ -272,14 +272,10 @@
     <string name="settings_retention_30_days">30 días</string>
     <string name="settings_retention_90_days">90 días</string>
     <string name="settings_retention_forever">Siempre</string>
-    <string name="settings_data_clear_current_title">Borrar el historial de la cuenta actual</string>
-    <string name="settings_data_clear_current_description">Borra el historial de esta cuenta; conserva la cuenta y la sesión.</string>
     <string name="settings_data_clear_all_title">Borrar el historial de todas las cuentas</string>
     <string name="settings_data_clear_all_description">Borra todo el historial; conserva las cuentas y las sesiones.</string>
     <string name="settings_data_clear_action">Borrar</string>
     <string name="settings_data_confirm_clear">Borrar</string>
-    <string name="settings_data_clear_current_confirm_title">¿Borrar el historial actual?</string>
-    <string name="settings_data_clear_current_confirm_message">Se borra el historial local de la cuenta actual. La cuenta y la sesión siguen en este dispositivo.</string>
     <string name="settings_data_clear_all_confirm_title">¿Borrar todo el historial?</string>
     <string name="settings_data_clear_all_confirm_message">Se borra el historial local de todas las cuentas. Las cuentas y las sesiones cifradas siguen en este dispositivo.</string>
     <string name="settings_diagnostics_title">Diagnóstico sin secretos</string>

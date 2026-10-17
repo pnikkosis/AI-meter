@@ -43,10 +43,6 @@ enum class SettingsRetentionOption(val days: Int?, @get:StringRes val labelResId
 }
 
 enum class SettingsPendingDataAction(@get:StringRes val titleResId: Int, @get:StringRes val messageResId: Int) {
-    ClearCurrentHistory(
-        R.string.settings_data_clear_current_confirm_title,
-        R.string.settings_data_clear_current_confirm_message,
-    ),
     ClearAllHistory(
         R.string.settings_data_clear_all_confirm_title,
         R.string.settings_data_clear_all_confirm_message,
@@ -166,7 +162,7 @@ data class SettingsUiState(
 )
 
 enum class SettingsBackgroundRefreshStatus(@get:StringRes val labelResId: Int) {
-    NoCurrentAccount(R.string.settings_refresh_last_result_no_account),
+    NoAccounts(R.string.settings_refresh_last_result_no_accounts),
     NoAttempts(R.string.settings_refresh_last_result_no_attempts),
     Success(R.string.settings_refresh_last_result_success),
     Failed(R.string.settings_refresh_last_result_failed),
@@ -503,12 +499,6 @@ class SettingsViewModel(
         }
     }
 
-    fun requestClearCurrentHistory() {
-        update { state ->
-            state.copy(data = state.data.copy(pendingAction = SettingsPendingDataAction.ClearCurrentHistory))
-        }
-    }
-
     fun requestClearAllHistory() {
         update { state ->
             state.copy(data = state.data.copy(pendingAction = SettingsPendingDataAction.ClearAllHistory))
@@ -526,8 +516,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             val result = runCatching {
                 when (action) {
-                    SettingsPendingDataAction.ClearCurrentHistory ->
-                        quotaHistoryClearUseCase.clearCurrentAccountHistory()
                     SettingsPendingDataAction.ClearAllHistory ->
                         quotaHistoryClearUseCase.clearAllHistory()
                 }
