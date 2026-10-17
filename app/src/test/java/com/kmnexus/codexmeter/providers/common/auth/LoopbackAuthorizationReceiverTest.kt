@@ -86,6 +86,37 @@ class LoopbackAuthorizationReceiverTest {
     }
 
     @Test
+    fun `the whole page is sent after a long request head or a request body`() = runBlocking {
+        val receiver = start()
+        val result = async { receiver.awaitResult(timeoutMillis = 10_000) }
+        val manyHeaders = (1..60).joinToString("") { "X-Header-$it: ${"v".repeat(40)}\r\n" }
+
+        val post = request(
+            receiver.port,
+            "POST /callback HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nabcde",
+        )
+        val real = request(
+            receiver.port,
+            "GET /callback?code=long-head&state=$state HTTP/1.1\r\nHost: localhost\r\n$manyHeaders\r\n",
+        )
+
+        assertTrue(post.startsWith("HTTP/1.1 405"))
+        assertTrue(post.endsWith("</html>"))
+        assertTrue(real.startsWith("HTTP/1.1 200"))
+        assertTrue(real.endsWith("</html>"))
+        assertEquals("long-head", (result.await() as CallbackResult.Code).code)
+    }
+
+    @Test
+    fun `header lines are consumed up to the blank line`() {
+        val input = "Host: localhost\r\nAccept: */*\r\n\r\nbody".byteInputStream()
+
+        LoopbackAuthorizationReceiver.skipHeaders(input)
+
+        assertEquals("body", input.readBytes().toString(Charsets.US_ASCII))
+    }
+
+    @Test
     fun `repeated parameters are treated as an invalid response`() = runBlocking {
         val receiver = start()
         val result = async { receiver.awaitResult(timeoutMillis = 10_000) }

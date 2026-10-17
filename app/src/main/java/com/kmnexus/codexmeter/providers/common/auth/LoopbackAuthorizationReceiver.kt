@@ -111,8 +111,9 @@ class LoopbackAuthorizationReceiver private constructor(
 
     private fun handle(socket: Socket, alreadyCompleted: Boolean): CallbackResult? {
         socket.soTimeout = READ_TIMEOUT_MILLIS
+        val input = socket.getInputStream()
         val requestLine = try {
-            readRequestLine(socket.getInputStream())
+            readRequestLine(input)?.also { skipHeaders(input) }
         } catch (_: IOException) {
             null
         }
@@ -177,6 +178,18 @@ class LoopbackAuthorizationReceiver private constructor(
                 write(body)
                 flush()
             }
+            // Half-close, then read (bounded, briefly) whatever the client still sends: closing a
+            // socket with unread input resets the connection, and the browser could drop the page.
+            socket.shutdownOutput()
+            socket.soTimeout = LINGER_MILLIS
+            val input = socket.getInputStream()
+            val buffer = ByteArray(1024)
+            var drained = 0
+            while (drained < MAX_HEADER_BYTES) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                drained += read
+            }
         }
     }
 
@@ -236,7 +249,9 @@ class LoopbackAuthorizationReceiver private constructor(
         const val MISSING_CODE = "missing_code"
 
         private const val READ_TIMEOUT_MILLIS = 5_000
+        private const val LINGER_MILLIS = 500
         private const val MAX_REQUEST_LINE_BYTES = 8 * 1024
+        private const val MAX_HEADER_BYTES = 16 * 1024
         private const val MAX_CODE_LENGTH = 4 * 1024
         private const val MAX_CONCURRENT_CONNECTIONS = 8
         private const val CONTENT_SECURITY_POLICY =
@@ -278,6 +293,33 @@ class LoopbackAuthorizationReceiver private constructor(
                 bytes.write(next)
             }
             return null
+        }
+
+        /**
+         * Consumes the header lines up to the blank line that ends the request head (bounded). The
+         * response is written only after this, so the request is never left half read when the
+         * socket closes. A client that stops sending is answered with what arrived.
+         */
+        internal fun skipHeaders(input: InputStream) {
+            var consumed = 0
+            var lineLength = 0
+            try {
+                while (consumed < MAX_HEADER_BYTES) {
+                    val next = input.read()
+                    if (next == -1) return
+                    consumed++
+                    when (next) {
+                        '\n'.code -> {
+                            if (lineLength == 0) return
+                            lineLength = 0
+                        }
+                        '\r'.code -> Unit
+                        else -> lineLength++
+                    }
+                }
+            } catch (_: IOException) {
+                // Timeout or reset while reading headers: nothing in them is needed.
+            }
         }
 
         /**
