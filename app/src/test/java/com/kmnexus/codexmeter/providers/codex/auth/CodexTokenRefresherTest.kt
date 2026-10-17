@@ -261,6 +261,32 @@ class CodexTokenRefresherTest {
         )
     }
 
+    @Test
+    fun `a challenge page, rate limit or server error never ends the session`() = runTest {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(403)
+                .addHeader("cf-mitigated", "challenge")
+                .addHeader("Content-Type", "text/html")
+                .body("<html>synthetic challenge</html>")
+                .build(),
+        )
+        server.enqueue(MockResponse.Builder().code(429).body("{}").build())
+        server.enqueue(MockResponse.Builder().code(502).body("synthetic gateway error").build())
+        val refresher = newRefresher()
+
+        val errors = List(3) { (refresher.refresh(existingSession()) as CodexTokenRefresher.Result.Failure).error }
+
+        assertTrue(errors[0] is QuotaError.ProviderUnavailable)
+        assertEquals(403, errors[0].httpStatus)
+        assertTrue(errors[1] is QuotaError.RateLimited)
+        assertTrue(errors[2] is QuotaError.ProviderUnavailable)
+        assertEquals(502, errors[2].httpStatus)
+        errors.forEach { error ->
+            assertFalse(error.diagnosticsDigest.orEmpty().contains("synthetic"))
+        }
+    }
+
     private fun newRefresher(): CodexTokenRefresher =
         CodexTokenRefresher(
             httpClient = ProviderHttpClient(),

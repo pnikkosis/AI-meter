@@ -136,7 +136,7 @@ class CodexUsageClientTest {
 
         assertTrue(result is CodexUsageClient.Result.Failure)
         val failure = result as CodexUsageClient.Result.Failure
-        assertTrue(failure.error is QuotaError.Network)
+        assertTrue(failure.error is QuotaError.ResponseInvalid)
         assertEquals("codex_usage_decode_error", failure.error.diagnosticsDigest)
         assertFalse(failure.error.diagnosticsDigest.orEmpty().contains("fake-access-token"))
         assertFalse(failure.error.diagnosticsDigest.orEmpty().contains(responseBody))
@@ -165,6 +165,44 @@ class CodexUsageClientTest {
         assertEquals(401, error.httpStatus)
         assertFalse(error.diagnosticsDigest.orEmpty().contains("fake-access-token"))
         assertFalse(error.diagnosticsDigest.orEmpty().contains(responseBody))
+    }
+
+    @Test
+    fun `answers from the server are never reported as no connection`() = runTest {
+        server.enqueue(MockResponse.Builder().code(429).addHeader("Retry-After", "30").body("{}").build())
+        server.enqueue(MockResponse.Builder().code(503).body("synthetic outage").build())
+        server.enqueue(
+            MockResponse.Builder()
+                .code(403)
+                .addHeader("cf-mitigated", "challenge")
+                .addHeader("Content-Type", "text/html; charset=UTF-8")
+                .body("<html>synthetic challenge</html>")
+                .build(),
+        )
+        server.enqueue(
+            MockResponse.Builder()
+                .code(403)
+                .addHeader("Content-Type", "application/json")
+                .body("""{"detail":"synthetic forbidden"}""")
+                .build(),
+        )
+        val client = newClient()
+
+        val limited = client.fetchUsage(accessToken = "fake-access-token", accountId = null)
+        val outage = client.fetchUsage(accessToken = "fake-access-token", accountId = null)
+        val challenge = client.fetchUsage(accessToken = "fake-access-token", accountId = null)
+        val forbidden = client.fetchUsage(accessToken = "fake-access-token", accountId = null)
+
+        val limitedError = (limited as CodexUsageClient.Result.Failure).error
+        assertTrue(limitedError is QuotaError.RateLimited)
+        assertEquals(30L, (limitedError as QuotaError.RateLimited).retryAfterSeconds)
+        val outageError = (outage as CodexUsageClient.Result.Failure).error
+        assertTrue(outageError is QuotaError.ProviderUnavailable)
+        assertEquals(503, outageError.httpStatus)
+        val challengeError = (challenge as CodexUsageClient.Result.Failure).error
+        assertTrue(challengeError is QuotaError.ProviderUnavailable)
+        assertEquals(403, challengeError.httpStatus)
+        assertTrue((forbidden as CodexUsageClient.Result.Failure).error is QuotaError.AuthRequired)
     }
 
     private fun newClient(): CodexUsageClient =

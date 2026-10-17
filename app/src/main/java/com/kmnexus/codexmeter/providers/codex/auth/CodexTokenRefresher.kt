@@ -2,7 +2,10 @@ package com.kmnexus.codexmeter.providers.codex.auth
 
 import com.kmnexus.codexmeter.core.network.AppUserAgent
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
+import com.kmnexus.codexmeter.core.network.ProviderHttpResponse
 import com.kmnexus.codexmeter.domain.refresh.QuotaError
+import com.kmnexus.codexmeter.providers.common.network.isWebPage
+import com.kmnexus.codexmeter.providers.common.network.unexpectedStatusError
 import com.kmnexus.codexmeter.providers.codex.session.CodexSessionPayload
 import java.io.IOException
 import java.time.Clock
@@ -58,10 +61,7 @@ class CodexTokenRefresher(
                 body = response.body,
                 existingSession = session,
             )
-            else -> decodeFailure(
-                statusCode = response.statusCode,
-                body = response.body,
-            )
+            else -> decodeFailure(response)
         }
     }
 
@@ -87,7 +87,7 @@ class CodexTokenRefresher(
             val response = json.decodeFromString<CodexTokenRefreshResponseDto>(body)
             val accessToken = response.accessToken?.takeIf { it.isNotBlank() }
                 ?: return Result.Failure(
-                    QuotaError.Network(diagnosticsDigest = "codex_refresh_decode_error"),
+                    QuotaError.ResponseInvalid(diagnosticsDigest = "codex_refresh_decode_error"),
                 )
             val refreshToken = response.refreshToken?.takeIf { it.isNotBlank() }
                 ?: existingSession.refreshToken
@@ -113,19 +113,18 @@ class CodexTokenRefresher(
             )
         } catch (_: SerializationException) {
             Result.Failure(
-                QuotaError.Network(diagnosticsDigest = "codex_refresh_decode_error"),
+                QuotaError.ResponseInvalid(diagnosticsDigest = "codex_refresh_decode_error"),
             )
         } catch (_: IllegalArgumentException) {
             Result.Failure(
-                QuotaError.Network(diagnosticsDigest = "codex_refresh_decode_error"),
+                QuotaError.ResponseInvalid(diagnosticsDigest = "codex_refresh_decode_error"),
             )
         }
 
-    private fun decodeFailure(
-        statusCode: Int,
-        body: String,
-    ): Result {
-        if (statusCode == HTTP_UNAUTHORIZED || statusCode == HTTP_FORBIDDEN) {
+    private fun decodeFailure(response: ProviderHttpResponse): Result {
+        val statusCode = response.statusCode
+        // A 403 web page (Cloudflare challenge) is not a refused credential.
+        if (statusCode == HTTP_UNAUTHORIZED || (statusCode == HTTP_FORBIDDEN && !response.isWebPage())) {
             return Result.Failure(
                 QuotaError.AuthRequired(
                     httpStatus = statusCode,
@@ -134,7 +133,7 @@ class CodexTokenRefresher(
             )
         }
 
-        val errorCode = decodeErrorCode(body)
+        val errorCode = decodeErrorCode(response.body)
         if (errorCode in TERMINAL_AUTH_ERROR_CODES) {
             return Result.Failure(
                 QuotaError.AuthRequired(
@@ -144,9 +143,7 @@ class CodexTokenRefresher(
             )
         }
 
-        return Result.Failure(
-            QuotaError.Network(diagnosticsDigest = "codex_refresh_http_$statusCode"),
-        )
+        return Result.Failure(response.unexpectedStatusError("codex_refresh_http_$statusCode"))
     }
 
     private fun decodeErrorCode(body: String): String? =

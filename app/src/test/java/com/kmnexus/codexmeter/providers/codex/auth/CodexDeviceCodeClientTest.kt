@@ -115,7 +115,7 @@ class CodexDeviceCodeClientTest {
 
         val result = client.requestDeviceCode()
 
-        assertNetworkFailure(
+        assertFailure<QuotaError.ResponseInvalid>(
             result = result,
             diagnosticsDigest = "codex_device_code_unsafe_verification_uri",
             forbiddenText = "evil.example",
@@ -142,7 +142,7 @@ class CodexDeviceCodeClientTest {
 
         val result = client.requestDeviceCode()
 
-        assertNetworkFailure(
+        assertFailure<QuotaError.ResponseInvalid>(
             result = result,
             diagnosticsDigest = "codex_device_code_decode_error",
             forbiddenText = SAMPLE_DEVICE_AUTH_ID,
@@ -162,10 +162,45 @@ class CodexDeviceCodeClientTest {
 
         val result = client.requestDeviceCode()
 
-        assertNetworkFailure(
+        assertFailure<QuotaError.RateLimited>(
             result = result,
             diagnosticsDigest = "codex_device_code_http_429",
             forbiddenText = responseBody,
+        )
+    }
+
+    @Test
+    fun `a challenge page or server error is a provider error, never no connection`() = runTest {
+        server.enqueue(MockResponse.Builder().code(403).body("<html>synthetic challenge</html>").build())
+        server.enqueue(MockResponse.Builder().code(503).body("synthetic outage").build())
+        val client = newClient()
+
+        val challenged = client.requestDeviceCode()
+        val outage = client.requestDeviceCode()
+
+        assertFailure<QuotaError.ProviderUnavailable>(
+            result = challenged,
+            diagnosticsDigest = "codex_device_code_http_403",
+            forbiddenText = "synthetic challenge",
+        )
+        assertFailure<QuotaError.ProviderUnavailable>(
+            result = outage,
+            diagnosticsDigest = "codex_device_code_http_503",
+            forbiddenText = "synthetic outage",
+        )
+    }
+
+    @Test
+    fun `poll server error is a provider error`() = runTest {
+        server.enqueue(MockResponse.Builder().code(500).body("synthetic poll failure").build())
+        val client = newClient()
+
+        val result = client.pollAuthorization(sampleChallenge())
+
+        assertFailure<QuotaError.ProviderUnavailable>(
+            result = result,
+            diagnosticsDigest = "codex_device_authorization_http_500",
+            forbiddenText = "synthetic poll failure",
         )
     }
 
@@ -252,7 +287,7 @@ class CodexDeviceCodeClientTest {
 
         val result = client.pollAuthorization(sampleChallenge())
 
-        assertNetworkFailure(
+        assertFailure<QuotaError.ResponseInvalid>(
             result = result,
             diagnosticsDigest = "codex_device_authorization_decode_error",
             forbiddenText = SAMPLE_AUTHORIZATION_CODE,
@@ -316,14 +351,14 @@ class CodexDeviceCodeClientTest {
     private fun JsonObject.stringField(name: String): String =
         (this[name] as JsonPrimitive).contentOrNull.orEmpty()
 
-    private fun assertNetworkFailure(
+    private inline fun <reified T : QuotaError> assertFailure(
         result: CodexDeviceCodeClient.Result<*>,
         diagnosticsDigest: String,
         forbiddenText: String,
     ) {
         assertTrue(result is CodexDeviceCodeClient.Result.Failure)
         val failure = result as CodexDeviceCodeClient.Result.Failure
-        assertTrue(failure.error is QuotaError.Network)
+        assertTrue("expected ${T::class.simpleName}, got ${failure.error}", failure.error is T)
         assertEquals(diagnosticsDigest, failure.error.diagnosticsDigest)
         assertFalse(failure.toString().contains(forbiddenText))
         assertFalse(failure.error.diagnosticsDigest.orEmpty().contains(forbiddenText))

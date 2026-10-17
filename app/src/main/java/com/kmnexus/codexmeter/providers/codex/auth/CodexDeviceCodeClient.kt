@@ -3,6 +3,7 @@ package com.kmnexus.codexmeter.providers.codex.auth
 import com.kmnexus.codexmeter.core.network.AppUserAgent
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.domain.refresh.QuotaError
+import com.kmnexus.codexmeter.providers.common.network.unexpectedStatusError
 import java.io.IOException
 import java.time.Clock
 import java.time.Duration
@@ -61,9 +62,7 @@ class CodexDeviceCodeClient(
 
         return when (response.statusCode) {
             in SUCCESS_STATUS_RANGE -> decodeDeviceCodeChallenge(response.body)
-            else -> Result.Failure(
-                QuotaError.Network(diagnosticsDigest = "codex_device_code_http_${response.statusCode}"),
-            )
+            else -> Result.Failure(response.unexpectedStatusError("codex_device_code_http_${response.statusCode}"))
         }
     }
 
@@ -117,9 +116,7 @@ class CodexDeviceCodeClient(
                     Result.Pending
                 } else {
                     Result.Failure(
-                        QuotaError.Network(
-                            diagnosticsDigest = "codex_device_authorization_http_${response.statusCode}",
-                        ),
+                        response.unexpectedStatusError("codex_device_authorization_http_${response.statusCode}"),
                     )
                 }
             }
@@ -179,7 +176,7 @@ class CodexDeviceCodeClient(
                 ?.let { unsafeCandidate ->
                     validatedVerificationUri(unsafeCandidate)
                         ?: return Result.Failure(
-                            QuotaError.Network(
+                            QuotaError.ResponseInvalid(
                                 diagnosticsDigest = "codex_device_code_unsafe_verification_uri",
                             ),
                         )
@@ -264,12 +261,12 @@ class CodexDeviceCodeClient(
 
     private fun deviceCodeDecodeFailure(): Result.Failure =
         Result.Failure(
-            QuotaError.Network(diagnosticsDigest = "codex_device_code_decode_error"),
+            QuotaError.ResponseInvalid(diagnosticsDigest = "codex_device_code_decode_error"),
         )
 
     private fun authorizationDecodeFailure(): Result.Failure =
         Result.Failure(
-            QuotaError.Network(diagnosticsDigest = "codex_device_authorization_decode_error"),
+            QuotaError.ResponseInvalid(diagnosticsDigest = "codex_device_authorization_decode_error"),
         )
 
     sealed interface Result<out T> {

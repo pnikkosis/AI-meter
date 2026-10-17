@@ -4,6 +4,8 @@ import com.kmnexus.codexmeter.core.network.AppUserAgent
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.domain.refresh.QuotaError
 import com.kmnexus.codexmeter.providers.codex.dto.CodexUsageResponseDto
+import com.kmnexus.codexmeter.providers.common.network.isWebPage
+import com.kmnexus.codexmeter.providers.common.network.unexpectedStatusError
 import java.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -54,19 +56,17 @@ class CodexUsageClient(
             )
         }
 
-        return when (response.statusCode) {
-            in SUCCESS_STATUS_RANGE -> decodeSuccess(response.body)
-            HTTP_UNAUTHORIZED,
-            HTTP_FORBIDDEN,
-            -> Result.Failure(
+        return when {
+            response.statusCode in SUCCESS_STATUS_RANGE -> decodeSuccess(response.body)
+            // A 403 web page (Cloudflare challenge) is not a refused token.
+            response.statusCode == HTTP_UNAUTHORIZED ||
+                (response.statusCode == HTTP_FORBIDDEN && !response.isWebPage()) -> Result.Failure(
                 QuotaError.AuthRequired(
                     httpStatus = response.statusCode,
                     diagnosticsDigest = "codex_usage_auth_required_${response.statusCode}",
                 ),
             )
-            else -> Result.Failure(
-                QuotaError.Network(diagnosticsDigest = "codex_usage_http_${response.statusCode}"),
-            )
+            else -> Result.Failure(response.unexpectedStatusError("codex_usage_http_${response.statusCode}"))
         }
     }
 
@@ -75,18 +75,18 @@ class CodexUsageClient(
             val dto = json.decodeFromString<CodexUsageResponseDto>(body)
             if (dto.hasDecodeFailure()) {
                 Result.Failure(
-                    QuotaError.Network(diagnosticsDigest = "codex_usage_decode_error"),
+                    QuotaError.ResponseInvalid(diagnosticsDigest = "codex_usage_decode_error"),
                 )
             } else {
                 Result.Success(dto = dto)
             }
         } catch (_: SerializationException) {
             Result.Failure(
-                QuotaError.Network(diagnosticsDigest = "codex_usage_decode_error"),
+                QuotaError.ResponseInvalid(diagnosticsDigest = "codex_usage_decode_error"),
             )
         } catch (_: IllegalArgumentException) {
             Result.Failure(
-                QuotaError.Network(diagnosticsDigest = "codex_usage_decode_error"),
+                QuotaError.ResponseInvalid(diagnosticsDigest = "codex_usage_decode_error"),
             )
         }
 
