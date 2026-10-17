@@ -148,9 +148,10 @@ jobs:
       - name: Print screenshots
         if: ${{ !cancelled() }}
         run: |
+          # Long lines keep the whole log within what log readers return (they cut by line count).
           for f in $(find shots -name '*.png' | sort); do
             name=$(echo "$f" | tr '/' '_')
             echo "=====BEGIN $name====="
-            base64 -w 76 "$f"
+            base64 -w 8000 "$f"
             echo "=====END $name====="
           done

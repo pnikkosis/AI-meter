@@ -72,7 +72,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        part: [0, 1, 2, 3, 4]
+        part: [0, 1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - name: Fetch files
         uses: actions/download-artifact@v4
@@ -86,18 +86,19 @@ jobs:
         run: |
           cd export
           sha256sum app-release-unsigned.apk apksigner.jar
+          # Long base64 lines keep each log small in line count (log readers cut by lines).
           if [ "$PART" = "0" ]; then
             echo "=====BEGIN apksigner.jar====="
-            base64 -w 76 apksigner.jar
+            base64 -w 8000 apksigner.jar
             echo "=====END apksigner.jar====="
           else
-            # Four slices of the APK so each job log stays a few MB.
+            # Eight slices of the APK so each job log stays around 1 MB.
             SIZE=$(stat -c %s app-release-unsigned.apk)
-            SLICE=$(( (SIZE + 3) / 4 ))
+            SLICE=$(( (SIZE + 7) / 8 ))
             SLICE=$(( (SLICE + 2) / 3 * 3 ))  # multiple of 3 bytes so slices decode independently
             dd if=app-release-unsigned.apk of=slice.bin bs=$SLICE skip=$(( PART - 1 )) count=1 iflag=fullblock status=none
-            echo "slice=$PART of 4, bytes=$(stat -c %s slice.bin), sha256=$(sha256sum slice.bin | cut -d' ' -f1)"
+            echo "slice=$PART of 8, bytes=$(stat -c %s slice.bin), sha256=$(sha256sum slice.bin | cut -d' ' -f1)"
             echo "=====BEGIN apk.part$PART====="
-            base64 -w 76 slice.bin
+            base64 -w 8000 slice.bin
             echo "=====END apk.part$PART====="
           fi

@@ -87,10 +87,13 @@ jobs:
           for (severity, issue_id), n in sorted(counts.items()):
               print(f"{severity:14} {issue_id:45} {n}")
           print(f"total issues: {len(issues)}")
+          # Details for everything except dependency-version and unused-resource noise.
+          noise = {"GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion", "UseTomlInstead", "UnusedResources"}
           for i in issues:
-              if i.get("severity") in ("Error", "Fatal"):
+              if i.get("id") not in noise:
                   loc = i.find("location")
                   where = f'{loc.get("file")}:{loc.get("line")}' if loc is not None else "?"
+                  where = where.replace(os.getcwd() + "/", "")
                   print(f'{i.get("severity")}: {i.get("id")} at {where}: {i.get("message")}')
           EOF
 
@@ -107,6 +110,8 @@ jobs:
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
           "$ANDROID_HOME/build-tools/37.0.0/aapt2" dump permissions "$APK"
           "$ANDROID_HOME/build-tools/37.0.0/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|application-label):"
+          echo "Components in the merged manifest:"
+          "$ANDROID_HOME/build-tools/37.0.0/aapt2" dump xmltree --file AndroidManifest.xml "$APK" | python3 scripts/ci/manifest_components.py
           ./gradlew --no-daemon -q :app:dependencies --configuration releaseRuntimeClasspath | grep -E -- "--- " | sed -E 's/^[| \\+-]+//' | sort -u
 
       - name: Upload reports

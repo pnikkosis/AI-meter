@@ -50,8 +50,8 @@ preparar la versión 1.0.0).
 
 1. En GitHub → Actions → **Export unsigned release (manual)** → *Run workflow* sobre la rama/commit
    deseado. El workflow compila el APK release **sin firmar**, imprime su SHA-256 y escribe en los
-   registros del job el APK (en 4 partes) y el `apksigner.jar` de build-tools 37.0.0, codificados en
-   base64. No usa secretos.
+   registros de sus jobs el APK (en 8 partes) y el `apksigner.jar` de build-tools 37.0.0, codificados
+   en base64. No usa secretos.
 2. Reconstruir los archivos desde los registros (decodificar las partes en orden) y comprobar que los
    SHA-256 coinciden con los impresos por el job.
 3. Firmar y verificar con la clave local:
@@ -64,7 +64,21 @@ preparar la versión 1.0.0).
    variables de entorno y genera `dist/AIUsageWidget-<versión>.apk` + `.sha256`.
 
 El workflow **CI** (en cada push) ejecuta las pruebas unitarias, lint, compila el APK debug y el
-release sin firmar, y publica en el registro los permisos del APK y sus dependencias de ejecución.
+release sin firmar, y publica en el registro los totales de pruebas, el resumen de lint, los
+permisos del APK y sus dependencias de ejecución.
+
+El workflow manual **Emulator check (manual)** arranca un emulador Android en el runner (API 35 en
+español y API 31 en inglés), renderiza todos los estados del widget, instala el release (procesado
+por R8 y firmado con una clave descartable creada en el job, nunca la de release) y recorre la app
+con `scripts/ci/emulator_smoke.py`. Las capturas quedan en el registro del job en base64.
+
+## Compilación reproducible
+
+La compilación no incluye marcas de tiempo ni datos de la máquina (`BuildConfig` solo lleva versión
+y tipo de build), así que el mismo commit compilado con las versiones de la tabla produce el mismo
+APK sin firmar. Para comprobarlo, comparar el SHA-256 de `app-release-unsigned.apk` impreso por dos
+ejecuciones distintas (por ejemplo CI y el workflow de exportación) del mismo commit. La firma se
+agrega después; con la misma clave, `apksigner` produce el mismo APK firmado.
 
 ## Verificar un APK
 
@@ -86,10 +100,18 @@ versión firmada con otra clave encima de la existente.
 
 - Archivo: `aiusagewidget-release.p12` (PKCS12, RSA 4096, SHA256withRSA, válida hasta 2056, alias
   `aiusagewidget`) y su archivo `aiusagewidget-release.properties` con la contraseña.
+- La clave de la versión 1.0.0 se generó fuera del repositorio, en el entorno temporal donde se firmó
+  el APK, y se entregó a su dueño junto con el archivo de propiedades. No está en GitHub: ningún
+  workflow la recibe (el CI y la exportación solo producen APK sin firmar).
 - Nunca se suben al repositorio (`.gitignore` excluye `*.p12`, `*.jks`, `*.keystore` y el archivo de
-  propiedades) ni aparecen en registros.
+  propiedades) ni aparecen en registros: los scripts pasan las contraseñas a `apksigner` por
+  variables de entorno.
 - Guardar ambos en un gestor de contraseñas o almacenamiento cifrado, con una copia de respaldo. Si se
   pierden, no se podrá actualizar la app instalada: habría que desinstalarla (borrando sus datos) e
   instalar una nueva firmada con otra clave.
 - Para una nueva versión: subir `appVersionCode` y `appVersionName` en `app/build.gradle.kts`,
-  compilar con la opción A o B y firmar con la misma clave.
+  compilar con la opción A o B y firmar con la misma clave. Al copiar el archivo de propiedades a
+  otra máquina, actualizar `storeFile` con la ruta nueva del `.p12`.
+- Para confirmar que una clave es la correcta sin firmar nada:
+  `keytool -list -v -storetype PKCS12 -keystore aiusagewidget-release.p12` (pide la contraseña sin
+  mostrarla) y comparar la huella SHA-256 con la de arriba.
