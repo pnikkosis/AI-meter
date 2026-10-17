@@ -4,6 +4,12 @@ This repository is the Android project for **CodexMeter** (`codexbar-apk`): a se
 
 This file is the canonical operating guide for AI agents and human maintainers working in this repo. `CLAUDE.md` must stay aligned with this file.
 
+> **Fork note (AI Usage Widget).** This repository is a personal fork of CodexMeter 0.2.4 that keeps
+> only Codex and Claude. Where the upstream guides and docs disagree with the fork's own docs
+> (`CHANGELOG.md`, `docs/SEGURIDAD.md`, `docs/INSTALAR.md`), the fork's docs describe the code. In
+> particular, Claude and (since 1.0.2) Codex sign in through the external browser with OAuth PKCE and
+> a loopback receiver on 127.0.0.1; Codex's device-code flow stays available as an alternative.
+
 ## 1. Mandatory reading order
 
 Before making any non-trivial change, read these files in order:

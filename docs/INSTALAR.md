@@ -21,19 +21,23 @@ CodexMeter si estuviera instalado.
 La interfaz está en español cuando el teléfono está en español (en otros idiomas, en inglés o
 chino). Abajo se citan los textos en español y, entre paréntesis, en inglés.
 
-Antes de empezar, una sola vez: OpenAI exige activar el inicio de sesión con **código de
-dispositivo** en la configuración de seguridad de ChatGPT. El enlace de OpenAI lleva a la versión
-web (`chatgpt.com/#settings/Security`, abrirla en el navegador); la pantalla Seguridad de la app de
-ChatGPT para Android no muestra esa opción. Si no está activada, OpenAI pide el código del
-autenticador y después muestra “Activa el inicio de sesión con código de dispositivo para Codex…”.
-Con la opción activada, no ingresar nunca un código que no se haya generado uno mismo.
-
 1. Abrir la app → **Agregar cuenta** (*Add account*; también el botón **+** arriba a la derecha en
-   la pestaña **Cuentas**) → **Codex**.
-2. **Iniciar sesión en Codex**: la app muestra un código (**Copiar** lo copia).
-3. **Abrir la página de verificación de Codex** e iniciar sesión en OpenAI en el navegador.
-   Introducir el código y aprobar el acceso.
-4. Volver a la app: valida la sesión leyendo el consumo y guarda la cuenta.
+   la pestaña **Cuentas**) → **Codex**. Leer el aviso **Antes de continuar** (cliente de Codex CLI,
+   permisos pedidos, dónde quedan los tokens). Ver `docs/SEGURIDAD.md`.
+2. **Continuar en el navegador** (*Continue in browser*): se abre la página de OpenAI
+   (`auth.openai.com`) en una pestaña del navegador. Iniciar sesión con la cuenta de ChatGPT y
+   aprobar el acceso.
+3. Cuando la página diga “Sesión iniciada en AI Usage Widget” (*Signed in to AI Usage Widget*),
+   cerrar esa pestaña (la **X** arriba) para volver a la app. Recién entonces la app termina el
+   intercambio, valida leyendo el consumo de Codex y guarda la cuenta.
+4. Si algo falla, la pantalla dice el motivo y permite **Reintentar**. No se guarda nada si falla.
+
+No hace falta activar nada en ChatGPT para este método. La alternativa **Usar un código de
+dispositivo** (*Use a device code instead*), debajo del botón, es el método de las versiones 1.0.0 y
+1.0.1: OpenAI solo lo acepta si antes se activó el inicio de sesión con código de dispositivo en la
+configuración de seguridad de ChatGPT (versión web, `chatgpt.com/#settings/Security`; la app de
+ChatGPT para Android no muestra la opción). No ingresar nunca un código que no se haya generado uno
+mismo.
 
 ## 3. Conectar Claude
 
@@ -79,7 +83,16 @@ Cómo leer un widget:
 - Botón ↻ (junto al estado): pide una actualización inmediata en segundo plano.
 - Tocar el resto del widget abre la app.
 
-## 5. Actualización en segundo plano
+## 5. Notificación persistente
+
+**Ajustes → Notificación persistente → Notificación de estado persistente** muestra en el panel de
+notificaciones el disponible de la cuenta elegida. En Android 13 o posterior hace falta el permiso
+de notificaciones: si Android las bloquea, el interruptor se ve apagado y Ajustes lo avisa; al
+encenderlo, la app explica para qué las usa y Android pregunta (**Permitir**). Si Android ya no
+muestra la pregunta (por ejemplo, porque antes se rechazó dos veces), se abren los ajustes de
+notificaciones de la app en el sistema para activarlas ahí.
+
+## 6. Actualización en segundo plano
 
 - La app actualiza con WorkManager cada 15 minutos como mínimo (**Ajustes → Actualización →
   Intervalo de actualización** permite elegir 15 o 30 minutos o **Solo manual**).
@@ -88,7 +101,7 @@ Cómo leer un widget:
   exención de optimización de batería; es opcional.
 - En la app se puede actualizar a mano deslizando hacia abajo en Inicio o Cuentas.
 
-## 6. Desconectar una cuenta
+## 7. Desconectar una cuenta
 
 Pestaña **Cuentas** → desplegar la cuenta (**Desplegar**) → **Desconectar**. El diálogo explica qué
 pasa:
@@ -100,7 +113,7 @@ pasa:
 
 Después aparece un aviso con lo que realmente ocurrió.
 
-## 7. Actualizar la app
+## 8. Actualizar la app
 
 Instalar encima el APK nuevo firmado con la misma clave. Los datos se conservan. Un APK firmado con
 otra clave no se instala encima (habría que desinstalar primero, perdiendo las cuentas conectadas).

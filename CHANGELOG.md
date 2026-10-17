@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.0.2] - 2026-10-17
+
+Correcciones tras la segunda prueba en el teléfono.
+
+- Codex: el inicio de sesión pasa a ser en el navegador, como `codex login` de Codex CLI: OAuth 2.0
+  con PKCE S256 y `state`, la página de OpenAI (`auth.openai.com/oauth/authorize`) en una pestaña
+  del navegador y retorno a `http://127.0.0.1:1455/auth/callback` (`:1457` si el 1455 está
+  ocupado), los mismos puertos y la misma dirección que usa Codex CLI. Ya no hace falta activar el
+  inicio de sesión con código de dispositivo en ChatGPT. Ese método queda como alternativa en la
+  misma pantalla (**Usar un código de dispositivo**). Permisos pedidos: `openid profile email
+  offline_access` (Codex CLI pide además `api.connectors.read api.connectors.invoke`, que la app no
+  usa); la app no envía el parámetro `originator` con el que Codex CLI se identifica. Si OpenAI
+  responde que la cuenta no tiene acceso a Codex, la pantalla lo dice.
+- Notificación persistente: venía activada de fábrica (igual que en CodexMeter), pero en Android 13
+  o posterior la app solo pedía el permiso de notificaciones al tocar el interruptor, y como ya se
+  veía encendido nadie lo tocaba: Android la bloqueaba sin avisar. Ahora los interruptores de
+  notificaciones de Ajustes se ven encendidos solo si Android deja notificar; si no, Ajustes lo
+  avisa, y al encenderlos se pide el permiso (o se abren los ajustes de notificaciones del sistema
+  cuando Android ya no muestra su diálogo).
+- Claude: un límite semanal propio de un modelo o producto que no sea Opus ni Sonnet se veía con el
+  rótulo genérico “Límite” y sin nombre. Ahora se muestra con el nombre que informa Claude (por
+  ejemplo “7 días · <nombre>”) en Inicio, Cuentas, los widgets y Ajustes. Un medidor que esta
+  versión no conoce sigue como “Límite”, seguido del nombre si Claude lo informa.
+- Versión 1.0.2 (código 3): se instala como actualización y conserva los datos.
+
 ## [1.0.1] - 2026-10-17
 
 Correcciones tras la primera prueba en un teléfono real.

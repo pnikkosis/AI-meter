@@ -52,32 +52,42 @@ Todas las peticiones salen por un único cliente OkHttp que:
 
 | Host | Para qué | Credencial enviada |
 | --- | --- | --- |
-| `auth.openai.com` | Código de dispositivo, intercambio y renovación de tokens, revocación al desconectar | Código de dispositivo / refresh token de Codex |
+| `auth.openai.com` | Intercambio y renovación de tokens, código de dispositivo (alternativa), revocación al desconectar | Código de autorización y verificador PKCE / código de dispositivo / refresh token de Codex |
 | `chatgpt.com` | `GET /backend-api/wham/usage` (consumo de Codex) | Access token de Codex |
 | `platform.claude.com` | `POST /v1/oauth/token` (intercambio y renovación) | Código de autorización / refresh token de Claude |
 | `api.anthropic.com` | `GET /api/oauth/usage` (consumo de Claude) | Access token de Claude |
 
-Fuera de la app, el navegador abre `auth.openai.com/codex/device` (Codex) y
-`claude.com/cai/oauth/authorize` → `claude.ai` (Claude). Esas páginas las carga el navegador con sus
-propias cookies.
+Fuera de la app, el navegador abre `auth.openai.com/oauth/authorize` (Codex; con la alternativa
+de código de dispositivo, `auth.openai.com/codex/device`) y `claude.com/cai/oauth/authorize` →
+`claude.ai` (Claude). Esas páginas las carga el navegador con sus propias cookies.
 
-El único socket que abre la app es el receptor del retorno de Claude: escucha solo en `127.0.0.1` y
-`::1` (nunca en la red Wi-Fi), en un puerto efímero, durante el inicio de sesión.
+Los únicos sockets que abre la app son los receptores del retorno del inicio de sesión, y solo
+mientras se espera ese retorno: escuchan en `127.0.0.1` y `::1` (nunca en la red Wi-Fi), Claude en
+un puerto efímero y Codex en el 1455 (o el 1457 si está ocupado), los puertos de Codex CLI.
 
 Las peticiones se identifican con el User-Agent propio `AIUsageWidget/<versión> (Android)` (por
-ejemplo `AIUsageWidget/1.0.1 (Android)`); la app no se hace pasar por Codex CLI ni por Claude Code.
+ejemplo `AIUsageWidget/1.0.2 (Android)`); la app no se hace pasar por Codex CLI ni por Claude Code.
 
 La única librería de terceros fuera de AndroidX/Kotlin/OkHttp es `com.qmdeve.liquidglass:core`
 (efecto visual, MIT): 16 clases, sin permisos y sin código de red.
 
 ## Codex (OpenAI)
 
-- **Inicio de sesión:** flujo de código de dispositivo de OpenAI, el mismo que usa Codex CLI. La app
-  muestra un código; el usuario lo aprueba en `https://auth.openai.com/codex/device` en su navegador.
-  La app solo abre esa URL exacta (se valida antes de abrirla).
-- **Permisos (scopes):** `openid profile email offline_access`, los de Codex CLI. Permiten leer la
-  identidad de la cuenta y renovar el acceso. El token resultante es el de la cuenta de ChatGPT para
-  Codex: **no es de solo lectura**; la app solo lo usa para leer el consumo.
+- **Inicio de sesión:** el de `codex login` de Codex CLI: autorización OAuth 2.0 con PKCE (S256) y
+  `state` en el navegador del teléfono (Custom Tab), en `https://auth.openai.com/oauth/authorize`,
+  con retorno a `http://127.0.0.1:1455/auth/callback` (o `:1457`). El receptor es el mismo que el de
+  Claude (ver abajo), con la ruta `/auth/callback`. El código se canjea en
+  `https://auth.openai.com/oauth/token` junto con el verificador PKCE cuando la app vuelve al frente,
+  y la cuenta se guarda solo si la lectura del consumo funciona. La app no envía el parámetro
+  `originator` con el que Codex CLI se identifica.
+- **Alternativa, código de dispositivo:** el flujo de 1.0.0 y 1.0.1. La app muestra un código y el
+  usuario lo aprueba en `https://auth.openai.com/codex/device`; OpenAI solo lo acepta si la cuenta
+  activó esa opción en la configuración de seguridad de ChatGPT. La app solo abre esa URL exacta (se
+  valida antes de abrirla).
+- **Permisos (scopes):** `openid profile email offline_access`. Codex CLI pide además
+  `api.connectors.read api.connectors.invoke`, que esta app no pide. Permiten leer la identidad de
+  la cuenta y renovar el acceso. El token resultante es el de la cuenta de ChatGPT para Codex: **no
+  es de solo lectura**; la app solo lo usa para leer el consumo.
 - **Cliente OAuth:** el cliente público de Codex CLI (`app_EMoamEEZ73f0CkXaXp7hrann`). OpenAI no
   documenta su uso por apps de terceros.
 - **Desconectar:** se envía a `https://auth.openai.com/oauth/revoke` la misma revocación que hace
