@@ -1,0 +1,95 @@
+# Compilar AI Usage Widget
+
+## Base del código
+
+- Proyecto original: [KyoMio/CodexMeter](https://github.com/KyoMio/CodexMeter), versión 0.2.4,
+  commit `2f7bf52167967aab97f7cb1f1e7d9af7ac3a9977` (licencia MIT, ver `LICENSE` y `NOTICE.md`).
+- Este fork conserva toda la historia del original; `git diff 2f7bf52 HEAD` muestra cada cambio.
+
+## Herramientas y versiones
+
+| Herramienta | Versión |
+| --- | --- |
+| JDK | 21 (Temurin 21.0.12 en CI; el bytecode apunta a Java 17) |
+| Gradle (wrapper) | 9.5.1 (`gradle-wrapper.jar` SHA-256 `497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7`) |
+| Android Gradle Plugin | 9.2.1 |
+| Kotlin / KSP | 2.3.21 / 2.3.8 |
+| Android SDK | `platforms;android-37.0`, `build-tools;37.0.0` |
+| minSdk / targetSdk | 31 (Android 12) / 36 |
+
+Las versiones de las librerías están fijadas en `gradle/libs.versions.toml`.
+
+## Opción A: compilar y firmar en una computadora con el SDK de Android
+
+1. Instalar JDK 21 y el SDK de Android con los paquetes de la tabla; exportar `ANDROID_HOME`.
+2. Guardar la clave de firma **fuera del repositorio** y crear un archivo de propiedades, por
+   ejemplo `~/.android/aiusagewidget-release.properties`:
+
+   ```properties
+   storeFile=/ruta/segura/aiusagewidget-release.p12
+   storePassword=...
+   keyAlias=aiusagewidget
+   keyPassword=...
+   ```
+
+   (Otra ruta: `export AIUW_RELEASE_PROPERTIES=/ruta/al/archivo.properties`.)
+3. Ejecutar:
+
+   ```bash
+   scripts/build-release.sh            # pruebas unitarias + APK release firmado
+   scripts/build-release.sh --skip-tests
+   ```
+
+   El resultado queda en `dist/AIUsageWidget-<versión>.apk` con su `.sha256`, y el script muestra la
+   verificación de `apksigner` y la huella SHA-256 del certificado.
+
+## Opción B: compilar en GitHub Actions y firmar localmente
+
+Sirve cuando la máquina que tiene la clave no puede descargar el SDK de Android (fue el caso al
+preparar la versión 1.0.0).
+
+1. En GitHub → Actions → **Export unsigned release (manual)** → *Run workflow* sobre la rama/commit
+   deseado. El workflow compila el APK release **sin firmar**, imprime su SHA-256 y escribe en los
+   registros del job el APK (en 4 partes) y el `apksigner.jar` de build-tools 37.0.0, codificados en
+   base64. No usa secretos.
+2. Reconstruir los archivos desde los registros (decodificar las partes en orden) y comprobar que los
+   SHA-256 coinciden con los impresos por el job.
+3. Firmar y verificar con la clave local:
+
+   ```bash
+   scripts/sign-exported-apk.sh app-release-unsigned.apk apksigner.jar <sha256-del-apk-sin-firmar>
+   ```
+
+   El script se niega a firmar si el SHA-256 no coincide, pasa las contraseñas a `apksigner` por
+   variables de entorno y genera `dist/AIUsageWidget-<versión>.apk` + `.sha256`.
+
+El workflow **CI** (en cada push) ejecuta las pruebas unitarias, lint, compila el APK debug y el
+release sin firmar, y publica en el registro los permisos del APK y sus dependencias de ejecución.
+
+## Verificar un APK
+
+```bash
+sha256sum AIUsageWidget-1.0.0.apk
+apksigner verify --verbose --print-certs AIUsageWidget-1.0.0.apk
+```
+
+La huella SHA-256 del certificado de firma de este fork es:
+
+```
+1C:F0:5E:0E:20:64:70:29:AE:42:8B:93:DD:7D:02:EB:3B:84:56:D3:4F:89:D6:BF:69:98:F0:E0:D6:FF:F3:8C
+```
+
+Toda actualización tiene que estar firmada con ese mismo certificado; Android rechaza instalar una
+versión firmada con otra clave encima de la existente.
+
+## Clave de firma
+
+- Archivo: `aiusagewidget-release.p12` (PKCS12, RSA 4096, SHA256withRSA, válida hasta 2056, alias
+  `aiusagewidget`) y su archivo `aiusagewidget-release.properties` con la contraseña.
+- Nunca se suben al repositorio (`.gitignore` excluye `*.p12`, `*.jks`, `*.keystore` y el archivo de
+  propiedades) ni aparecen en registros.
+- Guardar ambos en un gestor de contraseñas o almacenamiento cifrado, con una copia de respaldo. Si se
+  pierden, no se podrá actualizar la app instalada: habría que desinstalarla (borrando sus datos) e
+  instalar una nueva firmada con otra clave.
+- Para una nueva versión: subir `appVersionCode` y `appVersionName` en `app/build.gradle.kts`,
+  compilar con la opción A o B y firmar con la misma clave.

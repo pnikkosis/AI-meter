@@ -113,7 +113,8 @@ class RefreshWorkSchedulerTest {
             ),
         )
 
-        assertEquals(QuotaRefreshWorkerOutcome.Success, QuotaRefreshWorkerOutcome.fromDependencies(dependencies))
+        // Failure ends this run without WorkManager backoff; the next period tries again.
+        assertEquals(QuotaRefreshWorkerOutcome.Failure, QuotaRefreshWorkerOutcome.fromDependencies(dependencies))
     }
 
     @Test
