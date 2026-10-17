@@ -87,9 +87,26 @@ jobs:
           printf 'hw.lcd.width=720\nhw.lcd.height=1520\nhw.lcd.density=320\nhw.keyboard=yes\nhw.ramSize=3072\ndisk.dataPartition.size=3G\n' >> "$ANDROID_AVD_HOME/check.avd/config.ini"
           df -h / | tail -1
           nohup emulator -avd check -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect \
-            -camera-back none -camera-front none -change-locale "${{ matrix.locale }}" > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          timeout 300 adb wait-for-device || { tail -n 80 "$RUNNER_TEMP/emulator.log"; exit 1; }
-          timeout 900 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 5; done'
+            -camera-back none -camera-front none > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          boot_wait() {
+            timeout 300 adb wait-for-device || return 1
+            timeout 900 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 5; done' || return 1
+            # The package manager can lag behind boot_completed.
+            timeout 180 bash -c 'until adb shell pm path android > /dev/null 2>&1; do sleep 3; done'
+          }
+          boot_wait || { tail -n 80 "$RUNNER_TEMP/emulator.log"; exit 1; }
+          if [ "${{ matrix.locale }}" != "en-US" ]; then
+            # System locale via a persistent property and a reboot, so the framework does not
+            # restart later while the tests are running (what -change-locale does).
+            adb root
+            sleep 5
+            adb wait-for-device
+            adb shell setprop persist.sys.locale "${{ matrix.locale }}"
+            adb reboot
+            sleep 20
+            boot_wait || { tail -n 80 "$RUNNER_TEMP/emulator.log"; exit 1; }
+          fi
+          sleep 20
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
@@ -101,8 +118,9 @@ jobs:
       - name: Render widget states (instrumented test, debug build)
         timeout-minutes: 10
         run: |
-          adb install -r app/build/outputs/apk/debug/app-debug.apk
-          adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          for apk in app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk; do
+            for attempt in 1 2 3; do adb install -r "$apk" && break; sleep 15; done
+          done
           adb shell am instrument -w -e class com.kmnexus.codexmeter.widget.WidgetScreenshotTest \
             "$PKG.debug.test/androidx.test.runner.AndroidJUnitRunner" | tee "$RUNNER_TEMP/instrument.log"
           grep -q "^OK (1 test)" "$RUNNER_TEMP/instrument.log"

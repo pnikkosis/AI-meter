@@ -22,15 +22,19 @@ pids = set(subprocess.run(["adb", "shell", "pidof", PKG], capture_output=True, t
 log = subprocess.run(
     ["adb", "logcat", "-d", "-b", "main,system,crash", "-v", "threadtime"], capture_output=True, text=True, timeout=60,
 ).stdout
-masked = 0
+masked_in_app = 0
 lines = []
 for line in log.splitlines():
     cols = line.split()
-    if not ((len(cols) > 2 and cols[2] in pids) or PKG in line):
+    from_app = len(cols) > 2 and cols[2] in pids
+    if not (from_app or PKG in line):
         continue
     for pattern in SENSITIVE:
         line, count = pattern.subn("<masked>", line)
-        masked += count
+        if from_app:
+            masked_in_app += count
     lines.append(line)
 print("\n".join(lines[-200:]))
-print(f"app log lines: {len(lines)}, masked values: {masked}")
+# System lines that mention the package are masked too (e.g. backup "token=" counters) but only
+# values logged by the app's own process count as a finding.
+print(f"log lines: {len(lines)}, masked values in the app's own lines: {masked_in_app}")
