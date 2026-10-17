@@ -1,0 +1,103 @@
+# Manual helper for build environments that cannot download the Android SDK themselves.
+#
+# Builds the UNSIGNED release APK from the selected commit on GitHub's runner and writes it, together
+# with the official apksigner.jar of the same build-tools, base64-encoded into the job logs, with
+# their SHA-256 checksums. The person who holds the signing key then decodes the files, checks the
+# checksums and signs locally (scripts/sign-exported-apk.sh). Nothing secret is involved: the key never
+# reaches GitHub, and an unsigned APK is not installable.
+name: Export unsigned release (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build unsigned release
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      apk_sha256: ${{ steps.describe.outputs.apk_sha256 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install Android SDK packages
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" --install "platforms;android-37.0" "build-tools;37.0.0" "platform-tools" > /dev/null
+
+      - name: Build unsigned release APK
+        run: ./gradlew --no-daemon --stacktrace :app:assembleRelease
+
+      - name: Describe outputs
+        id: describe
+        run: |
+          APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          BT="$ANDROID_HOME/build-tools/37.0.0"
+          echo "commit=$GITHUB_SHA"
+          java -version 2>&1
+          ./gradlew --version
+          sha256sum "$APK" "$BT/lib/apksigner.jar"
+          stat -c '%n %s bytes' "$APK" "$BT/lib/apksigner.jar"
+          "$BT/zipalign" -c -P 16 4 "$APK" && echo "zipalign check: OK (4-byte, 16 KiB pages for .so)"
+          "$BT/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|application-label):"
+          "$BT/aapt2" dump permissions "$APK"
+          echo "apk_sha256=$(sha256sum "$APK" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          mkdir -p export
+          cp "$APK" export/app-release-unsigned.apk
+          cp "$BT/lib/apksigner.jar" export/apksigner.jar
+
+      - name: Keep files for the export jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: export
+          path: export/
+          retention-days: 3
+
+  print:
+    name: Print part ${{ matrix.part }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        part: [0, 1, 2, 3, 4]
+    steps:
+      - name: Fetch files
+        uses: actions/download-artifact@v4
+        with:
+          name: export
+          path: export
+
+      - name: Print base64 part
+        env:
+          PART: ${{ matrix.part }}
+        run: |
+          cd export
+          sha256sum app-release-unsigned.apk apksigner.jar
+          if [ "$PART" = "0" ]; then
+            echo "=====BEGIN apksigner.jar====="
+            base64 -w 76 apksigner.jar
+            echo "=====END apksigner.jar====="
+          else
+            # Four slices of the APK so each job log stays a few MB.
+            SIZE=$(stat -c %s app-release-unsigned.apk)
+            SLICE=$(( (SIZE + 3) / 4 ))
+            SLICE=$(( (SLICE + 2) / 3 * 3 ))  # multiple of 3 bytes so slices decode independently
+            dd if=app-release-unsigned.apk of=slice.bin bs=$SLICE skip=$(( PART - 1 )) count=1 iflag=fullblock status=none
+            echo "slice=$PART of 4, bytes=$(stat -c %s slice.bin), sha256=$(sha256sum slice.bin | cut -d' ' -f1)"
+            echo "=====BEGIN apk.part$PART====="
+            base64 -w 76 slice.bin
+            echo "=====END apk.part$PART====="
+          fi

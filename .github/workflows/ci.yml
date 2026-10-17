@@ -63,6 +63,15 @@ jobs:
           find app/build/outputs/apk -name '*.apk' -exec sha256sum {} \; || true
           ls -l app/build/outputs/apk/*/ || true
 
+      - name: Release APK permissions and runtime dependencies
+        if: always()
+        continue-on-error: true
+        run: |
+          APK=app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/37.0.0/aapt2" dump permissions "$APK"
+          "$ANDROID_HOME/build-tools/37.0.0/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|application-label):"
+          ./gradlew --no-daemon -q :app:dependencies --configuration releaseRuntimeClasspath | grep -E -- "--- " | sed -E 's/^[| \\+-]+//' | sort -u
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4

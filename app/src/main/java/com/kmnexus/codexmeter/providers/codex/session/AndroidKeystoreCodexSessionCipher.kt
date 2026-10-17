@@ -58,7 +58,11 @@ class AndroidKeystoreCodexSessionCipher(
             )
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                // Without an explicit size the Keystore generates AES-128.
+                .setKeySize(256)
                 .setRandomizedEncryptionRequired(true)
+                // No unlocked-device requirement on purpose: background refresh decrypts the session
+                // while the phone is locked.
                 .build(),
         )
         return keyGenerator.generateKey()
