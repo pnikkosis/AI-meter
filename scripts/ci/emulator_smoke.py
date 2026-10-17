@@ -153,6 +153,14 @@ def listening_ports(uid):
     return ports
 
 
+def network_policy(uid):
+    """Lines of `dumpsys netpolicy` about the app's uid and the background network restriction."""
+    lines = adb("shell", "dumpsys", "netpolicy", check=False).splitlines()
+    own = [line.strip()[:300] for line in lines if re.search(rf"(?i)\buid[=: ]+{uid}\b", line)]
+    general = [line.strip()[:200] for line in lines if re.search(r"(?i)background", line)]
+    return own[:6] + general[:6]
+
+
 def code_visible():
     return any(re.match(r"^(Código|Code): \S+", node.get("text") or "") for node in nodes())
 
@@ -230,6 +238,7 @@ def main():
         shot("claude-disclosure")
         listening_before = listening_ports(uid) if uid else set()
         if tap_label(continue_browser, "continue in browser"):
+            browser_opened = time.monotonic()
             time.sleep(6)
             # A fresh emulator shows Chrome's first-run screens before the custom tab.
             for labels in (
@@ -271,9 +280,16 @@ def main():
                 still = listening_ports(uid) - listening_before
                 check(bool(still), "forged callbacks do not end the sign-in attempt")
                 adb("forward", "--remove", f"tcp:{FORWARD_PORT}", check=False)
+            # Android may cut the network of an app left behind another screen (here the browser tab)
+            # after up to 20 s; the sign-in therefore exchanges the code only once the app is back.
+            time.sleep(max(0.0, 25 - (time.monotonic() - browser_opened)))
+            if uid:
+                print(f"  network policy while behind the browser tab: {network_policy(uid)}")
             adb("shell", "input", "keyevent", "KEYCODE_BACK")
             time.sleep(3)
             back_to_app()
+            if uid:
+                print(f"  network policy back in front: {network_policy(uid)}")
             shot("claude-waiting")
             if tap_label(cancel_sign_in, "cancel Claude sign-in"):
                 time.sleep(2)
