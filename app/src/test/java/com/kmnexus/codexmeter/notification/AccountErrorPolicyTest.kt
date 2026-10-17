@@ -40,6 +40,27 @@ class AccountErrorPolicyTest {
     }
 
     @Test
+    fun `being offline does not notify repeated failures, provider errors still do`() {
+        val offline = policy.evaluate(
+            state = state(
+                status = CurrentQuotaStatus.ErrorWithLastKnownGood,
+                error = QuotaError.Network(diagnosticsDigest = "safe-digest"),
+            ),
+            consecutiveFailureCount = 5,
+        )
+        val serverError = policy.evaluate(
+            state = state(
+                status = CurrentQuotaStatus.ErrorWithLastKnownGood,
+                error = QuotaError.ProviderUnavailable(httpStatus = 503, diagnosticsDigest = "safe-digest"),
+            ),
+            consecutiveFailureCount = 3,
+        )
+
+        assertNull(offline)
+        assertEquals(AccountErrorNotificationReason.RepeatedRefreshFailure, serverError?.reason)
+    }
+
+    @Test
     fun `fewer than three consecutive failed attempts do not emit repeated-failure notification`() {
         val event = policy.evaluate(
             state = state(status = CurrentQuotaStatus.ErrorWithLastKnownGood),
