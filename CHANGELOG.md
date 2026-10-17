@@ -26,6 +26,8 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
 - Endpoints actuales de Claude Code: `platform.claude.com/v1/oauth/token`; uso en
   `api.anthropic.com/api/oauth/usage` leyendo las filas `limits[]` (con los campos antiguos como
   respaldo). User-Agent propio.
+- El receptor lee la cabecera completa de la petición antes de responder y cierra la conexión de
+  forma ordenada, para que el navegador muestre la página final en lugar de un error de conexión.
 - Renovación del token antes de expirar o tras un 401, guardando los tokens rotados antes de usarlos.
 - La cuenta se identifica por el uuid de Anthropic; re-iniciar sesión con otra cuenta no cambia nada.
 - Aviso previo sobre el cliente "Claude Code", el permiso (sin presentarlo como de solo lectura), el
@@ -39,6 +41,9 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
   con el tipo de error, valores atenuados cuando no son actuales, ventanas agotadas visibles como 0 %, mensaje en
   lugar de celdas vacías, botón de actualización manual.
 - Home y Cuenta indican que el porcentaje es lo disponible.
+- Ajustes del widget hechos tras verlo renderizado en emulador: el nombre del proveedor nunca se
+  recorta, el botón de actualizar va antes del estado, los tamaños chicos muestran "estado · hora",
+  las horas siguen el formato 12/24 h del teléfono y los reinicios de la semana usan el día.
 - El refresco periódico también corre sin red para registrar "sin conexión"; ni la falta de red ni
   un 429 provocan reintentos con backoff, y estar sin conexión no genera alertas de fallos repetidos.
 
@@ -55,10 +60,12 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
 - Renovaciones de token sin reintentos de transporte.
 - Claves AES del Keystore de 256 bits explícitos.
 
-### Compilación
+### Compilación y verificación
 - La firma de release se lee de fuera del repositorio; sin ella el release queda sin firmar.
 - `scripts/build-release.sh`, `scripts/sign-exported-apk.sh`, workflow de CI y workflow manual de
   exportación del release sin firmar.
+- Workflow manual de verificación en emulador (`scripts/ci/emulator_smoke.py`) y prueba
+  instrumentada que renderiza todos los estados del widget.
 
 
 ## [0.2.4] - 2026-10-08
