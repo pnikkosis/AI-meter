@@ -49,6 +49,9 @@ mapping.txt
 # Signing / secrets
 *.jks
 *.keystore
+*.p12
+*.pfx
+aiusagewidget-release.properties
 keystore.properties
 signing.properties
 secrets.properties

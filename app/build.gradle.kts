@@ -7,30 +7,24 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// App version is derived from the latest git tag (e.g. `v0.1.1`), never hardcoded.
-// versionName = tag without the leading `v`; versionCode is packed from the semver
-// (MAJOR*10000 + MINOR*100 + PATCH) so it increases monotonically across releases.
-// Falls back to 0.0.0 when no tag is reachable (e.g. a shallow checkout without tags).
-fun gitOutput(vararg args: String): String =
-    try {
-        ProcessBuilder(listOf("git", *args))
-            .directory(rootDir)
-            .redirectErrorStream(true)
-            .start()
-            .inputStream.bufferedReader()
-            .use { it.readText() }
-            .trim()
-    } catch (e: Exception) {
-        ""
-    }
+// AI Usage Widget is an independent build of the CodexMeter code base (see NOTICE.md). The version is
+// declared here instead of being derived from git tags: the upstream repository's tags must never
+// leak into this app's versionCode, and the same commit must always produce the same version.
+// Bump both values for every APK you install over a previous one (versionCode must increase).
+val appVersionName = "1.0.0"
+val appVersionCode = 1
 
-val gitTag = gitOutput("describe", "--tags", "--abbrev=0").ifBlank { "v0.0.0" }
-val appVersionName = gitTag.removePrefix("v")
-val appVersionCode = appVersionName.substringBefore("-").split(".").let { parts ->
-    (parts.getOrNull(0)?.toIntOrNull() ?: 0) * 10000 +
-        (parts.getOrNull(1)?.toIntOrNull() ?: 0) * 100 +
-        (parts.getOrNull(2)?.toIntOrNull() ?: 0)
-}.coerceAtLeast(1)
+// Release signing material is read from outside the repository: either the AIUW_RELEASE_* environment
+// variables or a properties file (default ~/.android/aiusagewidget-release.properties, overridable via
+// AIUW_RELEASE_PROPERTIES). Nothing secret is ever committed; see docs/BUILDING.md.
+fun releaseSigningProperties(): Properties {
+    val props = Properties()
+    val path = System.getenv("AIUW_RELEASE_PROPERTIES")
+        ?: "${System.getProperty("user.home")}/.android/aiusagewidget-release.properties"
+    val file = File(path)
+    if (file.isFile) file.inputStream().use { props.load(it) }
+    return props
+}
 
 android {
     namespace = "com.kmnexus.codexmeter"
@@ -38,57 +32,24 @@ android {
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        applicationId = "com.kmnexus.codexmeter"
+        // The Kotlin namespace keeps the upstream package so the code stays diffable against
+        // CodexMeter; only the installed identity changes.
+        applicationId = "io.github.pnikkosis.aiusagewidget"
         minSdk = 31
         targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // Antigravity OAuth client secret. Extracted from the official Antigravity
-        // installed-app client — non-confidential per Google's installed-app model,
-        // but kept out of source so it never lands in the public repo. CI injects it
-        // via env; local builds fall back to local.properties (gitignored).
-        val antigravityOauthClientSecret =
-            System.getenv("ANTIGRAVITY_OAUTH_CLIENT_SECRET")
-                ?: Properties().run {
-                    val propsFile = rootProject.file("local.properties")
-                    if (propsFile.exists()) propsFile.inputStream().use { load(it) }
-                    getProperty("antigravity.oauth.clientSecret")
-                }
-                ?: ""
-        buildConfigField(
-            "String",
-            "ANTIGRAVITY_OAUTH_CLIENT_SECRET",
-            "\"$antigravityOauthClientSecret\"",
-        )
     }
 
     signingConfigs {
         create("release") {
-            // CI: all four env vars are injected by GitHub Actions.
-            // Local: falls back to ~/.android/ properties file — behaviour unchanged.
-            val envKeystorePath  = System.getenv("RELEASE_KEYSTORE_PATH")
-            val envStorePassword = System.getenv("RELEASE_STORE_PASSWORD")
-            val envKeyAlias      = System.getenv("RELEASE_KEY_ALIAS")
-            val envKeyPassword   = System.getenv("RELEASE_KEY_PASSWORD")
-
-            if (envKeystorePath != null && envStorePassword != null &&
-                envKeyAlias != null && envKeyPassword != null) {
-                storeFile     = file(envKeystorePath)
-                storePassword = envStorePassword
-                keyAlias      = envKeyAlias
-                keyPassword   = envKeyPassword
-            } else {
-                val keystoreProps = Properties().also { props ->
-                    val propsFile = file("${System.getProperty("user.home")}/.android/codexmeter-release-keystore.properties")
-                    if (propsFile.exists()) props.load(propsFile.inputStream())
-                }
-                storeFile     = keystoreProps.getProperty("storeFile")?.let { file(it) }
-                storePassword = keystoreProps.getProperty("storePassword")
-                keyAlias      = keystoreProps.getProperty("keyAlias")
-                keyPassword   = keystoreProps.getProperty("keyPassword")
-            }
+            val props = releaseSigningProperties()
+            fun value(env: String, key: String): String? = System.getenv(env) ?: props.getProperty(key)
+            storeFile = value("AIUW_RELEASE_STORE_FILE", "storeFile")?.let { file(it) }
+            storePassword = value("AIUW_RELEASE_STORE_PASSWORD", "storePassword")
+            keyAlias = value("AIUW_RELEASE_KEY_ALIAS", "keyAlias")
+            keyPassword = value("AIUW_RELEASE_KEY_PASSWORD", "keyPassword")
         }
     }
 
@@ -107,6 +68,13 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+    }
+
+    // The dependency-metadata block is an encrypted blob meant for Google Play; a sideloaded personal
+    // APK does not need it, and leaving it out keeps the APK contents inspectable.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     buildFeatures {

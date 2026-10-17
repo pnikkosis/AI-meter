@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">CodexMeter</string>
+    <string name="app_name">AI Usage Widget</string>
     <string name="tab_home">首页</string>
     <string name="tab_home_content_description">首页标签</string>
     <string name="tab_account">账号</string>
@@ -28,7 +28,7 @@
     <string name="auth_tip_kimi">通过手机号码登录 Kimi 后，点击右上角的 %1$s 图标即可，应用将自动验证并保存登录信息。</string>
     <string name="auth_tip_claude">由于内嵌浏览器限制，授权页面打开可能卡顿。若登录后授权页面长时间不弹出，点击右上角的 %1$s 图标重新载入授权页。</string>
     <string name="auth_select_region">选择区域</string>
-    <string name="auth_oauth_browser_instruction">在浏览器中完成授权后返回 CodexMeter。</string>
+    <string name="auth_oauth_browser_instruction">在浏览器中完成授权后返回 AI Usage Widget。</string>
     <string name="auth_oauth_waiting">等待浏览器授权…</string>
     <string name="auth_open_browser">打开浏览器</string>
     <string name="auth_reopen_browser">重新打开浏览器</string>
@@ -109,7 +109,7 @@
     <string name="add_account_restart_login">重新生成 code</string>
     <string name="add_account_device_code_idle">生成 device code 后，在 Codex 验证页输入授权码。</string>
     <string name="add_account_device_code_requesting">正在请求 Codex device code…</string>
-    <string name="add_account_device_code_waiting">点“打开 Codex 验证页”跳转浏览器完成授权。CodexMeter 正在轮询授权结果。</string>
+    <string name="add_account_device_code_waiting">点“打开 Codex 验证页”跳转浏览器完成授权。AI Usage Widget 正在轮询授权结果。</string>
     <string name="add_account_device_code_polling">正在检查授权是否完成…</string>
     <string name="add_account_device_code_exchanging">已收到授权，正在交换 Codex 会话…</string>
     <string name="add_account_device_code_validating">正在用 Codex 额度接口校验会话…</string>
@@ -213,7 +213,7 @@
     <string name="settings_quota_alerts_description">主额度进入紧张或耗尽状态时提醒。</string>
     <string name="settings_account_errors_title">账号与错误提醒</string>
     <string name="settings_account_errors_description">当前账号需要重新登录或连续刷新失败时提醒。</string>
-    <string name="settings_notification_permission_title">允许 CodexMeter 发送通知？</string>
+    <string name="settings_notification_permission_title">允许 AI Usage Widget 发送通知？</string>
     <string name="settings_notification_permission_description">仅用于可选的状态提示、额度告警和账号错误提醒；不授予也不影响 App 与微件。</string>
     <string name="settings_notification_permission_allow">允许通知</string>
     <string name="notification_channel_status_name">额度状态</string>
@@ -222,7 +222,7 @@
     <string name="notification_channel_quota_alerts_description">主额度紧张或耗尽时提醒。</string>
     <string name="notification_channel_account_errors_name">账号与错误</string>
     <string name="notification_channel_account_errors_description">重新登录和刷新失败提醒。</string>
-    <string name="notification_status_title">CodexMeter</string>
+    <string name="notification_status_title">AI Usage Widget</string>
     <string name="notification_status_title_percent_format">剩余 %1$d%%</string>
     <string name="notification_status_title_balance_format">剩余 %1$s</string>
     <!-- Provider·account identity line shared by the status and account-error notifications. -->
@@ -251,9 +251,9 @@
     <string name="notification_auth_login_connected_title">%1$s 账号连接成功</string>
     <string name="notification_auth_login_connected_body_format">%1$s 已可用于额度刷新。</string>
     <string name="notification_auth_login_expired_title">%1$s 登录已过期</string>
-    <string name="notification_auth_login_expired_body">回到 CodexMeter 重新生成授权码。</string>
+    <string name="notification_auth_login_expired_body">回到 AI Usage Widget 重新生成授权码。</string>
     <string name="notification_auth_login_failed_title">%1$s 登录失败</string>
-    <string name="notification_auth_login_failed_body">回到 CodexMeter 重试。安全原因：%1$s。</string>
+    <string name="notification_auth_login_failed_body">回到 AI Usage Widget 重试。安全原因：%1$s。</string>
     <string name="notification_auth_login_validation_failed_title">%1$s 额度校验失败</string>
     <string name="notification_auth_login_validation_failed_body">授权已完成，但额度校验未通过。安全原因：%1$s。</string>
     <string name="widget_description">Codex 额度状态</string>
@@ -273,11 +273,11 @@
     <string name="widget_status_auth_required">需要重新登录</string>
     <string name="widget_status_refresh_failed">刷新失败</string>
     <string name="widget_status_no_data">暂无额度数据</string>
-    <string name="widget_config_title">配置 CodexMeter 微件</string>
+    <string name="widget_config_title">配置 AI Usage Widget 微件</string>
     <string name="widget_config_description">选择此微件显示的账号与额度字段。微件会按尺寸显示前 1–4 个字段。</string>
     <string name="widget_config_loading">正在加载微件设置…</string>
     <string name="widget_config_account_section">账号</string>
-    <string name="widget_config_no_accounts">暂无已保存 Codex 账号，请先在 CodexMeter 中添加账号。</string>
+    <string name="widget_config_no_accounts">暂无已保存账号，请先在 AI Usage Widget 中添加账号。</string>
     <string name="widget_config_account_none">未选择账号</string>
     <string name="widget_config_account_current">当前账号</string>
     <string name="widget_config_fields_section">显示字段</string>
@@ -342,12 +342,12 @@
     <string name="settings_diagnostics_show">显示诊断</string>
     <string name="settings_diagnostics_hide">隐藏诊断</string>
     <string name="settings_diagnostics_collapsed_state">诊断默认折叠，复制或刷新后显示摘要。</string>
-    <string name="settings_diagnostics_clipboard_label">CodexMeter 诊断</string>
+    <string name="settings_diagnostics_clipboard_label">AI Usage Widget 诊断</string>
     <string name="settings_diagnostics_copy">复制诊断</string>
     <string name="settings_diagnostics_recheck">重新检测</string>
-    <string name="settings_about_version_format">CodexMeter %1$s</string>
+    <string name="settings_about_version_format">AI Usage Widget %1$s</string>
     <string name="settings_about_data_source">额度数据来自各供应商官方 API。</string>
-    <string name="settings_about_privacy">登录凭据仅存储在本设备本地。除访问各供应商官方 API 外，CodexMeter 不包含任何远程连接功能。</string>
+    <string name="settings_about_privacy">登录令牌仅保存在本设备，并使用 Android Keystore 密钥加密。App 只连接各服务商自己的服务器（Codex 为 OpenAI，Claude 为 Anthropic），不包含开发者服务器、统计、广告或遥测。</string>
     <string name="settings_about_repository_label">GitHub 仓库</string>
     <string name="settings_about_repository_content_description">打开 GitHub 仓库</string>
     <string name="settings_update_title">应用更新</string>

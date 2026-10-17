@@ -1,5 +1,6 @@
 package com.kmnexus.codexmeter.providers.codex.network
 
+import com.kmnexus.codexmeter.core.network.AppUserAgent
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.domain.refresh.QuotaError
 import com.kmnexus.codexmeter.providers.codex.dto.CodexUsageResponseDto
@@ -106,7 +107,7 @@ class CodexUsageClient(
 
     companion object {
         const val DEFAULT_ENDPOINT_URL = "https://chatgpt.com/backend-api/wham/usage"
-        const val DEFAULT_USER_AGENT = "CodexMeter/0.1.0"
+        const val DEFAULT_USER_AGENT = AppUserAgent.DEFAULT
 
         private const val AUTHORIZATION_HEADER = "Authorization"
         private const val ACCEPT_HEADER = "Accept"

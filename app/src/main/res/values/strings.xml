@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">CodexMeter</string>
+    <string name="app_name">AI Usage Widget</string>
     <string name="tab_home">Home</string>
     <string name="tab_home_content_description">Home tab</string>
     <string name="tab_account">Account</string>
@@ -28,7 +28,7 @@
     <string name="auth_tip_kimi">Sign in to Kimi with your phone number, then tap the %1$s icon in the top-right — CodexMeter verifies and saves your login automatically.</string>
     <string name="auth_tip_claude">Because of in-app browser limits, the authorization page can be slow to open. If the consent screen doesn\'t appear after you sign in, tap the %1$s icon in the top-right to reload the authorization page.</string>
     <string name="auth_select_region">Select region</string>
-    <string name="auth_oauth_browser_instruction">Authorize in your browser, then return to CodexMeter.</string>
+    <string name="auth_oauth_browser_instruction">Authorize in your browser, then return to AI Usage Widget.</string>
     <string name="auth_oauth_waiting">Waiting for browser authorization…</string>
     <string name="auth_open_browser">Open browser</string>
     <string name="auth_reopen_browser">Re-open browser</string>
@@ -109,7 +109,7 @@
     <string name="add_account_restart_login">Generate new code</string>
     <string name="add_account_device_code_idle">Generate a device code, then enter it in the Codex verification page.</string>
     <string name="add_account_device_code_requesting">Requesting a Codex device code…</string>
-    <string name="add_account_device_code_waiting">Tap Open verification page to continue in your browser. CodexMeter is polling for authorization.</string>
+    <string name="add_account_device_code_waiting">Tap Open verification page to continue in your browser. AI Usage Widget is polling for authorization.</string>
     <string name="add_account_device_code_polling">Checking whether authorization has completed…</string>
     <string name="add_account_device_code_exchanging">Authorization received. Exchanging it for a Codex session…</string>
     <string name="add_account_device_code_validating">Validating the session with Codex quota usage…</string>
@@ -213,7 +213,7 @@
     <string name="settings_quota_alerts_description">Notify on tight and exhausted states for the primary quota window.</string>
     <string name="settings_account_errors_title">Account and error alerts</string>
     <string name="settings_account_errors_description">Notify when the current account needs re-login or repeated refreshes fail.</string>
-    <string name="settings_notification_permission_title">Allow CodexMeter notifications?</string>
+    <string name="settings_notification_permission_title">Allow AI Usage Widget notifications?</string>
     <string name="settings_notification_permission_description">Used only for the optional status, quota alerts, and account-error alerts. The app and widget work without it.</string>
     <string name="settings_notification_permission_allow">Allow notifications</string>
     <string name="notification_channel_status_name">Quota status</string>
@@ -222,7 +222,7 @@
     <string name="notification_channel_quota_alerts_description">Tight and exhausted primary quota alerts.</string>
     <string name="notification_channel_account_errors_name">Account and errors</string>
     <string name="notification_channel_account_errors_description">Re-login and refresh failure alerts.</string>
-    <string name="notification_status_title">CodexMeter</string>
+    <string name="notification_status_title">AI Usage Widget</string>
     <string name="notification_status_title_percent_format">%1$d%% left</string>
     <string name="notification_status_title_balance_format">%1$s left</string>
     <!-- Provider·account identity line shared by the status and account-error notifications. -->
@@ -251,9 +251,9 @@
     <string name="notification_auth_login_connected_title">%1$s account connected</string>
     <string name="notification_auth_login_connected_body_format">%1$s is ready for quota refresh.</string>
     <string name="notification_auth_login_expired_title">%1$s sign-in expired</string>
-    <string name="notification_auth_login_expired_body">Return to CodexMeter to generate a new authorization code.</string>
+    <string name="notification_auth_login_expired_body">Return to AI Usage Widget to generate a new authorization code.</string>
     <string name="notification_auth_login_failed_title">%1$s sign-in failed</string>
-    <string name="notification_auth_login_failed_body">Return to CodexMeter to retry. Safe reason: %1$s.</string>
+    <string name="notification_auth_login_failed_body">Return to AI Usage Widget to retry. Safe reason: %1$s.</string>
     <string name="notification_auth_login_validation_failed_title">%1$s quota validation failed</string>
     <string name="notification_auth_login_validation_failed_body">Authorization finished, but quota validation did not pass. Safe reason: %1$s.</string>
     <string name="widget_description">Codex quota status</string>
@@ -273,11 +273,11 @@
     <string name="widget_status_auth_required">Log in again</string>
     <string name="widget_status_refresh_failed">Refresh failed</string>
     <string name="widget_status_no_data">No quota yet</string>
-    <string name="widget_config_title">Configure CodexMeter widget</string>
+    <string name="widget_config_title">Configure AI Usage Widget</string>
     <string name="widget_config_description">Choose the account and which quota fields to show. The widget shows the first 1–4 fields based on its size.</string>
     <string name="widget_config_loading">Loading widget settings…</string>
     <string name="widget_config_account_section">Account</string>
-    <string name="widget_config_no_accounts">No saved Codex account yet. Add an account in CodexMeter first.</string>
+    <string name="widget_config_no_accounts">No saved account yet. Add an account in AI Usage Widget first.</string>
     <string name="widget_config_account_none">No account selected</string>
     <string name="widget_config_account_current">Current account</string>
     <string name="widget_config_fields_section">Display fields</string>
@@ -342,12 +342,12 @@
     <string name="settings_diagnostics_show">Show diagnostics</string>
     <string name="settings_diagnostics_hide">Hide diagnostics</string>
     <string name="settings_diagnostics_collapsed_state">Diagnostics are collapsed until copied or refreshed.</string>
-    <string name="settings_diagnostics_clipboard_label">CodexMeter diagnostics</string>
+    <string name="settings_diagnostics_clipboard_label">AI Usage Widget diagnostics</string>
     <string name="settings_diagnostics_copy">Copy diagnostics</string>
     <string name="settings_diagnostics_recheck">Recheck</string>
-    <string name="settings_about_version_format">CodexMeter %1$s</string>
+    <string name="settings_about_version_format">AI Usage Widget %1$s</string>
     <string name="settings_about_data_source">Quota data comes from each provider\'s official APIs.</string>
-    <string name="settings_about_privacy">Login credentials are stored locally on this device. Apart from calling official provider APIs, CodexMeter does not include any remote-connection feature.</string>
+    <string name="settings_about_privacy">Sign-in tokens are stored on this device, encrypted with an Android Keystore key. The app only talks to the providers' own servers (OpenAI for Codex, Anthropic for Claude). There is no developer server, analytics, ads or telemetry.</string>
     <string name="settings_about_repository_label">GitHub repository</string>
     <string name="settings_about_repository_content_description">Open GitHub repository</string>
     <string name="settings_update_title">App update</string>

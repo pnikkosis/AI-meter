@@ -1,5 +1,6 @@
 package com.kmnexus.codexmeter.providers.codex.auth
 
+import com.kmnexus.codexmeter.core.network.AppUserAgent
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.domain.refresh.QuotaError
 import com.kmnexus.codexmeter.providers.codex.session.CodexSessionPayload
@@ -180,7 +181,7 @@ class CodexOAuthTokenExchanger(
 
     companion object {
         const val DEFAULT_ENDPOINT_URL = CodexOAuthConfig.TOKEN_ENDPOINT_URL
-        const val DEFAULT_USER_AGENT = "CodexMeter/0.1.0"
+        const val DEFAULT_USER_AGENT = AppUserAgent.DEFAULT
 
         private const val ACCEPT_HEADER = "Accept"
         private const val USER_AGENT_HEADER = "User-Agent"

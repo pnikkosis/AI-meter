@@ -1,8 +1,7 @@
 pluginManagement {
     repositories {
-        maven("https://dl-ssl.google.com/dl/android/maven2/") {
-            name = "GoogleDlSsl"
-        }
+        // google() is https://dl.google.com/dl/android/maven2/ (Android Gradle Plugin, AndroidX).
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -11,12 +10,10 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        maven("https://dl-ssl.google.com/dl/android/maven2/") {
-            name = "GoogleDlSsl"
-        }
+        google()
         mavenCentral()
     }
 }
 
-rootProject.name = "CodexMeter"
+rootProject.name = "AIUsageWidget"
 include(":app")

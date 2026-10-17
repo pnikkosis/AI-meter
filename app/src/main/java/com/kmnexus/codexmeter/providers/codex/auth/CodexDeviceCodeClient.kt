@@ -1,5 +1,6 @@
 package com.kmnexus.codexmeter.providers.codex.auth
 
+import com.kmnexus.codexmeter.core.network.AppUserAgent
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.domain.refresh.QuotaError
 import java.io.IOException
@@ -288,7 +289,7 @@ class CodexDeviceCodeClient(
     }
 
     companion object {
-        const val DEFAULT_USER_AGENT = "CodexMeter/0.1.0"
+        const val DEFAULT_USER_AGENT = AppUserAgent.DEFAULT
 
         private const val ACCEPT_HEADER = "Accept"
         private const val USER_AGENT_HEADER = "User-Agent"
