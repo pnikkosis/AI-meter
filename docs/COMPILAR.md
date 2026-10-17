@@ -119,6 +119,18 @@ versión firmada con otra clave encima de la existente.
 pero con minSdk 31 solo se verifica la v3, que es la que usa Android 12 o posterior
 (`--min-sdk-version 24` muestra también la v2).
 
+## Versión 1.0.0 entregada
+
+| Dato | Valor |
+| --- | --- |
+| Commit de compilación | `d0d3d0651573012e321f6bad15dde643d7a26b9d` |
+| Ejecución de exportación | Export unsigned release (manual) n.º 2 (run `39023263155`) |
+| SHA-256 del APK sin firmar | `f4b3534aecf273773084d9ca7e11a58adc1fe3ff1ab11ce7424c38b2ea1ba472` |
+| SHA-256 de `apksigner.jar` (build-tools 37.0.0) | `2defad215d7ff52968a409cde528cdaef7918b115e276b8e3378ca7a178e4180` |
+| SHA-256 de `AIUsageWidget-1.0.0.apk` (firmado) | `c17d3e26b6d7029a4b80472c0c2271479bf6caeb17d4e55cd99a830e69ca4581` |
+
+El mismo SHA-256 sin firmar salió también de la CI y de los dos emuladores de ese commit.
+
 ## Clave de firma
 
 - Archivo: `aiusagewidget-release.p12` (PKCS12, RSA 4096, SHA256withRSA, válida hasta 2056, alias

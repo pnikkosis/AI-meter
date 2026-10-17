@@ -5,7 +5,9 @@ Requisitos: Android 12 o posterior. No hace falta computadora, servidor ni servi
 ## 1. Instalar el APK
 
 1. Copiar `AIUsageWidget-1.0.0.apk` al teléfono (o descargarlo desde donde lo guardes).
-2. Opcional, recomendado: comprobar el SHA-256 del archivo con el publicado junto al APK.
+2. Opcional, recomendado: comprobar el SHA-256 del archivo. El de la versión 1.0.0 es
+   `c17d3e26b6d7029a4b80472c0c2271479bf6caeb17d4e55cd99a830e69ca4581` (también en el `.sha256` que
+   acompaña al APK y en `docs/COMPILAR.md`).
 3. Abrirlo desde el administrador de archivos. Android pedirá permitir “Instalar apps desconocidas”
    para esa app; concederlo solo para esta instalación.
 4. Play Protect puede advertir que la app no es conocida: es esperable en una compilación personal.
