@@ -241,52 +241,57 @@ credenciales:
   dueño no encontró. En 1.0.2 Codex inicia sesión en el navegador, como `codex login`, sin ese
   ajuste.
 
+### Tercera prueba (versión 1.0.2)
+
+Según las capturas del dueño:
+
+- **Codex funcionó con el inicio de sesión en el navegador:** la cuenta se conectó y la app muestra
+  plan Pro 20x y la ventana de 7 días con 0 % disponible (“Agotado”) y reinicio el 22/10. Queda
+  confirmado con una cuenta real el recorrido completo: autorización, canje del código con PKCE,
+  lectura del consumo y guardado. También que una ventana agotada no impide conectar la cuenta.
+- **Claude** siguió conectado después de instalar la 1.0.2 encima de la 1.0.1.
+- **Notificación persistente:** el interruptor quedó encendido (permiso concedido), con la cuenta
+  actual y la ventana de 7 días.
+- **Widgets:** uno por cuenta en la pantalla de inicio, con datos de las 16:09.
+- **Detalles a corregir en el rediseño:** en Inicio, “Datos actuales” aparece en rojo para la cuenta
+  agotada, como si fuera un error; el widget de Codex dice “Escaso” con 0 % mientras Inicio dice
+  “Agotado”; y la pestaña Cuentas muestra la cuenta actual dos veces.
+
 ## 6. Pendiente: comprobar en el teléfono
 
 Fuera de lo que cuenta la sección 5, nada de esto se probó con cuentas reales. Orden sugerido, con
 el resultado esperado:
 
-1. **Instalar** `AIUsageWidget-1.0.2.apk` encima de 1.0.1 y comprobar el SHA-256. Esperado: se
-   instala como actualización (misma firma, código de versión 3) y Claude sigue conectado.
-2. **Notificación persistente:** Ajustes → Notificación persistente. Esperado: el interruptor se ve
-   apagado con el aviso “Android tiene bloqueadas las notificaciones…”; al encenderlo, la app explica
-   para qué las usa y Android pregunta; con **Permitir**, aparece la notificación con el disponible
-   de la cuenta actual.
-3. **Codex (1.0.2, en el navegador):** Agregar cuenta → Codex → leer el aviso → Continuar en el
-   navegador → iniciar sesión en OpenAI y aprobar → cuando aparezca “Sesión iniciada en AI Usage
-   Widget”, cerrar la pestaña. Esperado: “Cuenta conectada.” y en Inicio los límites de Codex con su
-   reinicio. **Nunca se probó con una cuenta real.** En el emulador OpenAI aceptó el pedido hasta la
-   página de inicio de sesión (sección 3); falta ver con una cuenta el canje del código y la lectura
-   del consumo (si algo falla, la pantalla dice el motivo y no guarda nada).
-4. **Claude, tercer medidor:** en Inicio, el que decía “Límite” ahora debería decir “7 días · ” y el
-   nombre que informa Claude.
-5. **Widgets:** agregar uno por cuenta, elegir campos, probar los cuatro tamaños y el botón de
-   actualizar. Esperado: proveedor, ventana, “disponible”, hora de los datos y reinicio legibles.
-6. **Estados:** modo avión y tocar actualizar → “Sin conexión · Actualizado …” con valores
+1. **Claude, tercer medidor:** en Inicio, con Claude como cuenta actual, el que decía “Límite”
+   debería decir “7 días · ” y el nombre que informa Claude.
+2. **Notificación:** ver en el panel que aparezca con el disponible de la cuenta elegida.
+3. **Widgets:** probar los cuatro tamaños y el botón de actualizar.
+4. **Estados:** modo avión y tocar actualizar → “Sin conexión · Actualizado …” con valores
    atenuados; volver a conectar → valores normales.
-7. **Segundo plano:** dejar el teléfono una o dos horas con la pantalla apagada y ver la hora de los
+5. **Segundo plano:** dejar el teléfono una o dos horas con la pantalla apagada y ver la hora de los
    datos del widget (Android puede demorar el refresco en Doze).
-8. **Desconectar Codex:** Cuentas → Desplegar → Desconectar. Esperado: aviso “el proveedor aceptó el
+6. **Desconectar Codex:** Cuentas → Desplegar → Desconectar. Esperado: aviso “el proveedor aceptó el
    pedido de revocar…” y la cuenta desaparece de la app y de los widgets.
-9. **Desconectar Claude:** igual. Esperado: aviso de borrado solo local; la sesión de claude.ai del
+7. **Desconectar Claude:** igual. Esperado: aviso de borrado solo local; la sesión de claude.ai del
    navegador sigue abierta.
-10. **Opcional, tráfico:** con una app como PCAPdroid (sin root) se puede ver a qué hosts se conecta
-    la app; deberían aparecer solo `auth.openai.com`, `chatgpt.com`, `platform.claude.com` y
-    `api.anthropic.com`.
+8. **Opcional, tráfico:** con una app como PCAPdroid (sin root) se puede ver a qué hosts se conecta
+   la app; deberían aparecer solo `auth.openai.com`, `chatgpt.com`, `platform.claude.com` y
+   `api.anthropic.com`.
 
 ## 7. Limitaciones conocidas
 
-- **Política de Anthropic:** sus términos reservan el inicio de sesión de Claude.ai para Claude Code y
-  las apps de Anthropic. Esta app usa el cliente de Claude Code y guarda el token; Anthropic podría
-  restringir la cuenta (ver `docs/SEGURIDAD.md`). Alternativa sin ese riesgo: no conectar Claude y
-  ver el uso en la app oficial o en claude.ai.
+- **Política de Anthropic:** su documentación de Claude Code dice que no permite a desarrolladores de
+  terceros ofrecer el inicio de sesión de Claude.ai ni guardar sus tokens, y que puede aplicarlo sin
+  aviso. Esta app usa el cliente de Claude Code y guarda el token; Anthropic podría restringir la
+  cuenta (ver `docs/SEGURIDAD.md` y `docs/PRODUCTO-Y-PLAY-STORE.md`). Alternativa sin ese riesgo: no
+  conectar Claude y ver el uso en la app oficial o en claude.ai.
 - **Permiso mínimo de Claude:** confirmado en el teléfono con 1.0.1: la autorización aceptó
   `user:profile` solo y el endpoint de uso respondió con ese token (sección 5). Claude Code pide
   además `user:inference`; si Anthropic dejara de aceptar `user:profile` solo, la app lo mostraría
   como “Claude aceptó el inicio de sesión pero se negó a informar el consumo”.
-- **Inicio de sesión de Codex en el navegador sin probar con una cuenta:** sus partes se probaron
-  por separado (sección 2 y emulador), pero el recorrido completo con una cuenta real queda para el
-  teléfono (sección 6).
+- **Cliente de Codex CLI:** OpenAI no autoriza ese cliente para apps comerciales; para una versión
+  publicada habría que usar su programa “Sign in with ChatGPT” (ver
+  `docs/PRODUCTO-Y-PLAY-STORE.md`).
 - **Endpoints no documentados:** `chatgpt.com/backend-api/wham/usage` y `api.anthropic.com/api/oauth/usage`
   no son APIs públicas; pueden cambiar sin aviso. La app lo mostraría como “Datos ilegibles” o
   “Error del proveedor”, nunca como 0 %.
