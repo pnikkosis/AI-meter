@@ -54,11 +54,30 @@ class ProviderHttpClientSecurityTest {
     }
 
     @Test
-    fun `production allowlist is exactly the provider API hosts`() {
-        assertEquals(
-            setOf("auth.openai.com", "chatgpt.com", "platform.claude.com", "api.anthropic.com"),
-            ProviderHosts.ALL,
-        )
+    fun `production allowlists are exactly each provider's API hosts`() {
+        assertEquals(setOf("auth.openai.com", "chatgpt.com"), ProviderHosts.CODEX)
+        assertEquals(setOf("platform.claude.com", "api.anthropic.com"), ProviderHosts.CLAUDE)
+        assertEquals(ProviderHosts.CODEX + ProviderHosts.CLAUDE, ProviderHosts.ALL)
+    }
+
+    @Test
+    fun `a provider's client cannot send a credential to the other provider`() = runTest {
+        val codexOnly = ProviderHttpClient(allowedHosts = ProviderHosts.CODEX)
+        val claudeOnly = ProviderHttpClient(allowedHosts = ProviderHosts.CLAUDE)
+
+        listOf(
+            codexOnly to "https://api.anthropic.com/api/oauth/usage",
+            codexOnly to "https://platform.claude.com/v1/oauth/token",
+            claudeOnly to "https://chatgpt.com/backend-api/wham/usage",
+            claudeOnly to "https://auth.openai.com/oauth/token",
+        ).forEach { (client, url) ->
+            try {
+                client.get(url, headers = mapOf("Authorization" to "Bearer secret"))
+                fail("$url must be blocked")
+            } catch (_: DisallowedHostException) {
+                // expected
+            }
+        }
     }
 
     @Test

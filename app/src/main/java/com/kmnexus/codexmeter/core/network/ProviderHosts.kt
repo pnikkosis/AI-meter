@@ -17,5 +17,11 @@ object ProviderHosts {
     /** Claude usage endpoint (`/api/oauth/usage`). */
     const val ANTHROPIC_API = "api.anthropic.com"
 
-    val ALL: Set<String> = setOf(OPENAI_AUTH, CHATGPT, CLAUDE_PLATFORM, ANTHROPIC_API)
+    /** Hosts a Codex (OpenAI) credential may be sent to. */
+    val CODEX: Set<String> = setOf(OPENAI_AUTH, CHATGPT)
+
+    /** Hosts a Claude (Anthropic) credential may be sent to. */
+    val CLAUDE: Set<String> = setOf(CLAUDE_PLATFORM, ANTHROPIC_API)
+
+    val ALL: Set<String> = CODEX + CLAUDE
 }

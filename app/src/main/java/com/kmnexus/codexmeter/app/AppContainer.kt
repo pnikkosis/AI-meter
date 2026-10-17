@@ -178,18 +178,21 @@ class AppContainer private constructor(
             val retentionPreferences = RetentionPreferences(currentAccountPreferences.dataStore)
             val notificationPreferences = NotificationPreferencesDataStore(currentAccountPreferences.dataStore)
             val primaryQuotaWindowPreferences = PrimaryQuotaWindowPreferences(currentAccountPreferences.dataStore)
-            // Every provider request goes over HTTPS to an allowlisted provider host, without
-            // following redirects. Token grants use a client that never replays a request, so a
-            // rotated refresh token cannot be burned by a silent transport retry.
-            val httpClient = ProviderHttpClient(allowedHosts = ProviderHosts.ALL)
-            val tokenHttpClient = ProviderHttpClient.noRetry(allowedHosts = ProviderHosts.ALL)
-            // Disconnecting waits at most this long for the provider before deleting local data.
+            // Every provider request goes over HTTPS, without following redirects, and each provider's
+            // clients can only reach that provider's own hosts: a Codex token can never be sent to
+            // Anthropic or the other way round. Token grants use a client that never replays a
+            // request, so a rotated refresh token cannot be burned by a silent transport retry.
+            val httpClient = ProviderHttpClient(allowedHosts = ProviderHosts.CODEX)
+            val tokenHttpClient = ProviderHttpClient.noRetry(allowedHosts = ProviderHosts.CODEX)
+            val claudeHttpClient = ProviderHttpClient(allowedHosts = ProviderHosts.CLAUDE)
+            val claudeTokenHttpClient = ProviderHttpClient.noRetry(allowedHosts = ProviderHosts.CLAUDE)
+            // Disconnecting waits at most this long for OpenAI before deleting local data.
             val revokeHttpClient = ProviderHttpClient(
                 okHttpClient = OkHttpClient.Builder()
                     .callTimeout(10, TimeUnit.SECONDS)
                     .retryOnConnectionFailure(false)
                     .build(),
-                allowedHosts = ProviderHosts.ALL,
+                allowedHosts = ProviderHosts.CODEX,
             )
             val usageClient = CodexUsageClient(httpClient)
             val sessionStore = FileSecureSessionStore(
@@ -240,8 +243,8 @@ class AppContainer private constructor(
                 usageFetcher = CodexUsageFetcher(usageClient::fetchUsage),
                 clock = clock,
             )
-            val claudeUsageClient = ClaudeUsageClient(httpClient)
-            val claudeTokenClient = ClaudeTokenClient(tokenHttpClient)
+            val claudeUsageClient = ClaudeUsageClient(claudeHttpClient)
+            val claudeTokenClient = ClaudeTokenClient(claudeTokenHttpClient)
             val claudeRefreshProvider = ClaudeRefreshProvider(
                 usageClient = claudeUsageClient,
                 tokenClient = claudeTokenClient,
