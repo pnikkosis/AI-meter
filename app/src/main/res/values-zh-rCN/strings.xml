@@ -164,6 +164,7 @@
     <string name="settings_primary_window_weekly">7天额度</string>
     <string name="settings_status_notification_title">常驻状态通知</string>
     <string name="settings_status_notification_description">在通知栏显示低打扰的额度状态。</string>
+    <string name="settings_notifications_blocked_hint">Android 已阻止此应用的通知。打开开关即可允许。</string>
     <string name="settings_notification_account_title">通知账号</string>
     <string name="settings_notification_account_description">选择常驻通知显示的账号。</string>
     <string name="settings_notification_account_follow_current">跟随当前账号</string>

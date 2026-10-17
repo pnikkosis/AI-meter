@@ -164,6 +164,7 @@
     <string name="settings_primary_window_weekly">7 días</string>
     <string name="settings_status_notification_title">Notificación de estado persistente</string>
     <string name="settings_status_notification_description">Estado discreto de los límites en el panel de notificaciones.</string>
+    <string name="settings_notifications_blocked_hint">Android tiene bloqueadas las notificaciones de esta app. Activar el interruptor para permitirlas.</string>
     <string name="settings_notification_account_title">Cuenta de la notificación</string>
     <string name="settings_notification_account_description">Cuenta que muestra la notificación persistente.</string>
     <string name="settings_notification_account_follow_current">Según la cuenta actual</string>

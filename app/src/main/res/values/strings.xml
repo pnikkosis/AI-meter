@@ -164,6 +164,7 @@
     <string name="settings_primary_window_weekly">7-day quota</string>
     <string name="settings_status_notification_title">Persistent status notification</string>
     <string name="settings_status_notification_description">A low-noise quota status in the notification shade.</string>
+    <string name="settings_notifications_blocked_hint">Android is blocking this app\'s notifications. Turn the switch on to allow them.</string>
     <string name="settings_notification_account_title">Notification account</string>
     <string name="settings_notification_account_description">Choose which account the persistent notification displays.</string>
     <string name="settings_notification_account_follow_current">Follow current account</string>

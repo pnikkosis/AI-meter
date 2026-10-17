@@ -150,6 +150,7 @@ private fun ThemeModeSegmentedControl(
 @Composable
 internal fun PersistentNotificationCard(
     persistentNotification: SettingsPersistentNotificationUi,
+    notificationsEnabled: Boolean,
     onEnabledChanged: (Boolean) -> Unit,
     onAccountClick: () -> Unit,
     onWindowClick: () -> Unit,
@@ -159,9 +160,19 @@ internal fun PersistentNotificationCard(
             SwitchRow(
                 titleResId = R.string.settings_status_notification_title,
                 descriptionResId = R.string.settings_status_notification_description,
-                checked = persistentNotification.enabled,
+                checked = SettingsNotificationPermissionGate.shownAsEnabled(
+                    preferenceEnabled = persistentNotification.enabled,
+                    notificationsEnabled = notificationsEnabled,
+                ),
                 onCheckedChange = onEnabledChanged,
             )
+            if (!notificationsEnabled) {
+                Text(
+                    text = stringResource(R.string.settings_notifications_blocked_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CodexMeterTheme.colors.warning,
+                )
+            }
             ChoiceSummaryTextRow(
                 titleResId = R.string.settings_notification_account_title,
                 descriptionResId = null,
@@ -184,6 +195,7 @@ internal fun PersistentNotificationCard(
 @Composable
 internal fun AlertsCard(
     alerts: SettingsAlertsUi,
+    notificationsEnabled: Boolean,
     onAccountErrorsChanged: (Boolean) -> Unit,
     onCautionThresholdChanged: (Int) -> Unit,
     onWarningThresholdChanged: (Int) -> Unit,
@@ -193,7 +205,10 @@ internal fun AlertsCard(
             SwitchRow(
                 titleResId = R.string.settings_account_errors_title,
                 descriptionResId = R.string.settings_account_errors_description,
-                checked = alerts.accountErrorsEnabled,
+                checked = SettingsNotificationPermissionGate.shownAsEnabled(
+                    preferenceEnabled = alerts.accountErrorsEnabled,
+                    notificationsEnabled = notificationsEnabled,
+                ),
                 onCheckedChange = onAccountErrorsChanged,
             )
             ThresholdSlider(

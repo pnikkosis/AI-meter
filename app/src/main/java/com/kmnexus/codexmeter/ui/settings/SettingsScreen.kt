@@ -1,9 +1,11 @@
 package com.kmnexus.codexmeter.ui.settings
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PowerManager
@@ -34,6 +36,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,7 +50,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
@@ -99,6 +107,42 @@ fun SettingsRoute(
     val coroutineScope = rememberCoroutineScope()
     val diagnosticsClipboardLabel = stringResource(R.string.settings_diagnostics_clipboard_label)
     var pendingPermissionTarget by remember { mutableStateOf<SettingsNotificationPermissionTarget?>(null) }
+    // What Android allows, re-read whenever the screen comes back (from the permission dialog or the
+    // system settings): the switches never claim a notification Android would not show.
+    var notificationsEnabled by remember { mutableStateOf(context.areAppNotificationsEnabled()) }
+    var pendingSystemSettingsTarget by remember { mutableStateOf<SettingsNotificationPermissionTarget?>(null) }
+    var rationaleBeforeRequest by remember { mutableStateOf(false) }
+    fun enableNotificationTarget(target: SettingsNotificationPermissionTarget) {
+        when (target) {
+            SettingsNotificationPermissionTarget.StatusNotification -> viewModel.setStatusNotificationEnabled(true)
+            SettingsNotificationPermissionTarget.AccountErrors -> viewModel.setAccountErrorsEnabled(true)
+        }
+    }
+    fun openNotificationSettings(target: SettingsNotificationPermissionTarget) {
+        pendingSystemSettingsTarget = target
+        runCatching {
+            context.startActivity(SettingsNotificationSettingsTarget.appNotificationSettingsIntent(context.packageName))
+        }.onFailure { pendingSystemSettingsTarget = null }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsEnabled = context.areAppNotificationsEnabled()
+                // Kept until notifications are allowed: the screen also resumes right before the
+                // system settings page opens.
+                val target = pendingSystemSettingsTarget
+                if (target != null && notificationsEnabled) {
+                    pendingSystemSettingsTarget = null
+                    enableNotificationTarget(target)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     var batteryOptimizationIgnored by remember { mutableStateOf(context.isIgnoringBatteryOptimizations()) }
     // The system dialog always returns RESULT_CANCELED, so re-read PowerManager on return instead of
     // trusting the result code to decide whether the hint should disappear.
@@ -110,34 +154,46 @@ fun SettingsRoute(
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        when (pendingPermissionTarget) {
-            SettingsNotificationPermissionTarget.StatusNotification -> {
-                if (granted) {
-                    viewModel.setStatusNotificationEnabled(true)
-                }
-            }
-            SettingsNotificationPermissionTarget.AccountErrors -> {
-                if (granted) {
-                    viewModel.setAccountErrorsEnabled(true)
-                }
-            }
-            null -> Unit
-        }
+        val target = pendingPermissionTarget
         pendingPermissionTarget = null
+        notificationsEnabled = context.areAppNotificationsEnabled()
+        if (target != null) {
+            if (granted) {
+                enableNotificationTarget(target)
+            } else if (
+                SettingsNotificationPermissionGate.shouldOpenSystemSettingsAfterDenial(
+                    rationaleBeforeRequest = rationaleBeforeRequest,
+                    rationaleAfterRequest = context.shouldShowNotificationRationale(),
+                )
+            ) {
+                openNotificationSettings(target)
+            }
+        }
     }
     LaunchedEffect(viewModel) {
         viewModel.loadSettings()
     }
     var licensesVisible by rememberSaveable { mutableStateOf(false) }
     fun requestPermissionOrEnable(target: SettingsNotificationPermissionTarget, requestedEnabled: Boolean) {
+        val permissionGranted = context.hasNotificationPermission()
+        notificationsEnabled = context.areAppNotificationsEnabled()
         if (
             SettingsNotificationPermissionGate.shouldRequestPermission(
                 sdkInt = Build.VERSION.SDK_INT,
-                notificationPermissionGranted = context.hasNotificationPermission(),
+                notificationPermissionGranted = permissionGranted,
                 requestedEnabled = requestedEnabled,
             )
         ) {
             pendingPermissionTarget = target
+        } else if (
+            SettingsNotificationPermissionGate.shouldOpenSystemSettings(
+                sdkInt = Build.VERSION.SDK_INT,
+                notificationPermissionGranted = permissionGranted,
+                notificationsEnabled = notificationsEnabled,
+                requestedEnabled = requestedEnabled,
+            )
+        ) {
+            openNotificationSettings(target)
         } else {
             when (target) {
                 SettingsNotificationPermissionTarget.StatusNotification ->
@@ -154,6 +210,7 @@ fun SettingsRoute(
         onChoiceDialogDismiss = viewModel::dismissChoiceDialog,
         onPersistentNotificationAccountSelected = viewModel::updatePersistentNotificationAccount,
         onPersistentNotificationWindowSelected = viewModel::updatePersistentNotificationWindow,
+        notificationsEnabled = notificationsEnabled,
         onStatusNotificationChanged = { enabled ->
             requestPermissionOrEnable(SettingsNotificationPermissionTarget.StatusNotification, enabled)
         },
@@ -203,6 +260,7 @@ fun SettingsRoute(
     pendingPermissionTarget?.let {
         NotificationPermissionRationaleDialog(
             onConfirm = {
+                rationaleBeforeRequest = context.shouldShowNotificationRationale()
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             },
             onDismiss = {
@@ -220,6 +278,7 @@ fun SettingsScreen(
     onChoiceDialogDismiss: () -> Unit = {},
     onPersistentNotificationAccountSelected: (SettingsNotificationAccountSelection) -> Unit = {},
     onPersistentNotificationWindowSelected: (QuotaWindowId) -> Unit = {},
+    notificationsEnabled: Boolean = true,
     onStatusNotificationChanged: (Boolean) -> Unit = {},
     onAccountErrorsChanged: (Boolean) -> Unit = {},
     onCautionThresholdChanged: (Int) -> Unit = {},
@@ -255,6 +314,7 @@ fun SettingsScreen(
         SettingsSectionLabel(R.string.settings_group_persistent_notification)
         PersistentNotificationCard(
             persistentNotification = uiState.persistentNotification,
+            notificationsEnabled = notificationsEnabled,
             onEnabledChanged = onStatusNotificationChanged,
             onAccountClick = { onChoiceDialogRequested(SettingsChoiceDialog.NotificationAccount) },
             onWindowClick = { onChoiceDialogRequested(SettingsChoiceDialog.NotificationWindow) },
@@ -262,6 +322,7 @@ fun SettingsScreen(
         SettingsSectionLabel(R.string.settings_group_alerts)
         AlertsCard(
             alerts = uiState.alerts,
+            notificationsEnabled = notificationsEnabled,
             onAccountErrorsChanged = onAccountErrorsChanged,
             onCautionThresholdChanged = onCautionThresholdChanged,
             onWarningThresholdChanged = onWarningThresholdChanged,
@@ -563,6 +624,22 @@ private fun Context.hasNotificationPermission(): Boolean =
             this,
             Manifest.permission.POST_NOTIFICATIONS,
         ) == PackageManager.PERMISSION_GRANTED
+
+/** False when Android blocks the app's notifications: permission not granted (13+) or turned off. */
+private fun Context.areAppNotificationsEnabled(): Boolean =
+    NotificationManagerCompat.from(this).areNotificationsEnabled()
+
+private fun Context.shouldShowNotificationRationale(): Boolean {
+    val activity = findActivity() ?: return false
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 // Null when PowerManager is unavailable so the hint stays hidden rather than guessing.
 private fun Context.isIgnoringBatteryOptimizations(): Boolean? =
