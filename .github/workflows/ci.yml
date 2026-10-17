@@ -1,0 +1,84 @@
+# Verification build: unit tests, lint, debug APK and an UNSIGNED release APK.
+# It uses no secrets and publishes nothing; the signed release APK is built locally with
+# scripts/build-release.sh and the signing key that lives outside the repository.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Tests, lint and APKs
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install Android SDK packages
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" --install "platforms;android-37.0" "build-tools;37.0.0" "platform-tools" > /dev/null
+          "$SDKMANAGER" --list_installed | grep -E "platforms;android-37|build-tools;37" || true
+
+      - name: Record toolchain
+        run: |
+          java -version 2>&1
+          ./gradlew --version
+          sha256sum gradle/wrapper/gradle-wrapper.jar
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest
+
+      - name: Assemble debug and unsigned release APKs
+        if: always()
+        run: ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease
+
+      - name: Lint
+        if: always()
+        continue-on-error: true
+        run: ./gradlew --no-daemon :app:lintDebug
+
+      - name: APK checksums
+        if: always()
+        run: |
+          find app/build/outputs/apk -name '*.apk' -exec sha256sum {} \; || true
+          ls -l app/build/outputs/apk/*/ || true
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks-unsigned-and-debug
+          path: app/build/outputs/apk/
+          retention-days: 14
+          if-no-files-found: ignore

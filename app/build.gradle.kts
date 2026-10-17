@@ -26,6 +26,15 @@ fun releaseSigningProperties(): Properties {
     return props
 }
 
+val releaseSigning = releaseSigningProperties()
+
+fun releaseSigningValue(env: String, key: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: releaseSigning.getProperty(key)?.takeIf { it.isNotBlank() }
+
+// Without signing material the release build is produced unsigned (app-release-unsigned.apk), which is
+// what CI does; scripts/build-release.sh refuses to run without it.
+val releaseStoreFile: String? = releaseSigningValue("AIUW_RELEASE_STORE_FILE", "storeFile")
+
 android {
     namespace = "com.kmnexus.codexmeter"
     compileSdk = 37
@@ -43,13 +52,13 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val props = releaseSigningProperties()
-            fun value(env: String, key: String): String? = System.getenv(env) ?: props.getProperty(key)
-            storeFile = value("AIUW_RELEASE_STORE_FILE", "storeFile")?.let { file(it) }
-            storePassword = value("AIUW_RELEASE_STORE_PASSWORD", "storePassword")
-            keyAlias = value("AIUW_RELEASE_KEY_ALIAS", "keyAlias")
-            keyPassword = value("AIUW_RELEASE_KEY_PASSWORD", "keyPassword")
+        releaseStoreFile?.let { storePath ->
+            create("release") {
+                storeFile = file(storePath)
+                storePassword = releaseSigningValue("AIUW_RELEASE_STORE_PASSWORD", "storePassword")
+                keyAlias = releaseSigningValue("AIUW_RELEASE_KEY_ALIAS", "keyAlias")
+                keyPassword = releaseSigningValue("AIUW_RELEASE_KEY_PASSWORD", "keyPassword")
+            }
         }
     }
 
@@ -66,7 +75,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
