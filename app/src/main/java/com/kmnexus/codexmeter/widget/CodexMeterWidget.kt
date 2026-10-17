@@ -48,8 +48,10 @@ import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.ui.navigation.CodexMeterLaunchDestination
 import com.kmnexus.codexmeter.ui.navigation.CodexMeterRoute
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 class CodexMeterWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(WidgetLayoutVariant.referenceSizes)
@@ -139,7 +141,7 @@ private fun ThreeByOneContent(context: Context, state: WidgetQuotaState) {
                 style = TextStyle(color = WidgetTextProvider, fontSize = 13.sp, fontWeight = FontWeight.Medium),
                 maxLines = 1,
             )
-            StatusRefreshRow(context, state, modifier = GlanceModifier.padding(top = 2.dp))
+            StatusRefreshRow(context, state, modifier = GlanceModifier.padding(top = 2.dp), compact = true)
             field?.resetLine(context)?.let { reset ->
                 Text(
                     text = reset,
@@ -287,7 +289,12 @@ private fun WidgetHeaderRow(
  * button comes first so that a status too long for the space is what gets cut, never the button.
  */
 @Composable
-private fun StatusRefreshRow(context: Context, state: WidgetQuotaState, modifier: GlanceModifier = GlanceModifier) {
+private fun StatusRefreshRow(
+    context: Context,
+    state: WidgetQuotaState,
+    modifier: GlanceModifier = GlanceModifier,
+    compact: Boolean = false,
+) {
     Row(modifier = modifier, verticalAlignment = Alignment.Vertical.CenterVertically) {
         Image(
             provider = ImageProvider(R.drawable.ic_action_refresh),
@@ -297,9 +304,11 @@ private fun StatusRefreshRow(context: Context, state: WidgetQuotaState, modifier
         )
         Spacer(GlanceModifier.width(4.dp))
         Text(
-            text = state.statusLine(context),
+            text = state.statusLine(context, compact),
             style = TextStyle(color = state.tone.statusAccentProvider(), fontSize = 10.sp, fontWeight = FontWeight.Medium),
-            maxLines = 1,
+            // Narrow layouts have height to spare but not width: a long status wraps instead of
+            // hiding the time of the data.
+            maxLines = if (compact) 2 else 1,
         )
     }
 }
@@ -321,7 +330,7 @@ private fun QuadrantHeader(context: Context, state: WidgetQuotaState, modifier: 
                     maxLines = 1,
                 )
             }
-            StatusRefreshRow(context, state, modifier = GlanceModifier.padding(top = 4.dp))
+            StatusRefreshRow(context, state, modifier = GlanceModifier.padding(top = 4.dp), compact = true)
         }
     }
 }
@@ -581,11 +590,15 @@ private fun WidgetQuotaState.headerTitle(wide: Boolean): String =
 private fun WidgetQuotaState.accountSuffix(): String =
     accountName?.takeIf { it.isNotBlank() && it != providerName }?.let { " · $it" }.orEmpty()
 
-/** "Normal · Updated 14:05"; just the status word when there is no data yet. */
-private fun WidgetQuotaState.statusLine(context: Context): String {
+/**
+ * "Normal · Updated 14:05"; just the status word when there is no data yet. [compact] layouts drop
+ * "Updated" ("Normal · 14:05") so the time of the data still fits.
+ */
+private fun WidgetQuotaState.statusLine(context: Context, compact: Boolean = false): String {
     val status = context.getString(statusLabelResId())
     val updated = lastUpdatedAt ?: return status
-    return context.getString(R.string.widget_status_updated_format, status, updated.formatWidgetTime(context))
+    val format = if (compact) R.string.widget_status_compact_format else R.string.widget_status_updated_format
+    return context.getString(format, status, updated.formatWidgetTime(context))
 }
 
 @androidx.annotation.StringRes
@@ -694,16 +707,21 @@ internal fun WidgetQuotaTone.statusGlowArgb(): Int =
     statusGlowColor().toArgb()
 
 /**
- * Time only when the instant is today, otherwise short month/day + time (never the year: data
- * times and resets are always near-term). The hour cycle follows the phone's 12/24-hour setting;
- * getBestDateTimePattern keeps the locale's field order.
+ * Time only when the instant is today, weekday + time within a week of today (a weekly reset, data
+ * from a few days ago), otherwise short month/day + time; never the year. The hour cycle follows
+ * the phone's 12/24-hour setting; getBestDateTimePattern keeps the locale's field order.
  */
 private fun Instant.formatWidgetTime(context: Context): String {
     val locale = context.resources.configuration.locales[0]
     val zone = ZoneId.systemDefault()
     val hours = if (DateFormat.is24HourFormat(context)) "Hm" else "hm"
-    val sameDay = atZone(zone).toLocalDate() == java.time.LocalDate.now(zone)
-    val pattern = DateFormat.getBestDateTimePattern(locale, if (sameDay) hours else "Md$hours")
+    val days = ChronoUnit.DAYS.between(LocalDate.now(zone), atZone(zone).toLocalDate())
+    val skeleton = when {
+        days == 0L -> hours
+        days in -6L..6L -> "EEE$hours"
+        else -> "Md$hours"
+    }
+    val pattern = DateFormat.getBestDateTimePattern(locale, skeleton)
     return DateTimeFormatter.ofPattern(pattern, locale).withZone(zone).format(this)
 }
 

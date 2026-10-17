@@ -329,7 +329,7 @@
     <string name="claude_login_disclosure_storage">The tokens stay on this device, encrypted with an Android Keystore key. Disconnecting deletes them from the device; Anthropic provides no way for this app to revoke the authorization on its servers.</string>
     <string name="claude_login_disclosure_policy">Anthropic\'s terms reserve this sign-in for Claude Code and Anthropic\'s own apps, and Anthropic may restrict accounts that use it elsewhere. Continue only if you accept that risk. Without signing in, you can check usage in the official Claude app or on claude.ai under Settings &gt; Usage.</string>
     <string name="claude_login_continue">Continue in browser</string>
-    <string name="claude_login_waiting">Finish signing in in the browser. When the page says you are signed in, close it to return here.</string>
+    <string name="claude_login_waiting">Finish signing in with the browser. When the page says you are signed in, close it to return here.</string>
     <string name="claude_login_reopen">Open the sign-in page again</string>
     <string name="claude_login_connecting">Checking the sign-in with Claude…</string>
     <string name="claude_login_done">Done</string>
@@ -357,6 +357,8 @@
     <string name="account_disconnected_ok">OK</string>
     <string name="quota_window_remaining_format">%1$s · left</string>
     <string name="widget_status_updated_format">%1$s · Updated %2$s</string>
+    <!-- Narrow widget layouts: status and the time of the data, without "Updated". -->
+    <string name="widget_status_compact_format" translatable="false">%1$s · %2$s</string>
     <string name="widget_refresh_content_description">Refresh now</string>
     <string name="widget_status_offline">No connection</string>
     <string name="widget_status_rate_limited">Rate limited</string>

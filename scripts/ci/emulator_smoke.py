@@ -175,6 +175,7 @@ def main():
     cancel_sign_in = ["Cancelar inicio de sesión"] if es else ["Cancel sign-in"]
     settings_tab = ["Ajustes", "Pestaña Ajustes"] if es else ["Settings", "Settings tab"]
     accounts_tab = ["Cuentas", "Pestaña Cuentas"] if es else ["Account", "Account tab"]
+    home_tab = ["Inicio", "Pestaña Inicio"] if es else ["Home", "Home tab"]
 
     print("== launch")
     adb("shell", "am", "start", "-W", "-n", ACTIVITY)
@@ -196,7 +197,7 @@ def main():
         shot("settings-bottom")
 
     print("== add account → providers")
-    adb("shell", "am", "start", "-n", ACTIVITY)
+    tap_label(home_tab, "home tab")
     tap_label(add_account, "add account")
     shot("providers")
 
@@ -255,6 +256,7 @@ def main():
     adb("shell", "am", "start", "-n", ACTIVITY)
     time.sleep(2)
     if not visible(["Codex"]):
+        tap_label(home_tab, "home tab", required=False)
         tap_label(add_account, "add account", required=False)
     if tap_label(["Codex"], "Codex provider"):
         shot("codex-start")
