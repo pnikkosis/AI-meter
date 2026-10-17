@@ -4,10 +4,11 @@ Requisitos: Android 12 o posterior. No hace falta computadora, servidor ni servi
 
 ## 1. Instalar el APK
 
-1. Copiar `AIUsageWidget-1.0.1.apk` al teléfono (o descargarlo desde donde lo guardes). Si ya está
-   instalada la 1.0.0, la 1.0.1 se instala encima como actualización y conserva los datos.
-2. Opcional, recomendado: comprobar el SHA-256 del archivo. El de la versión 1.0.1 es
-   `250c231b4286f5ca25297a2b14e4c1312aa01321b2d69cbcef042802908181c0` (también en el `.sha256` que
+1. Copiar `AIUsageWidget-1.0.2.apk` al teléfono (o descargarlo desde donde lo guardes). Si ya está
+   instalada una versión anterior (1.0.0 o 1.0.1), la 1.0.2 se instala encima como actualización y
+   conserva los datos.
+2. Opcional, recomendado: comprobar el SHA-256 del archivo. El de la versión 1.0.2 es
+   `d8ed32ff167039fbfcfd3917e3a1d3fb51a4938461433553893e8e613e2fe605` (también en el `.sha256` que
    acompaña al APK y en `docs/COMPILAR.md`).
 3. Abrirlo desde el administrador de archivos. Android pedirá permitir “Instalar apps desconocidas”
    para esa app; concederlo solo para esta instalación.
@@ -52,8 +53,8 @@ mismo.
 4. Si algo falla, la pantalla dice el motivo (cancelado, permiso rechazado, sin conexión, límite de
    peticiones, etc.) y permite **Reintentar**. No se guarda nada si falla. En particular, si aparece
    “Claude aceptó el inicio de sesión pero se negó a informar el consumo”, lo más probable es que
-   Anthropic no acepte el permiso mínimo `user:profile` para leer el uso (ver la sección 7 de
-   `docs/INFORME-PRUEBAS.md`).
+   Anthropic haya dejado de aceptar el permiso mínimo `user:profile` para leer el uso (con 1.0.1 lo
+   aceptó; ver la sección 7 de `docs/INFORME-PRUEBAS.md`).
 
 ## 4. Agregar los widgets
 
