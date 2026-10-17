@@ -8,7 +8,6 @@ import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshot
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshotSource
 import com.kmnexus.codexmeter.domain.refresh.QuotaError
-import com.kmnexus.codexmeter.providers.SessionImporter
 import com.kmnexus.codexmeter.providers.codex.mapper.CodexUsageMapper
 import com.kmnexus.codexmeter.providers.codex.network.CodexUsageClient
 import com.kmnexus.codexmeter.providers.codex.session.CodexSessionPayload
@@ -24,7 +23,7 @@ class CodexSessionImporter(
     private val localAccountIdProvider: LocalAccountIdProvider,
     private val defaultDisplayName: String,
     private val clock: Clock,
-) : SessionImporter {
+) {
     /**
      * Validates a freshly exchanged OAuth session through the official usage endpoint before
      * anything is persisted. Device-code login commits only this prepared, sanitized model.
@@ -221,24 +220,6 @@ class CodexSessionImporter(
             val quotaError: QuotaError?,
         ) : Result
     }
-
-    override suspend fun importFromApiKey(
-        apiKey: String,
-        account: ProviderAccount,
-        apiBaseUrl: String?,
-    ): kotlin.Result<QuotaSnapshot> =
-        kotlin.Result.failure(UnsupportedOperationException("Codex does not support API key auth"))
-
-    override suspend fun importFromCookie(cookieJson: String, account: ProviderAccount): kotlin.Result<QuotaSnapshot> =
-        kotlin.Result.failure(UnsupportedOperationException("Codex does not support cookie auth"))
-
-    override suspend fun importFromOAuthPkce(
-        code: String,
-        verifier: String,
-        redirectUri: String,
-        account: ProviderAccount,
-    ): kotlin.Result<QuotaSnapshot> =
-        kotlin.Result.failure(UnsupportedOperationException("Codex does not support OAuth PKCE auth"))
 
     private companion object {
         val CODEX_PROVIDER_ID = ProviderId("codex")

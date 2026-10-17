@@ -104,7 +104,56 @@ class CurrentQuotaStateFactoryTest {
         assertSame(snapshot, state.snapshot)
         assertEquals(38, state.primaryWindow?.displayPercent)
         assertSame(failedAttempt, state.latestAttempt)
-        assertTrue(state.error is QuotaError.Network)
+        // A 5xx answer is the provider failing, not the device being offline.
+        assertTrue(state.error is QuotaError.ProviderUnavailable)
+    }
+
+    @Test
+    fun `stored error codes rebuild distinct error kinds and keep the last snapshot`() {
+        val snapshot = quotaSnapshot(fetchedAt = now.minus(Duration.ofMinutes(5)))
+        val cases = mapOf(
+            "error_network" to QuotaError.Network::class,
+            "error_rate_limited" to QuotaError.RateLimited::class,
+            "error_provider_unavailable" to QuotaError.ProviderUnavailable::class,
+            "error_response_invalid" to QuotaError.ResponseInvalid::class,
+        )
+        cases.forEach { (code, expected) ->
+            val state = factory.create(
+                account = account(),
+                latestSnapshot = snapshot,
+                latestAttempt = refreshAttempt(
+                    status = RefreshAttemptStatus.Failed,
+                    httpStatus = if (code == "error_rate_limited") 429 else null,
+                    retryable = true,
+                    userActionRequired = false,
+                    errorCode = code,
+                ),
+                now = now,
+            )
+            assertEquals(code, expected, state.error!!::class)
+            assertEquals(code, CurrentQuotaStatus.ErrorWithLastKnownGood, state.status)
+            assertSame(code, snapshot, state.snapshot)
+        }
+    }
+
+    @Test
+    fun `provider error without any snapshot reports no data instead of an empty quota`() {
+        val state = factory.create(
+            account = account(),
+            latestSnapshot = null,
+            latestAttempt = refreshAttempt(
+                status = RefreshAttemptStatus.Failed,
+                httpStatus = 503,
+                retryable = true,
+                userActionRequired = false,
+                errorCode = "error_provider_unavailable",
+            ),
+            now = now,
+        )
+
+        assertEquals(CurrentQuotaStatus.NoData, state.status)
+        assertEquals(null, state.primaryWindow)
+        assertTrue(state.error is QuotaError.ProviderUnavailable)
     }
 
     @Test

@@ -9,7 +9,6 @@ import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.data.currency.ExchangeRateReader
-import com.kmnexus.codexmeter.domain.auth.SessionLoginUseCase
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginNotifier
@@ -38,6 +37,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.kmnexus.codexmeter.providers.claude.auth.ClaudeConnect
 
 class CodexMeterApp :
     Application(),
@@ -115,8 +115,8 @@ class CodexMeterApp :
     val widgetQuotaStateLoader: WidgetQuotaStateLoader
         get() = appContainer.widgetQuotaStateLoader
 
-    val apiKeyLoginUseCase: SessionLoginUseCase
-        get() = appContainer.apiKeyLoginUseCase
+    val claudeConnect: ClaudeConnect
+        get() = appContainer.claudeConnect
 
     val currencyPreferenceReader: CurrencyPreferenceReader
         get() = appContainer.currencyPreferences

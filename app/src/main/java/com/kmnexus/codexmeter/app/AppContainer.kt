@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.kmnexus.codexmeter.R
+import com.kmnexus.codexmeter.core.network.ProviderHosts
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.preferences.CurrentAccountPreferences
@@ -31,7 +32,6 @@ import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
-import com.kmnexus.codexmeter.domain.auth.SessionLoginUseCase
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginDiagnosticsReader
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginNotifier
@@ -53,8 +53,6 @@ import com.kmnexus.codexmeter.notification.AccountErrorPolicy
 import com.kmnexus.codexmeter.notification.CurrentQuotaNotificationPublisher
 import com.kmnexus.codexmeter.notification.NotificationPreferenceAlertThresholdsReader
 import com.kmnexus.codexmeter.notification.NotificationPreferenceQuotaAlertWindowReader
-import com.kmnexus.codexmeter.providers.SessionImportRouter
-import com.kmnexus.codexmeter.providers.common.auth.OAuthTokenClient
 import com.kmnexus.codexmeter.providers.codex.CodexRefreshProvider
 import com.kmnexus.codexmeter.providers.codex.CodexSessionCipher
 import com.kmnexus.codexmeter.providers.codex.CodexTokenRefresh
@@ -72,7 +70,9 @@ import com.kmnexus.codexmeter.providers.codex.network.CodexUsageClient
 import com.kmnexus.codexmeter.providers.codex.session.AndroidKeystoreCodexSessionCipher
 import com.kmnexus.codexmeter.providers.codex.session.CodexSessionPayload
 import com.kmnexus.codexmeter.providers.claude.ClaudeRefreshProvider
-import com.kmnexus.codexmeter.providers.claude.auth.ClaudeSessionImporter
+import com.kmnexus.codexmeter.providers.claude.auth.ClaudeAccountConnector
+import com.kmnexus.codexmeter.providers.claude.auth.ClaudeConnect
+import com.kmnexus.codexmeter.providers.claude.auth.ClaudeTokenClient
 import com.kmnexus.codexmeter.providers.claude.network.ClaudeUsageClient
 import com.kmnexus.codexmeter.data.currency.ExchangeRateRepository
 import com.kmnexus.codexmeter.data.preferences.CurrencyPreferencesDataStore
@@ -126,7 +126,7 @@ class AppContainer private constructor(
     val settingsDiagnosticsReader: SettingsDiagnosticsReader,
     val widgetQuotaStateLoader: WidgetQuotaStateLoader,
     val startupMaintenance: StartupMaintenance,
-    val apiKeyLoginUseCase: SessionLoginUseCase,
+    val claudeConnect: ClaudeConnect,
     val appearancePreferences: AppearancePreferenceStore,
     val initialThemeMode: ThemeMode,
     val currencyPreferences: CurrencyPreferencesDataStore,
@@ -174,7 +174,11 @@ class AppContainer private constructor(
             val retentionPreferences = RetentionPreferences(currentAccountPreferences.dataStore)
             val notificationPreferences = NotificationPreferencesDataStore(currentAccountPreferences.dataStore)
             val primaryQuotaWindowPreferences = PrimaryQuotaWindowPreferences(currentAccountPreferences.dataStore)
-            val httpClient = ProviderHttpClient()
+            // Every provider request goes over HTTPS to an allowlisted provider host, without
+            // following redirects. Token grants use a client that never replays a request, so a
+            // rotated refresh token cannot be burned by a silent transport retry.
+            val httpClient = ProviderHttpClient(allowedHosts = ProviderHosts.ALL)
+            val tokenHttpClient = ProviderHttpClient.noRetry(allowedHosts = ProviderHosts.ALL)
             val usageClient = CodexUsageClient(httpClient)
             val sessionStore = FileSecureSessionStore(
                 directory = appContext.filesDir.resolve(SESSION_DIRECTORY_NAME),
@@ -220,25 +224,14 @@ class AppContainer private constructor(
             val codexRefreshProvider = CodexRefreshProvider(
                 sessionStore = sessionStore,
                 sessionCipher = sessionCipher,
-                tokenRefresh = CodexTokenRefresh(CodexTokenRefresher(httpClient)::refresh),
+                tokenRefresh = CodexTokenRefresh(CodexTokenRefresher(tokenHttpClient)::refresh),
                 usageFetcher = CodexUsageFetcher(usageClient::fetchUsage),
                 clock = clock,
             )
             val claudeUsageClient = ClaudeUsageClient(httpClient)
-            val claudeTokenClient = OAuthTokenClient(
-                httpClient = httpClient,
-                // Mirrors Hermes' proven exchange: claude.ai + JSON body + state + UA. The host is
-                // claude.ai (not console.anthropic.com, whose /v1/oauth/token now 404s); the
-                // console.anthropic.com/oauth/code/callback redirect_uri is just the registered
-                // client identifier echoed back in the exchange, not a host we call.
-                tokenEndpoint = "https://claude.ai/v1/oauth/token",
-                clientId = "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
-                diagnosticsPrefix = "claude_oauth",
-                useJsonBody = true,
-                userAgent = "claude-cli/2.1.0 (external, cli)",
-            )
+            val claudeTokenClient = ClaudeTokenClient(tokenHttpClient)
             val claudeRefreshProvider = ClaudeRefreshProvider(
-                client = claudeUsageClient,
+                usageClient = claudeUsageClient,
                 tokenClient = claudeTokenClient,
                 sessionStore = sessionStore,
                 payloadCipher = payloadCipher,
@@ -249,13 +242,6 @@ class AppContainer private constructor(
                     ProviderId("codex") to codexRefreshProvider,
                     ProviderId("claude") to claudeRefreshProvider,
                 ),
-            )
-            val claudeSessionImporter = ClaudeSessionImporter(
-                tokenClient = claudeTokenClient,
-                client = claudeUsageClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
             )
             return fromDatabase(
                 appContext = appContext,
@@ -269,7 +255,9 @@ class AppContainer private constructor(
                 sessionCipher = sessionCipher,
                 refreshProvider = compositeRefreshProvider,
                 usageClient = usageClient,
-                claudeSessionImporter = claudeSessionImporter,
+                claudeUsageClient = claudeUsageClient,
+                claudeTokenClient = claudeTokenClient,
+                payloadCipher = payloadCipher,
                 deviceCodeLoginNotifier = AndroidDeviceCodeLoginNotifier(
                     notificationSink = AndroidNotificationSink(appContext),
                 ),
@@ -357,7 +345,9 @@ class AppContainer private constructor(
             sessionCipher: CodexSessionCipher,
             refreshProvider: RefreshProvider,
             usageClient: CodexUsageClient,
-            claudeSessionImporter: ClaudeSessionImporter,
+            claudeUsageClient: ClaudeUsageClient,
+            claudeTokenClient: ClaudeTokenClient,
+            payloadCipher: PayloadCipher,
             deviceCodeLoginNotifier: DeviceCodeLoginNotifier,
             currentQuotaStatePublisher: CurrentQuotaStatePublisher,
             currentQuotaStateRepository: CurrentQuotaStateRepository,
@@ -376,14 +366,17 @@ class AppContainer private constructor(
             exchangeRateRepository: ExchangeRateRepository,
             exchangeRateRefresher: ExchangeRateRefresher,
         ): AppContainer {
+            // Shared by both providers: commits account, first snapshot and encrypted session together
+            // and rolls back the session file and current-account choice if the database write fails.
+            val importPersistence = RoomCodexSessionImportPersistence(
+                database = database,
+                sessionStore = sessionStore,
+                currentAccountStore = currentAccountPreferences,
+            )
             val sessionImporter = CodexSessionImporter(
                 usageClient = CodexSessionImporter.UsageClient(usageClient::fetchUsage),
                 mapper = CodexUsageMapper(),
-                importPersistence = RoomCodexSessionImportPersistence(
-                    database = database,
-                    sessionStore = sessionStore,
-                    currentAccountStore = currentAccountPreferences,
-                ),
+                importPersistence = importPersistence,
                 sessionEnvelopeFactory = CodexSessionEnvelopeFactory(sessionCipher),
                 localAccountIdProvider = CodexSessionImporter.LocalAccountIdProvider {
                     LocalAccountId("codex-${UUID.randomUUID()}")
@@ -391,18 +384,11 @@ class AppContainer private constructor(
                 defaultDisplayName = defaultAccountDisplayName,
                 clock = clock,
             )
-            val sessionImportRouter = SessionImportRouter(
-                importers = mapOf(
-                    ProviderId("codex") to sessionImporter,
-                    ProviderId("claude") to claudeSessionImporter,
-                ),
-            )
-            val sessionLoginUseCase = SessionLoginUseCase(
-                importRouter = sessionImportRouter,
-                database = database,
-                accountDao = database.providerAccountDao(),
-                snapshotDao = database.quotaSnapshotDao(),
-                currentAccountStore = currentAccountPreferences,
+            val claudeAccountConnector = ClaudeAccountConnector(
+                tokenClient = claudeTokenClient,
+                usageClient = claudeUsageClient,
+                payloadCipher = payloadCipher,
+                persistence = importPersistence,
                 clock = clock,
             )
             val codexDeviceCodeClient = CodexDeviceCodeClient(httpClient)
@@ -569,7 +555,7 @@ class AppContainer private constructor(
                     reporter = AndroidStartupMaintenanceReporter,
                     clock = clock,
                 ),
-                apiKeyLoginUseCase = sessionLoginUseCase,
+                claudeConnect = claudeAccountConnector,
                 appearancePreferences = appearancePreferences,
                 initialThemeMode = initialThemeMode,
                 currencyPreferences = currencyPreferences,

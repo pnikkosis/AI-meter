@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.providers.ProviderRegistry
+import com.kmnexus.codexmeter.ui.quota.quotaErrorMessageRes
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
@@ -412,12 +413,7 @@ class HomeViewModel(
             HomeQuotaStatus.Unavailable -> R.string.home_quota_status_unavailable
         }
 
-    private fun String.toErrorMessageResId(): Int =
-        when (this) {
-            "error_auth_required" -> R.string.error_auth_required
-            "error_network" -> R.string.error_network
-            else -> R.string.error_unknown
-        }
+    private fun String.toErrorMessageResId(): Int = quotaErrorMessageRes(this)
 
     companion object {
         fun factory(

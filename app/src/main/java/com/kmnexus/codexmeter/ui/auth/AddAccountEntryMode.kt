@@ -1,8 +1,5 @@
 package com.kmnexus.codexmeter.ui.auth
 
-import com.kmnexus.codexmeter.domain.model.LocalAccountId
-import com.kmnexus.codexmeter.domain.model.ProviderId
-
 sealed class AddAccountEntryMode {
     /** First screen: pick a provider to add. Replaces the old Choose mode. */
     data object ProviderSelection : AddAccountEntryMode()
@@ -16,26 +13,23 @@ sealed class AddAccountEntryMode {
      */
     data class CodexRelogin(val expectedProviderAccountId: String?) : AddAccountEntryMode()
 
-    /** OAuth PKCE flow for the given provider (re-login when [reloginAccountId] set). */
-    data class WebViewOAuthPkce(
-        val providerId: ProviderId,
-        val reloginAccountId: LocalAccountId? = null,
-    ) : AddAccountEntryMode()
+    /**
+     * Claude sign-in in the browser (authorization code + PKCE, loopback redirect). For a re-login,
+     * [expectedProviderAccountId] is the Claude account uuid the new session must belong to.
+     */
+    data class ClaudeLogin(val expectedProviderAccountId: String? = null) : AddAccountEntryMode()
 
     val routeValue: String
         get() = when (this) {
             is ProviderSelection -> "select"
             is LoginToCodex -> "login"
             is CodexRelogin -> "codexrelogin:${expectedProviderAccountId.orEmpty()}"
-            is WebViewOAuthPkce -> "pkce:${providerId.value}".withReloginSuffix(reloginAccountId)
+            is ClaudeLogin -> "claudelogin:${expectedProviderAccountId.orEmpty()}"
         }
 
     companion object {
         /** Backward-compat alias kept so existing call-sites compile. */
         val Choose: AddAccountEntryMode get() = ProviderSelection
-
-        private fun String.withReloginSuffix(reloginAccountId: LocalAccountId?): String =
-            if (reloginAccountId == null) this else "$this:${reloginAccountId.value}"
 
         fun fromRouteValue(routeValue: String?): AddAccountEntryMode {
             if (routeValue == null) return ProviderSelection
@@ -44,20 +38,11 @@ sealed class AddAccountEntryMode {
                 routeValue == "login" -> LoginToCodex
                 routeValue.startsWith("codexrelogin:") ->
                     CodexRelogin(routeValue.removePrefix("codexrelogin:").takeIf { it.isNotBlank() })
-                routeValue.startsWith("pkce:") ->
-                    routeValue.removePrefix("pkce:").splitProviderAndRelogin { providerId, relogin ->
-                        WebViewOAuthPkce(providerId, relogin)
-                    }
+                routeValue.startsWith("claudelogin:") ->
+                    ClaudeLogin(routeValue.removePrefix("claudelogin:").takeIf { it.isNotBlank() })
+                // Retired routes (API key, cookie, WebView OAuth, other providers) fall back.
                 else -> ProviderSelection
             }
-        }
-
-        private inline fun String.splitProviderAndRelogin(
-            build: (ProviderId, LocalAccountId?) -> AddAccountEntryMode,
-        ): AddAccountEntryMode {
-            val parts = split(":", limit = 2)
-            val relogin = parts.getOrNull(1)?.takeIf { it.isNotBlank() }?.let(::LocalAccountId)
-            return build(ProviderId(parts[0]), relogin)
         }
     }
 }

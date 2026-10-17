@@ -1,7 +1,5 @@
 package com.kmnexus.codexmeter.ui.auth
 
-import com.kmnexus.codexmeter.domain.model.LocalAccountId
-import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.providers.ProviderAuthKind
 import com.kmnexus.codexmeter.providers.ProviderRegistry
 import org.junit.Assert.assertEquals
@@ -17,10 +15,10 @@ class ProviderSelectionViewModelTest {
     }
 
     @Test
-    fun `providerSelection Codex uses OAuthWebView auth`() {
+    fun `providerSelection Codex uses device code auth`() {
         val codex = ProviderRegistry.all.find { it.providerId.value == "codex" }
         assertNotNull(codex)
-        assertEquals(ProviderAuthKind.OAuthWebView, codex!!.authKind)
+        assertEquals(ProviderAuthKind.DeviceCode, codex!!.authKind)
         assertEquals("Codex", codex.displayName)
     }
 
@@ -38,12 +36,18 @@ class ProviderSelectionViewModelTest {
     }
 
     @Test
-    fun `claude pkce entry mode round-trips with and without relogin account`() {
-        val add = AddAccountEntryMode.WebViewOAuthPkce(ProviderId("claude"))
+    fun `claude login entry mode round-trips with and without expected account`() {
+        val add = AddAccountEntryMode.ClaudeLogin()
         assertEquals(add, AddAccountEntryMode.fromRouteValue(add.routeValue))
 
-        val relogin = AddAccountEntryMode.WebViewOAuthPkce(ProviderId("claude"), LocalAccountId("claude-1"))
+        val relogin = AddAccountEntryMode.ClaudeLogin(expectedProviderAccountId = "account-uuid-1")
         assertEquals(relogin, AddAccountEntryMode.fromRouteValue(relogin.routeValue))
+    }
+
+    @Test
+    fun `retired claude webview route falls back to provider selection`() {
+        assertTrue(AddAccountEntryMode.fromRouteValue("pkce:claude") is AddAccountEntryMode.ProviderSelection)
+        assertTrue(AddAccountEntryMode.fromRouteValue("pkce:claude:claude-1") is AddAccountEntryMode.ProviderSelection)
     }
 
     @Test

@@ -31,7 +31,7 @@ object ProviderRegistry {
             providerId = CODEX,
             displayName = "Codex",
             iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_codex,
-            authKind = ProviderAuthKind.OAuthWebView,
+            authKind = ProviderAuthKind.DeviceCode,
             supportsBalance = false,
             supportsRefill = false,
             supportsInviteLimitSnooping = false,
@@ -55,10 +55,10 @@ object ProviderRegistry {
 }
 
 enum class ProviderAuthKind {
-    /** Codex device-code sign-in in the external browser (historical enum name kept from upstream). */
-    OAuthWebView,
+    /** Codex OAuth device-code sign-in: the user approves a code in the external browser. */
+    DeviceCode,
 
-    /** Claude OAuth authorization-code + PKCE sign-in. */
+    /** Claude OAuth authorization-code + PKCE sign-in in the browser, loopback redirect. */
     OAuthPkceLogin,
 }
 

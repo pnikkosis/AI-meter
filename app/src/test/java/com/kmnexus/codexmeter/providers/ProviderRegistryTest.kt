@@ -19,7 +19,7 @@ class ProviderRegistryTest {
     fun configFor_returnsCorrectProvider() {
         val config = ProviderRegistry.configFor(ProviderId("codex"))
         assertEquals("Codex", config.displayName)
-        assertEquals(ProviderAuthKind.OAuthWebView, config.authKind)
+        assertEquals(ProviderAuthKind.DeviceCode, config.authKind)
     }
 
     @Test

@@ -96,20 +96,13 @@ class CurrentQuotaStateFactory {
 
     private fun RefreshAttempt.toQuotaError(): QuotaError? {
         if (status != RefreshAttemptStatus.Failed) return null
-        return if (requiresAuth()) {
-            QuotaError.AuthRequired(
-                httpStatus = httpStatus,
-                diagnosticsDigest = diagnosticsDigest,
-            )
-        } else {
-            QuotaError.Network(diagnosticsDigest = diagnosticsDigest)
-        }
+        return QuotaError.fromStored(
+            errorCode = errorCode,
+            httpStatus = httpStatus,
+            userActionRequired = userActionRequired,
+            diagnosticsDigest = diagnosticsDigest,
+        )
     }
-
-    private fun RefreshAttempt.requiresAuth(): Boolean =
-        userActionRequired == true ||
-            httpStatus in AUTH_REQUIRED_HTTP_STATUSES ||
-            errorCode in AUTH_REQUIRED_ERROR_CODES
 
     private fun QuotaSnapshot.belongsTo(account: ProviderAccount): Boolean =
         providerId == account.providerId && localAccountId == account.localAccountId
@@ -125,16 +118,5 @@ class CurrentQuotaStateFactory {
 
         private val POSSIBLY_STALE_AFTER = Duration.ofMinutes(30)
         private val EXPIRED_AFTER = Duration.ofHours(2)
-        private val AUTH_REQUIRED_HTTP_STATUSES = setOf(401, 403)
-        private val AUTH_REQUIRED_ERROR_CODES = setOf(
-            "auth_required",
-            "reauth_required",
-            "invalid_grant",
-            "refresh_token_expired",
-            "refresh_token_invalid",
-            "refresh_token_invalidated",
-            "refresh_token_reused",
-            "refresh_token_revoked",
-        )
     }
 }

@@ -178,7 +178,7 @@ internal fun ProviderListItem(
 @Composable
 private fun authTypeLabel(authKind: ProviderAuthKind): String = stringResource(
     when (authKind) {
-        ProviderAuthKind.OAuthWebView -> R.string.auth_method_device_code
+        ProviderAuthKind.DeviceCode -> R.string.auth_method_device_code
         ProviderAuthKind.OAuthPkceLogin -> R.string.auth_method_oauth_pkce
     },
 )

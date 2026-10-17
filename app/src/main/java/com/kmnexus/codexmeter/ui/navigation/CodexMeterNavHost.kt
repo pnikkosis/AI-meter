@@ -55,15 +55,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import java.security.MessageDigest
-import java.security.SecureRandom
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginNotifier
 import com.kmnexus.codexmeter.domain.auth.NoopDeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.NoopDeviceCodeLoginNotifier
+import com.kmnexus.codexmeter.domain.model.ProviderAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderId
-import com.kmnexus.codexmeter.domain.auth.SessionLoginUseCase
+import com.kmnexus.codexmeter.providers.claude.auth.ClaudeConnect
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
@@ -84,8 +83,7 @@ import com.kmnexus.codexmeter.ui.auth.AddAccountRoute
 import com.kmnexus.codexmeter.refresh.RefreshWorkScheduler
 import com.kmnexus.codexmeter.ui.auth.ProviderSelectionScreen
 import com.kmnexus.codexmeter.ui.auth.ProviderSelectionSheet
-import com.kmnexus.codexmeter.ui.auth.WebViewAuthConfig
-import com.kmnexus.codexmeter.ui.auth.WebViewAuthScreen
+import com.kmnexus.codexmeter.ui.auth.ClaudeLoginRoute
 import com.kmnexus.codexmeter.ui.components.CodexMeterBackdrop
 import com.kmnexus.codexmeter.ui.components.LiquidGlassSurfaceRole
 import com.kmnexus.codexmeter.ui.components.QmLiquidGlassSurface
@@ -143,7 +141,7 @@ fun CodexMeterNavHost(
         com.kmnexus.codexmeter.ui.settings.InMemoryBackgroundRefreshStatusReader(),
     settingsDiagnosticsReader: SettingsDiagnosticsReader = DefaultSettingsDiagnosticsReader,
     quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
-    apiKeyLoginUseCase: SessionLoginUseCase? = null,
+    claudeConnect: ClaudeConnect? = null,
     notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
         NotificationWindowChoicesLoader { _, _ -> emptyList() },
     appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
@@ -175,10 +173,10 @@ fun CodexMeterNavHost(
     fun navigateBasedOnAuthType(providerId: com.kmnexus.codexmeter.domain.model.ProviderId) {
         val config = com.kmnexus.codexmeter.providers.ProviderRegistry.configFor(providerId)
         val nextMode = when (config.authKind) {
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthWebView ->
+            com.kmnexus.codexmeter.providers.ProviderAuthKind.DeviceCode ->
                 AddAccountEntryMode.LoginToCodex
             com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthPkceLogin ->
-                AddAccountEntryMode.WebViewOAuthPkce(providerId)
+                AddAccountEntryMode.ClaudeLogin()
         }
         navigateToAddAccount(nextMode)
     }
@@ -192,10 +190,10 @@ fun CodexMeterNavHost(
     ) {
         val config = com.kmnexus.codexmeter.providers.ProviderRegistry.configFor(providerId)
         val nextMode = when (config.authKind) {
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthWebView ->
+            com.kmnexus.codexmeter.providers.ProviderAuthKind.DeviceCode ->
                 AddAccountEntryMode.CodexRelogin(providerAccountId)
             com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthPkceLogin ->
-                AddAccountEntryMode.WebViewOAuthPkce(providerId, reloginAccountId = localAccountId)
+                AddAccountEntryMode.ClaudeLogin(expectedProviderAccountId = providerAccountId)
         }
         navigateToAddAccount(nextMode)
     }
@@ -238,82 +236,22 @@ fun CodexMeterNavHost(
                         )
                     }
                 }
-                is AddAccountEntryMode.WebViewOAuthPkce -> {
+                is AddAccountEntryMode.ClaudeLogin -> {
                     CodexMeterDestination(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = innerPadding,
                     ) {
-                        val useCase = apiKeyLoginUseCase
-                        if (useCase != null) {
-                            val pkceParams = remember {
-                                val verifier = generateCodeVerifier()
-                                val challenge = generateCodeChallenge(verifier)
-                                val state = generateRandomState()
-                                Triple(verifier, challenge, state)
-                            }
-                            val (codeVerifier, codeChallenge, state) = pkceParams
-
-                            val pkceConfig = remember(entryMode.providerId) {
-                                when (entryMode.providerId.value) {
-                                    "claude" -> {
-                                        val authUrl = "https://claude.ai/oauth/authorize?" +
-                                            "code=true" +
-                                            "&client_id=9d1c250a-e61b-44d9-88ed-5944d1962f5e" +
-                                            "&response_type=code" +
-                                            "&redirect_uri=" + java.net.URLEncoder.encode(
-                                                "https://console.anthropic.com/oauth/code/callback", "UTF-8") +
-                                            "&scope=" + java.net.URLEncoder.encode(
-                                                "org:create_api_key user:profile user:inference", "UTF-8") +
-                                            "&state=$state" +
-                                            "&code_challenge=$codeChallenge" +
-                                            "&code_challenge_method=S256"
-                                        WebViewAuthConfig.OAuthIntercept(
-                                            providerId = entryMode.providerId,
-                                            authorizationUrl = authUrl,
-                                            redirectUriPrefix = "https://console.anthropic.com/oauth/code/callback",
-                                            expectedState = state,
-                                            appendStateToCode = true,
-                                            tipResId = R.string.auth_tip_claude,
-                                        )
-                                    }
-                                    else -> null
-                                }
-                            }
-                            if (pkceConfig != null) {
-                                WebViewAuthScreen(
-                                    config = pkceConfig,
-                                    onCredentialExtracted = { code, redirectUri ->
-                                        val reloginAccountId = entryMode.reloginAccountId
-                                        if (reloginAccountId != null) {
-                                            useCase.reloginOAuthPkce(
-                                                localAccountId = reloginAccountId,
-                                                code = code,
-                                                verifier = codeVerifier,
-                                                redirectUri = redirectUri.orEmpty(),
-                                            ).map { }
-                                        } else {
-                                            useCase.importOAuthPkce(
-                                                providerId = entryMode.providerId,
-                                                providerDisplayName = com.kmnexus.codexmeter.providers.ProviderRegistry
-                                                    .displayNameFor(entryMode.providerId),
-                                                code = code,
-                                                verifier = codeVerifier,
-                                                redirectUri = redirectUri.orEmpty(),
-                                            ).map { }
-                                        }
-                                    },
-                                    onBack = { navController.popBackStack() },
-                                    onSaved = { navigateToAccountAfterSave() },
-                                )
-                            } else {
-                                StubAuthScreen(
-                                    title = "OAuth PKCE — ${entryMode.providerId.value}",
-                                    onBack = { navController.popBackStack() },
-                                )
-                            }
+                        val connector = claudeConnect
+                        if (connector != null) {
+                            ClaudeLoginRoute(
+                                connector = connector,
+                                expectedProviderAccountId = entryMode.expectedProviderAccountId?.let(::ProviderAccountId),
+                                onBack = { navController.popBackStack() },
+                                onConnected = { navigateToAccountAfterSave() },
+                            )
                         } else {
                             StubAuthScreen(
-                                title = "OAuth PKCE — ${entryMode.providerId.value}",
+                                title = "Claude",
                                 onBack = { navController.popBackStack() },
                             )
                         }
@@ -651,22 +589,5 @@ private fun RowScope.CodexMeterBottomBarItem(
             maxLines = 1,
         )
     }
-}
-
-private fun generateCodeVerifier(): String {
-    val bytes = ByteArray(32)
-    SecureRandom().nextBytes(bytes)
-    return bytes.joinToString("") { "%02x".format(it) }
-}
-
-private fun generateCodeChallenge(verifier: String): String {
-    val digest = MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray())
-    return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(digest)
-}
-
-private fun generateRandomState(): String {
-    val bytes = ByteArray(16)
-    SecureRandom().nextBytes(bytes)
-    return bytes.joinToString("") { "%02x".format(it) }
 }
 

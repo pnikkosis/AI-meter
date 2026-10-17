@@ -80,7 +80,7 @@ class DeviceCodeLoginViewModel(
             is AddAccountEntryMode.ProviderSelection -> Unit
             is AddAccountEntryMode.LoginToCodex -> startDeviceCodeLogin()
             is AddAccountEntryMode.CodexRelogin -> startDeviceCodeRelogin(entryMode.expectedProviderAccountId)
-            is AddAccountEntryMode.WebViewOAuthPkce -> Unit // handled by the Claude sign-in screen
+            is AddAccountEntryMode.ClaudeLogin -> Unit // handled by the Claude sign-in screen
         }
     }
 
@@ -353,6 +353,9 @@ internal fun String.toDeviceCodeLoginErrorResId(): Int =
     when (this) {
         "error_network" -> R.string.error_network
         "error_auth_required" -> R.string.error_auth_required
+        "error_rate_limited" -> R.string.error_rate_limited
+        "error_provider_unavailable" -> R.string.error_provider_unavailable
+        "error_response_invalid" -> R.string.error_response_invalid
         "error_session_persistence" -> R.string.error_session_persistence
         "error_login_not_wired" -> R.string.error_login_not_wired
         "error_device_code_account_mismatch" -> R.string.add_account_device_code_account_mismatch

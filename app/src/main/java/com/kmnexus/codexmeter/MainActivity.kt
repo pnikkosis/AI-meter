@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     backgroundRefreshStatusReader = codexMeterApp.backgroundRefreshStatusReader,
                     settingsDiagnosticsReader = codexMeterApp.settingsDiagnosticsReader,
                     quotaHistoryClearUseCase = codexMeterApp.quotaHistoryClearUseCase,
-                    apiKeyLoginUseCase = codexMeterApp.apiKeyLoginUseCase,
+                    claudeConnect = codexMeterApp.claudeConnect,
                     currencyPreferenceReader = codexMeterApp.currencyPreferenceReader,
                     exchangeRateReader = codexMeterApp.exchangeRateReader,
                     notificationWindowChoicesLoader = codexMeterApp.notificationWindowChoicesLoader,
