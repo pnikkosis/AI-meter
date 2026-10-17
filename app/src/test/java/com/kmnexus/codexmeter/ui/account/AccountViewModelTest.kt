@@ -7,6 +7,7 @@ import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountDeleteUseCase
+import com.kmnexus.codexmeter.domain.account.RemoteRevocation
 import com.kmnexus.codexmeter.domain.account.NoopAccountListUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountSwitchUseCase
@@ -341,6 +342,36 @@ class AccountViewModelTest {
     }
 
     @Test
+    fun `disconnect dialog explains revocation per provider and the notice reports what happened`() = runTest {
+        val cases = listOf(
+            Triple(RemoteRevocation.Revoked, "codex", R.string.account_disconnected_revoked),
+            Triple(RemoteRevocation.Failed, "codex", R.string.account_disconnected_revoke_failed),
+            Triple(RemoteRevocation.NotSupported, "claude", R.string.account_disconnected_local_only),
+        )
+        cases.forEach { (revocation, provider, expectedNotice) ->
+            val viewModel = viewModel(RecordingAccountDeleteUseCase(revocation))
+            val target = account("local-1").copy(providerId = ProviderId(provider))
+            viewModel.setAccounts(accounts = listOf(target), currentAccountId = localId("local-1"))
+
+            viewModel.requestDeleteAccount(localId("local-1"))
+            val expectedDialog = if (provider == "codex") {
+                R.string.account_delete_dialog_message_codex
+            } else {
+                R.string.account_delete_dialog_message_claude
+            }
+            assertEquals(expectedDialog, viewModel.uiState.value.pendingDeleteAccount?.messageResId)
+
+            viewModel.confirmDelete()
+
+            val notice = viewModel.uiState.value.disconnectNotice
+            assertEquals(expectedNotice, notice?.messageResId)
+            assertEquals(target.displayName, notice?.displayName)
+            viewModel.dismissDisconnectNotice()
+            assertNull(viewModel.uiState.value.disconnectNotice)
+        }
+    }
+
+    @Test
     fun `deleting last account returns unauthenticated state`() = runTest {
         val viewModel = viewModel()
         viewModel.setAccounts(accounts = listOf(account("local-1")), currentAccountId = localId("local-1"))
@@ -414,18 +445,21 @@ class AccountViewModelTest {
         assertEquals(null, viewModel.uiState.value.pendingReloginRequest)
     }
 
-    private class RecordingAccountDeleteUseCase : AccountDeleteUseCase {
+    private class RecordingAccountDeleteUseCase(
+        private val revocation: RemoteRevocation = RemoteRevocation.Revoked,
+    ) : AccountDeleteUseCase {
         val requests = mutableListOf<AccountDeleteRequest>()
 
-        override suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId) {
+        override suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId): RemoteRevocation {
             requests += AccountDeleteRequest(providerId = providerId, localAccountId = localAccountId)
+            return revocation
         }
     }
 
     private class ThrowingAccountDeleteUseCase(
         private val exception: Throwable,
     ) : AccountDeleteUseCase {
-        override suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId) {
+        override suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId): RemoteRevocation {
             throw exception
         }
     }

@@ -26,6 +26,7 @@ import com.kmnexus.codexmeter.data.secure.AesGcmPayloadCipher
 import com.kmnexus.codexmeter.data.secure.AndroidKeystoreSecretKeyProvider
 import com.kmnexus.codexmeter.data.secure.FileSecureSessionStore
 import com.kmnexus.codexmeter.data.secure.PayloadCipher
+import com.kmnexus.codexmeter.data.secure.ProviderSessionRevoker
 import com.kmnexus.codexmeter.data.secure.ProviderSessionEnvelope
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
@@ -63,6 +64,7 @@ import com.kmnexus.codexmeter.providers.codex.auth.CodexDeviceCodeLoginControlle
 import com.kmnexus.codexmeter.providers.codex.auth.CodexDeviceCodeLoginUseCase
 import com.kmnexus.codexmeter.providers.codex.auth.CodexOAuthTokenExchanger
 import com.kmnexus.codexmeter.providers.codex.auth.CodexTokenRefresher
+import com.kmnexus.codexmeter.providers.codex.auth.CodexTokenRevoker
 import com.kmnexus.codexmeter.providers.codex.auth.DeviceCodeChallenge
 import com.kmnexus.codexmeter.providers.codex.auth.DeviceCodeLoginAttemptId
 import com.kmnexus.codexmeter.providers.codex.mapper.CodexUsageMapper
@@ -103,6 +105,8 @@ import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 class AppContainer private constructor(
     val refreshCoordinator: RefreshCoordinator,
@@ -179,6 +183,14 @@ class AppContainer private constructor(
             // rotated refresh token cannot be burned by a silent transport retry.
             val httpClient = ProviderHttpClient(allowedHosts = ProviderHosts.ALL)
             val tokenHttpClient = ProviderHttpClient.noRetry(allowedHosts = ProviderHosts.ALL)
+            // Disconnecting waits at most this long for the provider before deleting local data.
+            val revokeHttpClient = ProviderHttpClient(
+                okHttpClient = OkHttpClient.Builder()
+                    .callTimeout(10, TimeUnit.SECONDS)
+                    .retryOnConnectionFailure(false)
+                    .build(),
+                allowedHosts = ProviderHosts.ALL,
+            )
             val usageClient = CodexUsageClient(httpClient)
             val sessionStore = FileSecureSessionStore(
                 directory = appContext.filesDir.resolve(SESSION_DIRECTORY_NAME),
@@ -314,6 +326,9 @@ class AppContainer private constructor(
                     secureSessionStore = sessionStore,
                     currentAccountStore = currentAccountPreferences,
                     deletedAccountStateCleaner = widgetDeletedAccountStateCleaner,
+                    sessionRevoker = ProviderSessionRevoker(
+                        mapOf(ProviderId("codex") to CodexTokenRevoker(revokeHttpClient, sessionCipher)),
+                    ),
                 ),
                 retentionCleanupRepository = RetentionCleanupRepository(database),
                 quotaHistoryClearRepository = QuotaHistoryClearRepository(

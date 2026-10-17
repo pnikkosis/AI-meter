@@ -130,6 +130,7 @@ fun AccountRoute(
             }
         },
         onDeleteDismiss = viewModel::cancelDelete,
+        onDisconnectNoticeDismiss = viewModel::dismissDisconnectNotice,
     )
 }
 
@@ -152,6 +153,7 @@ fun AccountScreen(
     onToggleExpanded: (LocalAccountId) -> Unit = {},
     onDeleteConfirm: () -> Unit = {},
     onDeleteDismiss: () -> Unit = {},
+    onDisconnectNoticeDismiss: () -> Unit = {},
 ) {
     val pullState = rememberPullToRefreshState()
     PullToRefreshBox(
@@ -206,6 +208,24 @@ fun AccountScreen(
         AddAccountDialog(
             onLoginToCodexClick = onLoginToCodexClick,
             onDismiss = onAddAccountDismiss,
+        )
+    }
+
+    uiState.disconnectNotice?.let { notice ->
+        AlertDialog(
+            onDismissRequest = onDisconnectNoticeDismiss,
+            title = { Text(text = stringResource(R.string.account_disconnected_title)) },
+            text = {
+                Text(
+                    text = stringResource(notice.messageResId, notice.displayName),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onDisconnectNoticeDismiss) {
+                    Text(text = stringResource(R.string.account_disconnected_ok))
+                }
+            },
         )
     }
 
@@ -334,7 +354,7 @@ private fun DeleteAccountDialog(
         title = { Text(text = stringResource(R.string.account_delete_dialog_title)) },
         text = {
             Text(
-                text = stringResource(R.string.account_delete_dialog_message, pending.displayName),
+                text = stringResource(pending.messageResId, pending.displayName),
                 style = MaterialTheme.typography.bodyMedium,
             )
         },

@@ -20,12 +20,32 @@ object NoopAccountListUseCase : AccountListUseCase {
         AccountListResult(accounts = emptyList(), currentAccountId = null)
 }
 
+/**
+ * What happened on the provider's side when an account was disconnected. Local data is deleted in
+ * every case; this only says whether the provider was also told to invalidate the sign-in.
+ */
+enum class RemoteRevocation {
+    /** The provider confirmed that the stored token was revoked. */
+    Revoked,
+
+    /** The provider offers no revocation the app can call; only local data was deleted. */
+    NotSupported,
+
+    /** Revocation was attempted and failed (offline, timeout, error answer). */
+    Failed,
+
+    /** There was no stored token to revoke. */
+    NothingToRevoke,
+}
+
 fun interface AccountDeleteUseCase {
-    suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId)
+    /** Deletes the account's local data (always) after a best-effort remote revocation. */
+    suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId): RemoteRevocation
 }
 
 object NoopAccountDeleteUseCase : AccountDeleteUseCase {
-    override suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId) = Unit
+    override suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId) =
+        RemoteRevocation.NothingToRevoke
 }
 
 fun interface AccountSwitchUseCase {

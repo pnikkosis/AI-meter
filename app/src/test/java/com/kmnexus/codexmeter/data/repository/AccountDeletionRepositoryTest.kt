@@ -11,9 +11,11 @@ import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
 import com.kmnexus.codexmeter.data.secure.FakeSecureSessionStore
 import com.kmnexus.codexmeter.data.secure.ProviderSessionEnvelope
 import com.kmnexus.codexmeter.data.secure.SecureSessionStore
+import com.kmnexus.codexmeter.data.secure.SessionRevoker
 import com.kmnexus.codexmeter.domain.account.DeletedAccountStateCleanup
 import com.kmnexus.codexmeter.domain.account.DeletedAccountStateCleaner
 import com.kmnexus.codexmeter.domain.account.NoopDeletedAccountStateCleaner
+import com.kmnexus.codexmeter.domain.account.RemoteRevocation
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderId
 import kotlinx.coroutines.test.runTest
@@ -21,6 +23,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -185,11 +188,69 @@ class AccountDeletionRepositoryTest {
         }
     }
 
+    @Test
+    fun `revocation gets the stored session before anything is deleted and its outcome is returned`() = runTest {
+        val seen = mutableListOf<String>()
+        lateinit var store: SecureSessionStore
+        val revoker = SessionRevoker { envelope ->
+            seen += envelope.localAccountId
+            // The session must still be there while the provider is asked to revoke it.
+            assertNotNull(store.load(providerId = "codex", localAccountId = "target"))
+            RemoteRevocation.Revoked
+        }
+        withRepository(sessionRevoker = revoker) { db, sessionStore, repository ->
+            store = sessionStore
+            seedAccountGraph(db, localAccountId = "target")
+            sessionStore.save(sessionEnvelope(localAccountId = "target"))
+
+            val outcome = repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
+
+            assertEquals(RemoteRevocation.Revoked, outcome)
+            assertEquals(listOf("target"), seen)
+            assertNull(sessionStore.load(providerId = "codex", localAccountId = "target"))
+            assertAccountGraphDeleted(db, localAccountId = "target")
+        }
+    }
+
+    @Test
+    fun `a failing or crashing revocation still deletes everything local`() = runTest {
+        listOf<SessionRevoker>(
+            SessionRevoker { RemoteRevocation.Failed },
+            SessionRevoker { throw java.io.IOException("offline") },
+        ).forEach { revoker ->
+            withRepository(sessionRevoker = revoker) { db, sessionStore, repository ->
+                seedAccountGraph(db, localAccountId = "target")
+                sessionStore.save(sessionEnvelope(localAccountId = "target"))
+
+                val outcome = repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
+
+                assertEquals(RemoteRevocation.Failed, outcome)
+                assertNull(sessionStore.load(providerId = "codex", localAccountId = "target"))
+                assertAccountGraphDeleted(db, localAccountId = "target")
+            }
+        }
+    }
+
+    @Test
+    fun `an account without a stored session has nothing to revoke`() = runTest {
+        var called = false
+        withRepository(sessionRevoker = SessionRevoker { called = true; RemoteRevocation.Revoked }) { db, _, repository ->
+            seedAccountGraph(db, localAccountId = "target")
+
+            val outcome = repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
+
+            assertEquals(RemoteRevocation.NothingToRevoke, outcome)
+            assertTrue(!called)
+            assertAccountGraphDeleted(db, localAccountId = "target")
+        }
+    }
+
     private suspend fun withRepository(
         sessionStore: SecureSessionStore = FakeSecureSessionStore(),
         currentAccountStore: CurrentAccountStore = InMemoryCurrentAccountStore(),
         deletedAccountStateCleaner: DeletedAccountStateCleaner = NoopDeletedAccountStateCleaner,
         localDataDeleter: AccountLocalDataDeleter? = null,
+        sessionRevoker: SessionRevoker = SessionRevoker { RemoteRevocation.NotSupported },
         block: suspend (CodexMeterDatabase, SecureSessionStore, RepositoryHarness) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
@@ -202,6 +263,7 @@ class AccountDeletionRepositoryTest {
             currentAccountStore = currentAccountStore,
             deletedAccountStateCleaner = deletedAccountStateCleaner,
             localDataDeleter = localDataDeleter ?: RoomAccountLocalDataDeleter(db),
+            sessionRevoker = sessionRevoker,
         )
 
         try {
@@ -314,9 +376,8 @@ class AccountDeletionRepositoryTest {
         private val repository: AccountDeletionRepository,
         val currentAccountStore: CurrentAccountStore,
     ) {
-        suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId) {
+        suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId): RemoteRevocation =
             repository.deleteAccount(providerId = providerId, localAccountId = localAccountId)
-        }
     }
 
     private class InMemoryCurrentAccountStore : CurrentAccountStore {

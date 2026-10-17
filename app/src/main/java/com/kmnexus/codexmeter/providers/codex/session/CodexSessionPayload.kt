@@ -14,4 +14,6 @@ data class CodexSessionPayload(
      * sessions saved before this field existed; those refresh once on next use and then carry it.
      */
     val tokenExpiresAtEpochSeconds: Long? = null,
-)
+) {
+    override fun toString(): String = "CodexSessionPayload(redacted)"
+}

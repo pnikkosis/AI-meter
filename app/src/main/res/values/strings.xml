@@ -138,14 +138,14 @@
     <string name="account_set_current">Set current</string>
     <string name="account_rename">Rename</string>
     <string name="account_relogin">Re-login</string>
-    <string name="account_delete">Delete</string>
+    <string name="account_delete">Disconnect</string>
     <string name="account_rename_dialog_title">Rename account</string>
     <string name="account_rename_field_label">Account name</string>
     <string name="account_rename_dialog_confirm">Save</string>
     <string name="account_cancel">Cancel</string>
-    <string name="account_delete_dialog_title">Delete account?</string>
-    <string name="account_delete_dialog_message">This removes the session and local history for %1$s from this device.</string>
-    <string name="account_delete_dialog_confirm">Delete</string>
+    <string name="account_delete_dialog_title">Disconnect account?</string>
+    <string name="account_delete_dialog_message">This deletes the session and local history of %1$s from this device.</string>
+    <string name="account_delete_dialog_confirm">Disconnect</string>
     <string name="account_delete_dialog_cancel">Cancel</string>
     <string name="settings_title">Settings</string>
     <string name="settings_description">Notification, refresh, alerts, data, and diagnostics preferences.</string>
@@ -348,4 +348,11 @@
     <string name="claude_login_error_usage_not_allowed">Claude accepted the sign-in but refused to report usage for it. Nothing was saved.</string>
     <string name="claude_login_error_account_mismatch">You signed in to a different Claude account. The existing account was not changed.</string>
     <string name="claude_login_mismatch_signed_in_as">Signed in as %1$s</string>
+    <string name="account_delete_dialog_message_codex">The app deletes the sign-in tokens, usage history and widget data of %1$s from this device and asks OpenAI to revoke the sign-in. If OpenAI cannot be reached, the local data is deleted anyway.</string>
+    <string name="account_delete_dialog_message_claude">The app deletes the sign-in tokens, usage history and widget data of %1$s from this device. Anthropic offers no way for apps to revoke this sign-in remotely. Your browser\'s claude.ai session is not affected.</string>
+    <string name="account_disconnected_title">Account disconnected</string>
+    <string name="account_disconnected_revoked">%1$s: the data on this device was deleted and the provider confirmed that the sign-in was revoked.</string>
+    <string name="account_disconnected_local_only">%1$s: the data on this device was deleted. The provider offers no remote revocation for this sign-in.</string>
+    <string name="account_disconnected_revoke_failed">%1$s: the data on this device was deleted, but the provider could not be reached to revoke the sign-in. On the provider\'s side it stays valid until it expires.</string>
+    <string name="account_disconnected_ok">OK</string>
 </resources>

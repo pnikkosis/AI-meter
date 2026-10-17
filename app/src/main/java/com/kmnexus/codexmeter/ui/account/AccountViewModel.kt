@@ -15,6 +15,7 @@ import com.kmnexus.codexmeter.domain.account.NoopAccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountListUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountSwitchUseCase
+import com.kmnexus.codexmeter.domain.account.RemoteRevocation
 import com.kmnexus.codexmeter.domain.model.AccountStatus
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
@@ -129,6 +130,14 @@ data class AccountItemUi(
 data class AccountDeleteConfirmationUi(
     val accountId: LocalAccountId,
     val displayName: String,
+    /** Explains what disconnecting does for this provider (local deletion, remote revocation or not). */
+    @get:StringRes val messageResId: Int = R.string.account_delete_dialog_message,
+)
+
+/** Shown once after a disconnect: local data is always gone; this says what the provider did. */
+data class AccountDisconnectNoticeUi(
+    val displayName: String,
+    @get:StringRes val messageResId: Int,
 )
 
 data class AccountRenameUi(
@@ -147,6 +156,7 @@ data class AccountUiState(
     val pendingDeleteAccount: AccountDeleteConfirmationUi?,
     val pendingRenameAccount: AccountRenameUi?,
     val isRefreshing: Boolean = false,
+    val disconnectNotice: AccountDisconnectNoticeUi? = null,
 ) {
     companion object {
         val Empty = AccountUiState(
@@ -185,6 +195,7 @@ class AccountViewModel(
     private var selectedAddAccountIntent: AccountAddAccountIntent? = null
     private var pendingReloginRequest: AccountReloginRequest? = null
     private var pendingDeleteAccountId: LocalAccountId? = null
+    private var disconnectNotice: AccountDisconnectNoticeUi? = null
     private var pendingRenameAccountId: LocalAccountId? = null
     private var expandedAccountIds: Set<LocalAccountId> = emptySet()
     private var targetCurrency: String = CurrencyPreferences.DEFAULT_TARGET_CURRENCY
@@ -349,6 +360,11 @@ class AccountViewModel(
         publishState()
     }
 
+    fun dismissDisconnectNotice() {
+        disconnectNotice = null
+        publishState()
+    }
+
     fun toggleAccountExpanded(id: LocalAccountId) {
         if (accounts.none { it.localAccountId == id }) return
 
@@ -414,7 +430,7 @@ class AccountViewModel(
             return
         }
 
-        try {
+        val revocation = try {
             deleteUseCase.deleteAccount(
                 providerId = accountToDelete.providerId,
                 localAccountId = accountToDelete.localAccountId,
@@ -425,6 +441,15 @@ class AccountViewModel(
             publishState()
             return
         }
+        disconnectNotice = AccountDisconnectNoticeUi(
+            displayName = accountToDelete.displayName,
+            messageResId = when (revocation) {
+                RemoteRevocation.Revoked -> R.string.account_disconnected_revoked
+                RemoteRevocation.Failed -> R.string.account_disconnected_revoke_failed
+                RemoteRevocation.NotSupported,
+                RemoteRevocation.NothingToRevoke -> R.string.account_disconnected_local_only
+            },
+        )
 
         accounts = accounts.filterNot { it.localAccountId == accountId }
         pendingDeleteAccountId = null
@@ -495,7 +520,11 @@ class AccountViewModel(
             pendingReloginRequest = pendingReloginRequest,
             pendingDeleteAccount = pendingDeleteAccountId?.let { id ->
                 accountItems.firstOrNull { it.id == id }?.let { account ->
-                    AccountDeleteConfirmationUi(accountId = account.id, displayName = account.displayName)
+                    AccountDeleteConfirmationUi(
+                        accountId = account.id,
+                        displayName = account.displayName,
+                        messageResId = deleteMessageFor(accounts.firstOrNull { it.localAccountId == id }?.providerId),
+                    )
                 }
             },
             pendingRenameAccount = pendingRenameAccountId?.let { id ->
@@ -504,7 +533,15 @@ class AccountViewModel(
                 }
             },
             isRefreshing = isRefreshing,
+            disconnectNotice = disconnectNotice,
         )
+    }
+
+    @StringRes
+    private fun deleteMessageFor(providerId: ProviderId?): Int = when (providerId) {
+        ProviderRegistry.CODEX -> R.string.account_delete_dialog_message_codex
+        ProviderRegistry.CLAUDE -> R.string.account_delete_dialog_message_claude
+        else -> R.string.account_delete_dialog_message
     }
 
     private fun ProviderAccount.toUiItem(

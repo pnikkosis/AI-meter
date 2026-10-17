@@ -138,14 +138,14 @@
     <string name="account_set_current">设为当前</string>
     <string name="account_rename">重命名</string>
     <string name="account_relogin">重新登录</string>
-    <string name="account_delete">删除</string>
+    <string name="account_delete">断开连接</string>
     <string name="account_rename_dialog_title">重命名账号</string>
     <string name="account_rename_field_label">账号名称</string>
     <string name="account_rename_dialog_confirm">保存</string>
     <string name="account_cancel">取消</string>
-    <string name="account_delete_dialog_title">删除账号？</string>
-    <string name="account_delete_dialog_message">这会从本设备删除 %1$s 的会话和本地历史数据。</string>
-    <string name="account_delete_dialog_confirm">删除</string>
+    <string name="account_delete_dialog_title">断开此账号？</string>
+    <string name="account_delete_dialog_message">将从本设备删除 %1$s 的会话和本地历史。</string>
+    <string name="account_delete_dialog_confirm">断开连接</string>
     <string name="account_delete_dialog_cancel">取消</string>
     <string name="settings_title">设置</string>
     <string name="settings_description">通知、刷新、告警、数据和诊断设置。</string>
@@ -347,4 +347,11 @@
     <string name="claude_login_error_usage_not_allowed">Claude 接受了登录，但拒绝提供用量数据。未保存任何内容。</string>
     <string name="claude_login_error_account_mismatch">你登录的是另一个 Claude 账号，原账号未被更改。</string>
     <string name="claude_login_mismatch_signed_in_as">当前登录：%1$s</string>
+    <string name="account_delete_dialog_message_codex">应用会从本设备删除 %1$s 的登录令牌、用量历史和小组件数据，并请求 OpenAI 撤销该登录。若无法连接 OpenAI，本地数据仍会被删除。</string>
+    <string name="account_delete_dialog_message_claude">应用会从本设备删除 %1$s 的登录令牌、用量历史和小组件数据。Anthropic 没有提供让应用远程撤销此登录的方式。浏览器中的 claude.ai 会话不受影响。</string>
+    <string name="account_disconnected_title">账号已断开</string>
+    <string name="account_disconnected_revoked">%1$s：本设备上的数据已删除，服务商已确认撤销该登录。</string>
+    <string name="account_disconnected_local_only">%1$s：本设备上的数据已删除。服务商不提供远程撤销此登录的方式。</string>
+    <string name="account_disconnected_revoke_failed">%1$s：本设备上的数据已删除，但无法连接服务商撤销该登录。在服务商一侧，它在过期前仍然有效。</string>
+    <string name="account_disconnected_ok">确定</string>
 </resources>
