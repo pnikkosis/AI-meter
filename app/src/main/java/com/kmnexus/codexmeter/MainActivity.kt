@@ -38,8 +38,6 @@ class MainActivity : ComponentActivity() {
             CodexMeterTheme(themeMode = themeMode, fontScheme = CodexMeterFontScheme.MonoFocusGeistMono) {
                 CodexMeterNavHost(
                     startDestination = startDestination,
-                    launchDestinationValue = launchDestinationValue,
-                    updatePreferenceStore = codexMeterApp.updatePreferenceStore,
                     deviceCodeLoginControllers = codexMeterApp.deviceCodeLoginControllers,
                     deviceCodeLoginNotifiers = codexMeterApp.deviceCodeLoginNotifiers,
                     deviceCodeLoginNotifier = codexMeterApp.deviceCodeLoginNotifier,
@@ -57,8 +55,6 @@ class MainActivity : ComponentActivity() {
                     backgroundRefreshStatusReader = codexMeterApp.backgroundRefreshStatusReader,
                     settingsDiagnosticsReader = codexMeterApp.settingsDiagnosticsReader,
                     quotaHistoryClearUseCase = codexMeterApp.quotaHistoryClearUseCase,
-                    appUpdateChecker = codexMeterApp.appUpdateChecker,
-                    appUpdateDownloader = codexMeterApp.appUpdateDownloader,
                     apiKeyLoginUseCase = codexMeterApp.apiKeyLoginUseCase,
                     currencyPreferenceReader = codexMeterApp.currencyPreferenceReader,
                     exchangeRateReader = codexMeterApp.exchangeRateReader,

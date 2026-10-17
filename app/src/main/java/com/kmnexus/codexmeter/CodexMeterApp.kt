@@ -2,7 +2,6 @@ package com.kmnexus.codexmeter
 
 import android.app.Application
 import androidx.work.Configuration
-import com.kmnexus.codexmeter.BuildConfig
 import com.kmnexus.codexmeter.app.AppContainer
 import com.kmnexus.codexmeter.core.i18n.AppLocaleController
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
@@ -25,10 +24,6 @@ import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
 import com.kmnexus.codexmeter.domain.theme.AppearancePreferenceStore
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
-import com.kmnexus.codexmeter.domain.update.AppUpdateCheckUseCase
-import com.kmnexus.codexmeter.domain.update.AppUpdateDownloadUseCase
-import com.kmnexus.codexmeter.domain.update.AppUpdateNotifier
-import com.kmnexus.codexmeter.domain.update.UpdatePreferenceStore
 import com.kmnexus.codexmeter.refresh.ExchangeRateRefresher
 import com.kmnexus.codexmeter.refresh.QuotaRefreshDependenciesProvider
 import com.kmnexus.codexmeter.refresh.RefreshCoordinator
@@ -40,8 +35,6 @@ import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.ui.account.AccountQuotaAlertEvaluationRequester
 import com.kmnexus.codexmeter.ui.settings.SettingsBackgroundRefreshStatusReader
 import com.kmnexus.codexmeter.ui.settings.SettingsDiagnosticsReader
-import com.kmnexus.codexmeter.update.UpdateCheckDependenciesProvider
-import com.kmnexus.codexmeter.update.UpdateCheckWorkScheduler
 import com.kmnexus.codexmeter.widget.WidgetQuotaStateLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,8 +44,7 @@ import kotlinx.coroutines.launch
 class CodexMeterApp :
     Application(),
     Configuration.Provider,
-    QuotaRefreshDependenciesProvider,
-    UpdateCheckDependenciesProvider {
+    QuotaRefreshDependenciesProvider {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val appContainer: AppContainer by lazy {
@@ -125,24 +117,6 @@ class CodexMeterApp :
     val settingsDiagnosticsReader: SettingsDiagnosticsReader
         get() = appContainer.settingsDiagnosticsReader
 
-    val appUpdateChecker: AppUpdateCheckUseCase
-        get() = appContainer.appUpdateChecker
-
-    val appUpdateDownloader: AppUpdateDownloadUseCase
-        get() = appContainer.appUpdateDownloader
-
-    override val appUpdateCheck: AppUpdateCheckUseCase
-        get() = appContainer.appUpdateChecker
-
-    override val updatePreferenceStore: UpdatePreferenceStore
-        get() = appContainer.updatePreferenceStore
-
-    override val appUpdateNotifier: AppUpdateNotifier
-        get() = appContainer.appUpdateNotifier
-
-    override val currentVersionName: String
-        get() = BuildConfig.VERSION_NAME
-
     val widgetQuotaStateLoader: WidgetQuotaStateLoader
         get() = appContainer.widgetQuotaStateLoader
 
@@ -179,13 +153,6 @@ class CodexMeterApp :
                 appContainer.notificationPreferences.notificationPreferences().backgroundRefreshIntervalMinutes
             }.getOrDefault(DEFAULT_REFRESH_INTERVAL_MINUTES)
             scheduler.applyIntervalMinutes(minutes)
-        }
-        val updateScheduler = UpdateCheckWorkScheduler.from(this)
-        applicationScope.launch {
-            val autoCheck = runCatching {
-                appContainer.updatePreferenceStore.preferences().autoCheckEnabled
-            }.getOrDefault(true)
-            updateScheduler.setAutoCheckEnabled(autoCheck)
         }
     }
 

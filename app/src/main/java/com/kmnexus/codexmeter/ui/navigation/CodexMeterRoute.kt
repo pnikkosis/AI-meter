@@ -63,7 +63,6 @@ sealed interface CodexMeterRoute {
         fun startRouteForLaunchDestination(destination: String?): String =
             when (destination) {
                 CodexMeterLaunchDestination.AddAccount.value -> AddAccount.route
-                CodexMeterLaunchDestination.SettingsUpdate.value -> Settings.route
                 else -> Home.route
             }
     }
@@ -72,5 +71,4 @@ sealed interface CodexMeterRoute {
 enum class CodexMeterLaunchDestination(val value: String) {
     Home("home"),
     AddAccount("add_account"),
-    SettingsUpdate("settings_update"),
 }

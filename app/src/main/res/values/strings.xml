@@ -347,31 +347,7 @@
     <string name="settings_diagnostics_recheck">Recheck</string>
     <string name="settings_about_version_format">AI Usage Widget %1$s</string>
     <string name="settings_about_data_source">Quota data comes from each provider\'s official APIs.</string>
-    <string name="settings_about_privacy">Sign-in tokens are stored on this device, encrypted with an Android Keystore key. The app only talks to the providers' own servers (OpenAI for Codex, Anthropic for Claude). There is no developer server, analytics, ads or telemetry.</string>
-    <string name="settings_about_repository_label">GitHub repository</string>
-    <string name="settings_about_repository_content_description">Open GitHub repository</string>
-    <string name="settings_update_title">App update</string>
-    <string name="settings_update_description">Check GitHub for the latest release and install the APK.</string>
-    <string name="settings_update_check">Check for updates</string>
-    <string name="settings_update_checking">Checking</string>
-    <string name="settings_update_status_checking">Checking GitHub Releases…</string>
-    <string name="settings_update_status_update_available">A newer version is available.</string>
-    <string name="settings_update_status_latest">CodexMeter is up to date.</string>
-    <string name="settings_update_status_no_release">No GitHub release is available yet.</string>
-    <string name="settings_update_status_no_apk">The latest release has no APK asset.</string>
-    <string name="settings_update_status_failed">Could not check for updates right now.</string>
-    <string name="settings_update_status_downloading">Download started in the system downloader.</string>
-    <string name="settings_update_status_download_failed">Could not start the system download.</string>
-    <string name="settings_update_dialog_title">Update available</string>
-    <string name="settings_update_dialog_message">CodexMeter %1$s is available. Download the latest APK?</string>
-    <string name="settings_update_dialog_download">Download update</string>
-    <string name="settings_update_dialog_cancel">Cancel update</string>
-    <string name="settings_update_auto_check_title">Auto-check for updates</string>
-    <string name="settings_update_auto_check_description">Check for a new version once a day in the background</string>
-    <string name="settings_update_notify_title">Notify when an update is found</string>
-    <string name="settings_update_notify_description">Show a system notification when a new version is available</string>
-    <string name="settings_update_download_available">Download %1$s</string>
-    <string name="settings_update_download_description">Downloading CodexMeter %1$s APK</string>
+    <string name="settings_about_privacy">Sign-in tokens are stored on this device, encrypted with an Android Keystore key. The app only talks to the providers\' own servers (OpenAI for Codex, Anthropic for Claude). There is no developer server, analytics, ads or telemetry.</string>
     <string name="error_auth_required">Log in again to refresh Codex quota.</string>
     <string name="error_network">Could not refresh. Showing last known data.</string>
     <string name="error_unknown">Could not refresh right now.</string>
@@ -379,8 +355,12 @@
     <string name="error_session_persistence">Could not save the session.</string>
     <string name="error_grok_access_denied">Grok sign-in was denied. Generate a new code to retry.</string>
     <string name="quota_balance_breakdown_format">Granted %1$s · Topped up %2$s</string>
-    <string name="notification_channel_app_updates_name">App updates</string>
-    <string name="notification_channel_app_updates_description">Alerts when a newer version is available</string>
     <string name="notification_app_update_title">Update available</string>
     <string name="notification_app_update_body_format">Version %1$s is available. Tap to view.</string>
+    <string name="settings_about_based_on">Based on CodexMeter by KyoMio (MIT License), modified for personal use.</string>
+    <string name="settings_about_licenses_label">Licenses</string>
+    <string name="settings_about_licenses_title">Open-source licenses</string>
+    <string name="settings_about_licenses_close">Close</string>
+    <string name="settings_about_third_party_libraries">Also uses AndroidX, Jetpack Compose, Kotlin, kotlinx.coroutines, kotlinx.serialization and OkHttp (Apache License 2.0), and AndroidLiquidGlassView by QmDeve (MIT License).</string>
+    <string name="license_codexmeter_mit" translatable="false">MIT License\n\nCopyright (c) 2026 KyoMio\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</string>
 </resources>

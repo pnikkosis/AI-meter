@@ -61,12 +61,6 @@ import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.domain.settings.NoopQuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
-import com.kmnexus.codexmeter.domain.update.AppUpdateCheckUseCase
-import com.kmnexus.codexmeter.domain.update.AppUpdateDownloadUseCase
-import com.kmnexus.codexmeter.domain.update.NoopAppUpdateCheckUseCase
-import com.kmnexus.codexmeter.domain.update.NoopAppUpdateDownloadUseCase
-import com.kmnexus.codexmeter.domain.update.NoopUpdatePreferenceStore
-import com.kmnexus.codexmeter.domain.update.UpdatePreferenceStore
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
@@ -82,16 +76,11 @@ fun SettingsRoute(
     backgroundRefreshStatusReader: SettingsBackgroundRefreshStatusReader = InMemoryBackgroundRefreshStatusReader(),
     diagnosticsReader: SettingsDiagnosticsReader = DefaultSettingsDiagnosticsReader,
     quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
-    appUpdateChecker: AppUpdateCheckUseCase = NoopAppUpdateCheckUseCase,
-    appUpdateDownloader: AppUpdateDownloadUseCase = NoopAppUpdateDownloadUseCase,
     backgroundRefreshScheduler: BackgroundRefreshScheduler = NoopBackgroundRefreshScheduler,
     notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
         NotificationWindowChoicesLoader { _, _ -> emptyList() },
     currencyPreferenceStore: CurrencyPreferenceStore = NoopCurrencyPreferenceStore,
     appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
-    updatePreferenceStore: UpdatePreferenceStore = NoopUpdatePreferenceStore,
-    updateCheckScheduler: UpdateCheckScheduler = NoopUpdateCheckScheduler,
-    openUpdateDialogOnLaunch: Boolean = false,
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.factory(
             accountListUseCase = accountListUseCase,
@@ -100,14 +89,10 @@ fun SettingsRoute(
             backgroundRefreshStatusReader = backgroundRefreshStatusReader,
             diagnosticsReader = diagnosticsReader,
             quotaHistoryClearUseCase = quotaHistoryClearUseCase,
-            appUpdateChecker = appUpdateChecker,
-            appUpdateDownloader = appUpdateDownloader,
             backgroundRefreshScheduler = backgroundRefreshScheduler,
             notificationWindowChoicesLoader = notificationWindowChoicesLoader,
             currencyPreferenceStore = currencyPreferenceStore,
             appearancePreferenceStore = appearancePreferenceStore,
-            updatePreferenceStore = updatePreferenceStore,
-            updateCheckScheduler = updateCheckScheduler,
         ),
     ),
 ) {
@@ -146,13 +131,7 @@ fun SettingsRoute(
     LaunchedEffect(viewModel) {
         viewModel.loadSettings()
     }
-    var updateDialogConsumed by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(openUpdateDialogOnLaunch) {
-        if (openUpdateDialogOnLaunch && !updateDialogConsumed) {
-            updateDialogConsumed = true
-            viewModel.showAvailableUpdateDialog()
-        }
-    }
+    var licensesVisible by rememberSaveable { mutableStateOf(false) }
     fun requestPermissionOrEnable(target: SettingsNotificationPermissionTarget, requestedEnabled: Boolean) {
         if (
             SettingsNotificationPermissionGate.shouldRequestPermission(
@@ -215,15 +194,7 @@ fun SettingsRoute(
             }
         },
         onDiagnosticsRecheckClick = viewModel::requestDiagnosticsRecheck,
-        onAboutRepositoryClick = {
-            runCatching { context.startActivity(SettingsRepositoryLinkTarget.openIntent()) }
-        },
-        onAppUpdateCheckClick = viewModel::checkForUpdates,
-        onAppUpdateDismiss = viewModel::dismissPendingUpdate,
-        onAppUpdateDownloadClick = viewModel::downloadPendingUpdate,
-        onAppUpdateAvailableClick = viewModel::showAvailableUpdateDialog,
-        onAppUpdateAutoCheckChanged = viewModel::setAutoCheckUpdates,
-        onAppUpdateNotifyChanged = viewModel::setNotifyOnUpdate,
+        onAboutLicensesClick = { licensesVisible = true },
         showBatteryOptimizationHint = SettingsBatteryOptimizationGate.shouldOfferExemption(
             batteryOptimizationIgnored = batteryOptimizationIgnored,
             backgroundRefreshEnabled = uiState.refresh.backgroundRefreshEnabled,
@@ -236,6 +207,9 @@ fun SettingsRoute(
             }
         },
     )
+    if (licensesVisible) {
+        LicensesDialog(onDismiss = { licensesVisible = false })
+    }
     pendingPermissionTarget?.let {
         NotificationPermissionRationaleDialog(
             onConfirm = {
@@ -274,13 +248,7 @@ fun SettingsScreen(
     onDiagnosticsToggle: () -> Unit = {},
     onDiagnosticsCopyClick: () -> Unit = {},
     onDiagnosticsRecheckClick: () -> Unit = {},
-    onAboutRepositoryClick: () -> Unit = {},
-    onAppUpdateCheckClick: () -> Unit = {},
-    onAppUpdateDismiss: () -> Unit = {},
-    onAppUpdateDownloadClick: () -> Unit = {},
-    onAppUpdateAvailableClick: () -> Unit = {},
-    onAppUpdateAutoCheckChanged: (Boolean) -> Unit = {},
-    onAppUpdateNotifyChanged: (Boolean) -> Unit = {},
+    onAboutLicensesClick: () -> Unit = {},
     showBatteryOptimizationHint: Boolean = false,
     onBatteryOptimizationClick: () -> Unit = {},
 ) {
@@ -333,14 +301,7 @@ fun SettingsScreen(
         SettingsSectionLabel(R.string.settings_group_diagnostics)
         DiagnosticsCard(uiState.diagnostics, onDiagnosticsToggle, onDiagnosticsCopyClick, onDiagnosticsRecheckClick)
         SettingsSectionLabel(R.string.settings_group_about)
-        AboutCard(uiState.about, onAboutRepositoryClick)
-        AppUpdateCard(
-            update = uiState.update,
-            onCheckClick = onAppUpdateCheckClick,
-            onAvailableUpdateClick = onAppUpdateAvailableClick,
-            onAutoCheckChanged = onAppUpdateAutoCheckChanged,
-            onNotifyOnUpdateChanged = onAppUpdateNotifyChanged,
-        )
+        AboutCard(uiState.about, onAboutLicensesClick)
         Spacer(modifier = Modifier.height(CodexMeterSpacing.bottomNavigationClearance))
     }
 
@@ -357,14 +318,6 @@ fun SettingsScreen(
             onRefreshIntervalSelected = onRefreshIntervalSelected,
             onCurrencyTargetSelected = onCurrencyTargetSelected,
             onDismiss = onChoiceDialogDismiss,
-        )
-    }
-    uiState.update.pendingUpdate?.let { update ->
-        AppUpdateAvailableDialog(
-            versionName = update.versionName,
-            releaseNotes = update.releaseNotes,
-            onDownloadClick = onAppUpdateDownloadClick,
-            onDismiss = onAppUpdateDismiss,
         )
     }
 }
@@ -473,40 +426,38 @@ private fun ConfirmDataActionDialog(
     )
 }
 
+/**
+ * Shows the upstream CodexMeter MIT notice inside the app, as its license requires for copies and
+ * substantial portions of the software.
+ */
 @Composable
-private fun AppUpdateAvailableDialog(
-    versionName: String,
-    releaseNotes: String?,
-    onDownloadClick: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun LicensesDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(R.string.settings_update_dialog_title)) },
+        title = { Text(text = stringResource(R.string.settings_about_licenses_title)) },
         text = {
-            Column {
-                Text(text = stringResource(R.string.settings_update_dialog_message, versionName))
-                if (!releaseNotes.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(CodexMeterSpacing.sm))
-                    Text(
-                        text = releaseNotes,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .heightIn(max = 220.dp)
-                            .verticalScroll(rememberScrollState()),
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm),
+            ) {
+                Text(text = stringResource(R.string.settings_about_based_on))
+                Text(
+                    text = stringResource(R.string.license_codexmeter_mit),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(R.string.settings_about_third_party_libraries),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDownloadClick) {
-                Text(text = stringResource(R.string.settings_update_dialog_download))
-            }
-        },
-        dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.settings_update_dialog_cancel))
+                Text(text = stringResource(R.string.settings_about_licenses_close))
             }
         },
     )

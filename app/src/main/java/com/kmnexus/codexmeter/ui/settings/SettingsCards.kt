@@ -23,36 +23,26 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
@@ -581,7 +571,7 @@ internal fun DiagnosticsCard(
 @Composable
 internal fun AboutCard(
     about: SettingsAboutUi,
-    onRepositoryClick: () -> Unit,
+    onLicensesClick: () -> Unit,
 ) {
     SettingsSurfaceCard {
         Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
@@ -604,131 +594,17 @@ internal fun AboutCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            val repositoryContentDescription = stringResource(R.string.settings_about_repository_content_description)
-            OutlinedButton(
-                onClick = onRepositoryClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentDescription = repositoryContentDescription },
-                shape = CodexMeterShapes.md,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_brand_github),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Text(text = stringResource(R.string.settings_about_repository_label))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun AppUpdateCard(
-    update: SettingsUpdateUi,
-    onCheckClick: () -> Unit,
-    onAvailableUpdateClick: () -> Unit,
-    onAutoCheckChanged: (Boolean) -> Unit,
-    onNotifyOnUpdateChanged: (Boolean) -> Unit,
-) {
-    val animatorsEnabled = rememberCodexMeterAnimatorsEnabled()
-    val rotation = if (update.isChecking && animatorsEnabled) {
-        val transition = rememberInfiniteTransition(label = "settings_update_refresh_icon")
-        val animatedRotation by transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 900, easing = LinearEasing),
-            ),
-            label = "settings_update_refresh_icon_rotation",
-        )
-        animatedRotation
-    } else {
-        0f
-    }
-
-    SettingsSurfaceCard {
-        Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SettingsItemText(
-                    titleResId = R.string.settings_update_title,
-                    descriptionResId = R.string.settings_update_description,
-                    modifier = Modifier.weight(1f),
-                )
-                if (update.availableUpdate != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(CodexMeterSpacing.sm)
-                            .background(CodexMeterTheme.colors.danger, CircleShape),
-                    )
-                }
-            }
-
-            SwitchRow(
-                titleResId = R.string.settings_update_auto_check_title,
-                descriptionResId = R.string.settings_update_auto_check_description,
-                checked = update.autoCheckEnabled,
-                onCheckedChange = onAutoCheckChanged,
+            Text(
+                text = stringResource(R.string.settings_about_based_on),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            SwitchRow(
-                titleResId = R.string.settings_update_notify_title,
-                descriptionResId = R.string.settings_update_notify_description,
-                checked = update.notifyOnUpdateEnabled,
-                onCheckedChange = onNotifyOnUpdateChanged,
-                enabled = update.autoCheckEnabled,
-            )
-
-            update.availableUpdate?.let { available ->
-                Button(
-                    onClick = onAvailableUpdateClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = CodexMeterShapes.md,
-                ) {
-                    Text(
-                        text = stringResource(
-                            R.string.settings_update_download_available,
-                            available.versionName,
-                        ),
-                    )
-                }
-            }
-
             OutlinedButton(
-                onClick = onCheckClick,
-                enabled = !update.isChecking,
+                onClick = onLicensesClick,
                 modifier = Modifier.fillMaxWidth(),
                 shape = CodexMeterShapes.md,
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_action_refresh),
-                        contentDescription = null,
-                        modifier = Modifier.graphicsLayer {
-                            rotationZ = if (update.isChecking) rotation else 0f
-                        },
-                    )
-                    Text(
-                        text = stringResource(
-                            if (update.isChecking) R.string.settings_update_checking else R.string.settings_update_check,
-                        ),
-                    )
-                }
-            }
-            update.statusLabelResId?.let { statusLabelResId ->
-                Text(
-                    text = stringResource(statusLabelResId),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(text = stringResource(R.string.settings_about_licenses_label))
             }
         }
     }

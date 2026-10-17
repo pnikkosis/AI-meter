@@ -34,16 +34,6 @@ import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.RetentionPreference
 import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
-import com.kmnexus.codexmeter.domain.update.AppUpdateCheckResult
-import com.kmnexus.codexmeter.domain.update.AppUpdateCheckUseCase
-import com.kmnexus.codexmeter.domain.update.AppUpdateDownloadResult
-import com.kmnexus.codexmeter.domain.update.AppUpdateDownloadUseCase
-import com.kmnexus.codexmeter.domain.update.AppUpdateInfo
-import com.kmnexus.codexmeter.domain.update.AppVersionComparator
-import com.kmnexus.codexmeter.domain.update.NoopAppUpdateCheckUseCase
-import com.kmnexus.codexmeter.domain.update.NoopAppUpdateDownloadUseCase
-import com.kmnexus.codexmeter.domain.update.NoopUpdatePreferenceStore
-import com.kmnexus.codexmeter.domain.update.UpdatePreferenceStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -166,15 +156,6 @@ object NoopBackgroundRefreshScheduler : BackgroundRefreshScheduler {
     override fun applyIntervalMinutes(minutes: Int) = Unit
 }
 
-/** Schedules or cancels the daily update-check worker when the auto-check toggle changes. */
-fun interface UpdateCheckScheduler {
-    fun setAutoCheckEnabled(enabled: Boolean)
-}
-
-object NoopUpdateCheckScheduler : UpdateCheckScheduler {
-    override fun setAutoCheckEnabled(enabled: Boolean) = Unit
-}
-
 internal object NoopCurrencyPreferenceStore : CurrencyPreferenceStore {
     override suspend fun currencyPreferences(): CurrencyPreferences = CurrencyPreferences()
     override suspend fun updateCurrencyPreferences(preferences: CurrencyPreferences) = Unit
@@ -198,15 +179,6 @@ data class SettingsDiagnosticsUi(
     val recheckRequestCount: Int = 0,
 )
 
-data class SettingsUpdateUi(
-    val isChecking: Boolean = false,
-    @get:StringRes val statusLabelResId: Int? = null,
-    val pendingUpdate: AppUpdateInfo? = null,
-    val autoCheckEnabled: Boolean = true,
-    val notifyOnUpdateEnabled: Boolean = true,
-    val availableUpdate: AppUpdateInfo? = null,
-)
-
 data class SettingsAboutUi(
     val versionName: String = "0.1.0",
     val buildName: String = "MVP",
@@ -221,7 +193,6 @@ data class SettingsUiState(
     val data: SettingsDataUi = SettingsDataUi(),
     val diagnostics: SettingsDiagnosticsUi = SettingsDiagnosticsUi(),
     val about: SettingsAboutUi = SettingsAboutUi(),
-    val update: SettingsUpdateUi = SettingsUpdateUi(),
     val pendingChoiceDialog: SettingsChoiceDialog? = null,
 )
 
@@ -350,16 +321,12 @@ class SettingsViewModel(
         InMemoryBackgroundRefreshStatusReader(),
     private val diagnosticsReader: SettingsDiagnosticsReader = DefaultSettingsDiagnosticsReader,
     private val quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
-    private val appUpdateChecker: AppUpdateCheckUseCase = NoopAppUpdateCheckUseCase,
-    private val appUpdateDownloader: AppUpdateDownloadUseCase = NoopAppUpdateDownloadUseCase,
     private val backgroundRefreshScheduler: BackgroundRefreshScheduler = NoopBackgroundRefreshScheduler,
     private val currentVersionName: String = BuildConfig.VERSION_NAME,
     private val notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
         NotificationWindowChoicesLoader { _, _ -> emptyList() },
     private val currencyPreferenceStore: CurrencyPreferenceStore = NoopCurrencyPreferenceStore,
     private val appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
-    private val updatePreferenceStore: UpdatePreferenceStore = NoopUpdatePreferenceStore,
-    private val updateCheckScheduler: UpdateCheckScheduler = NoopUpdateCheckScheduler,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
         SettingsUiState(
@@ -620,25 +587,6 @@ class SettingsViewModel(
                     loadAndApplyWindowChoices(resolvedAccountSelection)
                 }
             }
-            runCatching {
-                updatePreferenceStore.preferences()
-            }.onSuccess { prefs ->
-                val available = prefs.availableUpdate?.takeIf {
-                    AppVersionComparator.isRemoteVersionNewer(currentVersionName, it.versionName)
-                }
-                if (available == null && prefs.availableUpdate != null) {
-                    runCatching { updatePreferenceStore.setAvailableUpdate(null) }
-                }
-                update { state ->
-                    state.copy(
-                        update = state.update.copy(
-                            autoCheckEnabled = prefs.autoCheckEnabled,
-                            notifyOnUpdateEnabled = prefs.notifyOnUpdateEnabled,
-                            availableUpdate = available,
-                        ),
-                    )
-                }
-            }
         }
     }
 
@@ -733,79 +681,6 @@ class SettingsViewModel(
                         recheckRequestCount = state.diagnostics.recheckRequestCount + 1,
                     ),
                 )
-            }
-        }
-    }
-
-    fun checkForUpdates() {
-        if (_uiState.value.update.isChecking) return
-        update { state ->
-            state.copy(
-                update = state.update.copy(
-                    isChecking = true,
-                    statusLabelResId = R.string.settings_update_status_checking,
-                    pendingUpdate = null,
-                ),
-            )
-        }
-        viewModelScope.launch {
-            val result = runCatching {
-                appUpdateChecker.checkForUpdate(currentVersionName)
-            }.getOrElse {
-                AppUpdateCheckResult.Failure("app_update_check_failed")
-            }
-            update { state -> state.copy(update = result.toSettingsUpdateUi(state.update)) }
-            when (result) {
-                is AppUpdateCheckResult.UpdateAvailable ->
-                    runCatching { updatePreferenceStore.setAvailableUpdate(result.update) }
-                AppUpdateCheckResult.UpToDate ->
-                    runCatching { updatePreferenceStore.setAvailableUpdate(null) }
-                else -> Unit
-            }
-        }
-    }
-
-    fun dismissPendingUpdate() {
-        update { state ->
-            state.copy(update = state.update.copy(pendingUpdate = null))
-        }
-    }
-
-    fun setAutoCheckUpdates(enabled: Boolean) {
-        update { state -> state.copy(update = state.update.copy(autoCheckEnabled = enabled)) }
-        updateCheckScheduler.setAutoCheckEnabled(enabled)
-        viewModelScope.launch {
-            runCatching { updatePreferenceStore.setAutoCheckEnabled(enabled) }
-        }
-    }
-
-    fun setNotifyOnUpdate(enabled: Boolean) {
-        update { state -> state.copy(update = state.update.copy(notifyOnUpdateEnabled = enabled)) }
-        viewModelScope.launch {
-            runCatching { updatePreferenceStore.setNotifyOnUpdateEnabled(enabled) }
-        }
-    }
-
-    fun showAvailableUpdateDialog() {
-        viewModelScope.launch {
-            val available = runCatching { updatePreferenceStore.preferences().availableUpdate }
-                .getOrNull() ?: _uiState.value.update.availableUpdate ?: return@launch
-            update { state ->
-                state.copy(update = state.update.copy(pendingUpdate = available))
-            }
-        }
-    }
-
-    fun downloadPendingUpdate() {
-        val pendingUpdate = _uiState.value.update.pendingUpdate ?: return
-        viewModelScope.launch {
-            val result = runCatching {
-                appUpdateDownloader.download(pendingUpdate)
-            }.getOrElse {
-                AppUpdateDownloadResult.Failure("app_update_download_failed")
-            }
-            update { state ->
-                state.copy(update = result.toSettingsUpdateUi(state.update))
             }
         }
     }
@@ -920,16 +795,12 @@ class SettingsViewModel(
                 InMemoryBackgroundRefreshStatusReader(),
             diagnosticsReader: SettingsDiagnosticsReader = DefaultSettingsDiagnosticsReader,
             quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
-            appUpdateChecker: AppUpdateCheckUseCase = NoopAppUpdateCheckUseCase,
-            appUpdateDownloader: AppUpdateDownloadUseCase = NoopAppUpdateDownloadUseCase,
             backgroundRefreshScheduler: BackgroundRefreshScheduler = NoopBackgroundRefreshScheduler,
             currentVersionName: String = BuildConfig.VERSION_NAME,
             notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
                 NotificationWindowChoicesLoader { _, _ -> emptyList() },
             currencyPreferenceStore: CurrencyPreferenceStore = NoopCurrencyPreferenceStore,
             appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
-            updatePreferenceStore: UpdatePreferenceStore = NoopUpdatePreferenceStore,
-            updateCheckScheduler: UpdateCheckScheduler = NoopUpdateCheckScheduler,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -941,15 +812,11 @@ class SettingsViewModel(
                         backgroundRefreshStatusReader = backgroundRefreshStatusReader,
                         diagnosticsReader = diagnosticsReader,
                         quotaHistoryClearUseCase = quotaHistoryClearUseCase,
-                        appUpdateChecker = appUpdateChecker,
-                        appUpdateDownloader = appUpdateDownloader,
                         backgroundRefreshScheduler = backgroundRefreshScheduler,
                         currentVersionName = currentVersionName,
                         notificationWindowChoicesLoader = notificationWindowChoicesLoader,
                         currencyPreferenceStore = currencyPreferenceStore,
                         appearancePreferenceStore = appearancePreferenceStore,
-                        updatePreferenceStore = updatePreferenceStore,
-                        updateCheckScheduler = updateCheckScheduler,
                     ) as T
             }
     }
@@ -984,48 +851,6 @@ class SettingsViewModel(
         }
     }
 }
-
-private fun AppUpdateCheckResult.toSettingsUpdateUi(previous: SettingsUpdateUi): SettingsUpdateUi =
-    when (this) {
-        is AppUpdateCheckResult.UpdateAvailable -> previous.copy(
-            isChecking = false,
-            statusLabelResId = R.string.settings_update_status_update_available,
-            pendingUpdate = update,
-            availableUpdate = update,
-        )
-        AppUpdateCheckResult.UpToDate -> previous.copy(
-            isChecking = false,
-            statusLabelResId = R.string.settings_update_status_latest,
-            pendingUpdate = null,
-            availableUpdate = null,
-        )
-        AppUpdateCheckResult.NoRelease -> previous.copy(
-            isChecking = false,
-            statusLabelResId = R.string.settings_update_status_no_release,
-        )
-        AppUpdateCheckResult.NoApkAsset -> previous.copy(
-            isChecking = false,
-            statusLabelResId = R.string.settings_update_status_no_apk,
-        )
-        is AppUpdateCheckResult.Failure -> previous.copy(
-            isChecking = false,
-            statusLabelResId = R.string.settings_update_status_failed,
-        )
-    }
-
-private fun AppUpdateDownloadResult.toSettingsUpdateUi(previous: SettingsUpdateUi): SettingsUpdateUi =
-    when (this) {
-        is AppUpdateDownloadResult.Enqueued -> previous.copy(
-            isChecking = false,
-            statusLabelResId = R.string.settings_update_status_downloading,
-            pendingUpdate = null,
-        )
-        is AppUpdateDownloadResult.Failure -> previous.copy(
-            isChecking = false,
-            statusLabelResId = R.string.settings_update_status_download_failed,
-            pendingUpdate = null,
-        )
-    }
 
 private fun RetentionPreference.toSettingsRetentionOption(): SettingsRetentionOption =
     when (this) {
