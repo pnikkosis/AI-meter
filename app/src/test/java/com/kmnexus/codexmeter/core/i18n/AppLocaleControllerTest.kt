@@ -92,7 +92,8 @@ class AppLocaleControllerTest {
         )
 
         assertEquals("Ajustes", context.getString(R.string.settings_title))
-        assertEquals("Límite 5 h · disponible", context.getString(R.string.quota_window_remaining_format, "Límite 5 h"))
+        val fiveHours = context.getString(R.string.account_quota_five_hour_label)
+        assertEquals("5 horas · disponible", context.getString(R.string.quota_window_remaining_format, fiveHours))
     }
 
     @Test

@@ -263,8 +263,15 @@ private fun WidgetHeaderRow(
         verticalAlignment = Alignment.Vertical.CenterVertically,
     ) {
         WidgetBrandIcon(state, sizeDp = 18)
+        // A row measures its unweighted children first, in order: the provider name is never cut,
+        // the status after it gets what is left, and the weighted account name gives way first.
         Text(
-            text = state.headerTitle(wide = true),
+            text = state.providerName,
+            style = TextStyle(color = WidgetTextProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+            maxLines = 1,
+        )
+        Text(
+            text = state.accountSuffix(),
             modifier = GlanceModifier.defaultWeight(),
             style = TextStyle(color = WidgetTextProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
@@ -275,23 +282,24 @@ private fun WidgetHeaderRow(
 }
 
 /**
- * Status word plus the time of the data on screen ("Normal · Updated 14:05", "No connection ·
- * Updated 09:12"), followed by a refresh button that fetches new data in the background.
+ * A refresh button that fetches new data in the background, followed by the status word and the
+ * time of the data on screen ("Normal · Updated 14:05", "No connection · Updated 09:12"). The
+ * button comes first so that a status too long for the space is what gets cut, never the button.
  */
 @Composable
 private fun StatusRefreshRow(context: Context, state: WidgetQuotaState, modifier: GlanceModifier = GlanceModifier) {
     Row(modifier = modifier, verticalAlignment = Alignment.Vertical.CenterVertically) {
-        Text(
-            text = state.statusLine(context),
-            style = TextStyle(color = state.tone.statusAccentProvider(), fontSize = 10.sp, fontWeight = FontWeight.Medium),
-            maxLines = 1,
-        )
-        Spacer(GlanceModifier.width(4.dp))
         Image(
             provider = ImageProvider(R.drawable.ic_action_refresh),
             contentDescription = context.getString(R.string.widget_refresh_content_description),
             modifier = GlanceModifier.width(16.dp).height(16.dp).clickable(actionRunCallback<WidgetRefreshAction>()),
             colorFilter = ColorFilter.tint(WidgetMutedTextProvider),
+        )
+        Spacer(GlanceModifier.width(4.dp))
+        Text(
+            text = state.statusLine(context),
+            style = TextStyle(color = state.tone.statusAccentProvider(), fontSize = 10.sp, fontWeight = FontWeight.Medium),
+            maxLines = 1,
         )
     }
 }
@@ -566,16 +574,18 @@ private fun WidgetField.title(context: Context): String {
 }
 
 /** Provider first so it is never cut off; wide layouts add the account name after it. */
-private fun WidgetQuotaState.headerTitle(wide: Boolean): String {
-    val account = accountName?.takeIf { it.isNotBlank() && it != providerName }
-    return if (wide && account != null) "$providerName · $account" else providerName
-}
+private fun WidgetQuotaState.headerTitle(wide: Boolean): String =
+    if (wide) providerName + accountSuffix() else providerName
+
+/** " · account" when the account has a name of its own, otherwise empty. */
+private fun WidgetQuotaState.accountSuffix(): String =
+    accountName?.takeIf { it.isNotBlank() && it != providerName }?.let { " · $it" }.orEmpty()
 
 /** "Normal · Updated 14:05"; just the status word when there is no data yet. */
 private fun WidgetQuotaState.statusLine(context: Context): String {
     val status = context.getString(statusLabelResId())
     val updated = lastUpdatedAt ?: return status
-    return context.getString(R.string.widget_status_updated_format, status, updated.formatUpdatedTime(context))
+    return context.getString(R.string.widget_status_updated_format, status, updated.formatWidgetTime(context))
 }
 
 @androidx.annotation.StringRes
@@ -602,11 +612,11 @@ private fun WidgetField.valueText(context: Context): String =
     }
 
 private fun WidgetField.resetLine(context: Context): String? =
-    resetAt?.let { context.getString(R.string.widget_reset_at_compact_format, it.formatShortDateTime(context)) }
+    resetAt?.let { context.getString(R.string.widget_reset_at_compact_format, it.formatWidgetTime(context)) }
 
-/** Bare reset stamp (short date + time) without the "Reset" prefix — for the narrow header/grid cells. */
+/** Bare reset stamp without the "Reset" prefix — for the narrow header/grid cells. */
 private fun WidgetField.compactResetTime(context: Context): String? =
-    resetAt?.formatShortDateTime(context)
+    resetAt?.formatWidgetTime(context)
 
 private fun WidgetQuotaState.launchIntent(context: Context): Intent =
     Intent(context, MainActivity::class.java).apply {
@@ -683,23 +693,18 @@ internal fun WidgetQuotaTone.statusAccentArgb(): Int = when (this) {
 internal fun WidgetQuotaTone.statusGlowArgb(): Int =
     statusGlowColor().toArgb()
 
-/** Time only when the data is from today, otherwise short date + time. */
-private fun Instant.formatUpdatedTime(context: Context): String {
+/**
+ * Time only when the instant is today, otherwise short month/day + time (never the year: data
+ * times and resets are always near-term). The hour cycle follows the phone's 12/24-hour setting;
+ * getBestDateTimePattern keeps the locale's field order.
+ */
+private fun Instant.formatWidgetTime(context: Context): String {
     val locale = context.resources.configuration.locales[0]
     val zone = ZoneId.systemDefault()
+    val hours = if (DateFormat.is24HourFormat(context)) "Hm" else "hm"
     val sameDay = atZone(zone).toLocalDate() == java.time.LocalDate.now(zone)
-    val pattern = DateFormat.getBestDateTimePattern(locale, if (sameDay) "jm" else "Mdjm")
+    val pattern = DateFormat.getBestDateTimePattern(locale, if (sameDay) hours else "Md$hours")
     return DateTimeFormatter.ofPattern(pattern, locale).withZone(zone).format(this)
-}
-
-private fun Instant.formatShortDateTime(context: Context): String {
-    val locale = context.resources.configuration.locales[0]
-    // Short month/day + time, without the year — a quota reset is always near-term, so the year is
-    // noise. getBestDateTimePattern keeps the date-field order and 12/24h hour cycle locale-correct.
-    val pattern = DateFormat.getBestDateTimePattern(locale, "Mdjm")
-    return DateTimeFormatter.ofPattern(pattern, locale)
-        .withZone(ZoneId.systemDefault())
-        .format(this)
 }
 
 private fun WidgetLayoutVariant.horizontalContentPadding() = when (this) {

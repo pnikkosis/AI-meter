@@ -36,8 +36,9 @@ chino). Abajo se citan los textos en español y, entre paréntesis, en inglés.
    leyendo el consumo y guarda la cuenta.
 4. Si algo falla, la pantalla dice el motivo (cancelado, permiso rechazado, sin conexión, límite de
    peticiones, etc.) y permite **Reintentar**. No se guarda nada si falla. En particular, si aparece
-   “Claude aceptó el inicio de sesión pero se negó a informar el consumo”, Anthropic no acepta el
-   permiso mínimo `user:profile` para leer el uso (ver `docs/INFORME-PRUEBAS.md`).
+   “Claude aceptó el inicio de sesión pero se negó a informar el consumo”, lo más probable es que
+   Anthropic no acepte el permiso mínimo `user:profile` para leer el uso (ver la sección 6 de
+   `docs/INFORME-PRUEBAS.md`).
 
 ## 4. Agregar los widgets
 
@@ -56,14 +57,14 @@ Cómo leer un widget:
 - Encabezado: proveedor (y cuenta en los tamaños anchos).
 - Línea de estado: estado y hora de los datos, por ejemplo `Normal · Actualizado 14:05`
   (*Normal · Updated 14:05*). Si los datos no son de hoy, incluye la fecha.
-- Cada campo: ventana y la palabra **disponible** (`Límite 5 h · disponible`, en inglés
-  `5h quota · left`), el porcentaje **disponible** (no el consumido) y la hora de reinicio informada
-  por el proveedor. Una ventana agotada se ve como `0%` en rojo.
+- Cada campo: ventana y la palabra **disponible** (`5 horas · disponible`, en inglés
+  `5h quota · left`), el porcentaje **disponible** (no el consumido) y el reinicio informado por el
+  proveedor (solo la hora si es hoy). Una ventana agotada se ve como `0%` en rojo.
 - Si el último intento falló, el estado dice por qué (`Sin conexión`, `Límite de peticiones`,
   `Error del proveedor`, `Datos ilegibles`, `Sesión vencida`) y los números se muestran atenuados
-  porque son los últimos conocidos, no los actuales. Sin datos, el widget lo dice en lugar de
-  mostrar 0 %.
-- Botón ↻: pide una actualización inmediata en segundo plano.
+  porque son los últimos conocidos, no los actuales; `Atrasado` y `Desactualizado` indican datos
+  viejos sin error. Sin datos, el widget lo dice en lugar de mostrar 0 %.
+- Botón ↻ (junto al estado): pide una actualización inmediata en segundo plano.
 - Tocar el resto del widget abre la app.
 
 ## 5. Actualización en segundo plano
