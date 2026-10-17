@@ -21,6 +21,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -122,9 +124,76 @@ class ClaudeLoginViewModelTest {
             viewModel.start(pages)
             runCurrent()
             receiver.result.complete(CallbackResult.Code("code"))
-            runCurrent()
+            advanceUntilIdle()
 
             assertEquals(expected, viewModel.uiState.value.failure)
+        }
+    }
+
+    @Test
+    fun `the code is exchanged only once the app is back in front of the browser`() = runTest(dispatcher) {
+        val receiver = FakeReceiver()
+        val connector = RecordingConnector(ConnectResult.Connected(account("person@example.com")))
+        val viewModel = viewModel(connector, receiver)
+
+        viewModel.start(pages)
+        runCurrent()
+        viewModel.onScreenVisibilityChanged(visible = false)
+        receiver.result.complete(CallbackResult.Code("auth-code"))
+        advanceUntilIdle()
+
+        assertTrue("no request while the browser covers the app", connector.calls.isEmpty())
+        assertEquals(ClaudeLoginPhase.WaitingForBrowser, viewModel.uiState.value.phase)
+
+        viewModel.onScreenVisibilityChanged(visible = true)
+        runCurrent()
+
+        assertEquals("auth-code", connector.calls.single().code)
+        assertEquals(ClaudeLoginPhase.Connected, viewModel.uiState.value.phase)
+    }
+
+    @Test
+    fun `an exchange that found no network is sent once more after a short pause`() = runTest(dispatcher) {
+        val receiver = FakeReceiver()
+        val connector = RecordingConnector(
+            ConnectResult.Failed(QuotaError.Network("d"), ConnectStage.Exchange),
+            ConnectResult.Connected(account("person@example.com")),
+        )
+        val viewModel = viewModel(connector, receiver)
+
+        viewModel.start(pages)
+        runCurrent()
+        receiver.result.complete(CallbackResult.Code("auth-code"))
+        runCurrent()
+
+        assertEquals(1, connector.calls.size)
+        assertEquals(ClaudeLoginPhase.Connecting, viewModel.uiState.value.phase)
+
+        advanceTimeBy(ClaudeLoginViewModel.NETWORK_RETRY_DELAY_MILLIS + 1)
+
+        assertEquals(listOf("auth-code", "auth-code"), connector.calls.map { it.code })
+        assertEquals(ClaudeLoginPhase.Connected, viewModel.uiState.value.phase)
+    }
+
+    @Test
+    fun `only exchange network failures are retried, and only once`() = runTest(dispatcher) {
+        val cases = listOf(
+            ConnectResult.Failed(QuotaError.Network("d"), ConnectStage.Exchange) to 2,
+            ConnectResult.Failed(QuotaError.Network("d"), ConnectStage.Validate) to 1,
+            ConnectResult.Failed(QuotaError.AuthRequired(400, "d"), ConnectStage.Exchange) to 1,
+        )
+        cases.forEach { (connectResult, expectedCalls) ->
+            val receiver = FakeReceiver()
+            val connector = RecordingConnector(connectResult)
+            val viewModel = viewModel(connector, receiver)
+
+            viewModel.start(pages)
+            runCurrent()
+            receiver.result.complete(CallbackResult.Code("code"))
+            advanceUntilIdle()
+
+            assertEquals("calls for $connectResult", expectedCalls, connector.calls.size)
+            assertEquals(ClaudeLoginPhase.Failed, viewModel.uiState.value.phase)
         }
     }
 
@@ -247,7 +316,8 @@ class ClaudeLoginViewModelTest {
         }
     }
 
-    private class RecordingConnector(private val result: ConnectResult) : ClaudeConnect {
+    /** Answers with [results] in order, repeating the last one. */
+    private class RecordingConnector(private vararg val results: ConnectResult) : ClaudeConnect {
         data class Call(val code: String, val pkce: PkceSession, val redirectUri: String, val expected: ProviderAccountId?)
 
         val calls = mutableListOf<Call>()
@@ -259,7 +329,7 @@ class ClaudeLoginViewModelTest {
             expectedProviderAccountId: ProviderAccountId?,
         ): ConnectResult {
             calls += Call(code, pkce, redirectUri, expectedProviderAccountId)
-            return result
+            return results[minOf(calls.size, results.size) - 1]
         }
     }
 }

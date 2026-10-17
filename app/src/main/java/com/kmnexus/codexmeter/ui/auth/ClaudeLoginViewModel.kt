@@ -20,10 +20,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -81,6 +83,10 @@ class ClaudeLoginViewModel(
     private var attempt: Job? = null
     private var currentUrl: String? = null
 
+    // Android cuts the network of an app whose screen stays behind another one (here the browser
+    // tab) after a few seconds, so provider requests wait until the screen is in front again.
+    private val screenVisible = MutableStateFlow(true)
+
     fun start(pages: CallbackPages) {
         if (attempt?.isActive == true) return
         attempt = viewModelScope.launch {
@@ -110,6 +116,11 @@ class ClaudeLoginViewModel(
         if (_uiState.value.phase == ClaudeLoginPhase.WaitingForBrowser) {
             browserRequestChannel.trySend(url)
         }
+    }
+
+    /** The screen reports when it is shown or hidden (for example behind the browser tab). */
+    fun onScreenVisibilityChanged(visible: Boolean) {
+        screenVisible.value = visible
     }
 
     /** Called when no app can open the sign-in page. */
@@ -143,8 +154,7 @@ class ClaudeLoginViewModel(
                 },
             )
             is CallbackResult.Code -> {
-                update { it.copy(phase = ClaudeLoginPhase.Connecting) }
-                when (val result = connector.connect(callback.code, pkce, redirectUri, expectedProviderAccountId)) {
+                when (val result = connectInForeground(callback.code, pkce, redirectUri)) {
                     is ConnectResult.Connected -> update {
                         it.copy(
                             phase = ClaudeLoginPhase.Connected,
@@ -160,6 +170,20 @@ class ClaudeLoginViewModel(
                 }
             }
         }
+    }
+
+    private suspend fun connectInForeground(code: String, pkce: PkceSession, redirectUri: String): ConnectResult {
+        screenVisible.first { it }
+        update { it.copy(phase = ClaudeLoginPhase.Connecting) }
+        val result = connector.connect(code, pkce, redirectUri, expectedProviderAccountId)
+        if (result !is ConnectResult.Failed || result.stage != ConnectStage.Exchange || result.error !is QuotaError.Network) {
+            return result
+        }
+        // Back in front, Android returns the network a moment after the screen; a code the server
+        // never received can be sent once more (if it did arrive, Claude refuses the repeat).
+        delay(NETWORK_RETRY_DELAY_MILLIS)
+        screenVisible.first { it }
+        return connector.connect(code, pkce, redirectUri, expectedProviderAccountId)
     }
 
     private fun ConnectResult.Failed.toFailure(): ClaudeLoginFailure = when (error) {
@@ -183,6 +207,9 @@ class ClaudeLoginViewModel(
     companion object {
         /** Generous enough for a password manager, 2FA and a slow network. */
         const val SIGN_IN_TIMEOUT_MILLIS = 10 * 60 * 1000L
+
+        /** Pause before sending again an exchange that found no network. */
+        const val NETWORK_RETRY_DELAY_MILLIS = 1_000L
 
         fun factory(
             connector: ClaudeConnect,
