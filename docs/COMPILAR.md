@@ -83,10 +83,21 @@ con `scripts/ci/emulator_smoke.py`. Las capturas quedan en el registro del job e
 ## Compilación reproducible
 
 La compilación no incluye marcas de tiempo ni datos de la máquina (`BuildConfig` solo lleva versión
-y tipo de build), así que el mismo commit compilado con las versiones de la tabla produce el mismo
-APK sin firmar. Para comprobarlo, comparar el SHA-256 de `app-release-unsigned.apk` impreso por dos
-ejecuciones distintas (por ejemplo CI y el workflow de exportación) del mismo commit. La firma se
-agrega después; con la misma clave, `apksigner` produce el mismo APK firmado.
+y tipo de build). Sí incluye el commit del que se compiló: el Android Gradle Plugin escribe
+`META-INF/version-control-info.textproto` con su hash. Por eso el mismo commit compilado con las
+versiones de la tabla produce el mismo APK sin firmar, y cada commit uno distinto. Para comprobarlo,
+comparar el SHA-256 de `app-release-unsigned.apk` impreso por dos ejecuciones distintas del mismo
+commit (por ejemplo CI y el workflow de exportación).
+
+La firma se agrega después. Con la clave RSA de este fork la firma es determinista: firmar dos
+veces el mismo APK da el mismo archivo. La firma v2/v3 no modifica las entradas del ZIP, así que un
+APK firmado se puede comparar con uno compilado por cualquiera desde el mismo commit:
+
+```bash
+entradas() { unzip -v "$1" | awk '$7 ~ /^[0-9a-f]{8}$/ {print $7, $8}' | sort -k2; }
+diff <(entradas app-release-unsigned.apk) <(entradas AIUsageWidget-1.0.0.apk) && echo "mismo contenido"
+unzip -p AIUsageWidget-1.0.0.apk META-INF/version-control-info.textproto   # commit de origen
+```
 
 ## Verificar un APK
 
@@ -103,6 +114,10 @@ La huella SHA-256 del certificado de firma de este fork es:
 
 Toda actualización tiene que estar firmada con ese mismo certificado; Android rechaza instalar una
 versión firmada con otra clave encima de la existente.
+
+`apksigner` informa “Verified using v3 scheme: true” y v2 en `false`: el APK lleva las dos firmas,
+pero con minSdk 31 solo se verifica la v3, que es la que usa Android 12 o posterior
+(`--min-sdk-version 24` muestra también la v2).
 
 ## Clave de firma
 

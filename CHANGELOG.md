@@ -40,6 +40,10 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
 - Codex: una respuesta HTTP del servidor (429, 5xx, página de desafío de Cloudflare) ya no se
   informa como "sin conexión" ni cierra la sesión; solo un 401, un 403 de la API o un error
   terminal de OAuth piden volver a iniciar sesión.
+- Codex: el inicio de sesión fallaba siempre en Android 12 (y en otras versiones con java.time
+  anterior a JDK 12): OpenAI envía `expires_at` con desplazamiento (`+00:00`) y `Instant.parse` de
+  esas versiones solo acepta `Z`. Ahora se lee con `OffsetDateTime`. Defecto heredado del original,
+  encontrado en el emulador con Android 12.
 - Widget: nombre del proveedor, "· disponible" ("· left") en cada campo, hora de los datos, estado
   con el tipo de error, valores atenuados cuando no son actuales, ventanas agotadas visibles como 0 %, mensaje en
   lugar de celdas vacías, botón de actualización manual.
