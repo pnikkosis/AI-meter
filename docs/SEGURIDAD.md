@@ -64,8 +64,8 @@ propias cookies.
 El único socket que abre la app es el receptor del retorno de Claude: escucha solo en `127.0.0.1` y
 `::1` (nunca en la red Wi-Fi), en un puerto efímero, durante el inicio de sesión.
 
-Las peticiones se identifican con el User-Agent propio `AIUsageWidget/1.0.0 (Android)`; la app no se
-hace pasar por Codex CLI ni por Claude Code.
+Las peticiones se identifican con el User-Agent propio `AIUsageWidget/<versión> (Android)` (por
+ejemplo `AIUsageWidget/1.0.1 (Android)`); la app no se hace pasar por Codex CLI ni por Claude Code.
 
 La única librería de terceros fuera de AndroidX/Kotlin/OkHttp es `com.qmdeve.liquidglass:core`
 (efecto visual, MIT): 16 clases, sin permisos y sin código de red.
