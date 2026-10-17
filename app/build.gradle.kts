@@ -99,6 +99,11 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+
+    lint {
+        // CI prints a per-issue summary from the XML report; the HTML report is only an artifact.
+        xmlReport = true
+    }
 }
 
 ksp {

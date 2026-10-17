@@ -48,23 +48,60 @@ jobs:
       - name: Unit tests
         run: ./gradlew --no-daemon --stacktrace :app:testDebugUnitTest
 
+      - name: Unit test summary
+        if: ${{ !cancelled() }}
+        run: |
+          python3 - <<'EOF'
+          import glob
+          import xml.etree.ElementTree as ET
+          files = glob.glob("app/build/test-results/testDebugUnitTest/*.xml")
+          totals = dict(tests=0, failures=0, errors=0, skipped=0)
+          for path in files:
+              root = ET.parse(path).getroot()
+              for key in totals:
+                  totals[key] += int(root.get(key, 0))
+          print(f"test classes: {len(files)}, " + ", ".join(f"{k}: {v}" for k, v in totals.items()))
+          EOF
+
       - name: Assemble debug and unsigned release APKs
-        if: always()
+        if: ${{ !cancelled() }}
         run: ./gradlew --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease
 
       - name: Lint
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: ./gradlew --no-daemon :app:lintDebug
 
+      - name: Lint summary
+        if: ${{ !cancelled() }}
+        run: |
+          python3 - <<'EOF'
+          import collections
+          import os
+          import xml.etree.ElementTree as ET
+          path = "app/build/reports/lint-results-debug.xml"
+          if not os.path.exists(path):
+              raise SystemExit("no lint XML report")
+          issues = ET.parse(path).getroot().findall("issue")
+          counts = collections.Counter((i.get("severity"), i.get("id")) for i in issues)
+          for (severity, issue_id), n in sorted(counts.items()):
+              print(f"{severity:14} {issue_id:45} {n}")
+          print(f"total issues: {len(issues)}")
+          for i in issues:
+              if i.get("severity") in ("Error", "Fatal"):
+                  loc = i.find("location")
+                  where = f'{loc.get("file")}:{loc.get("line")}' if loc is not None else "?"
+                  print(f'{i.get("severity")}: {i.get("id")} at {where}: {i.get("message")}')
+          EOF
+
       - name: APK checksums
-        if: always()
+        if: ${{ !cancelled() }}
         run: |
           find app/build/outputs/apk -name '*.apk' -exec sha256sum {} \; || true
           ls -l app/build/outputs/apk/*/ || true
 
       - name: Release APK permissions and runtime dependencies
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: |
           APK=app/build/outputs/apk/release/app-release-unsigned.apk
@@ -73,7 +110,7 @@ jobs:
           ./gradlew --no-daemon -q :app:dependencies --configuration releaseRuntimeClasspath | grep -E -- "--- " | sed -E 's/^[| \\+-]+//' | sort -u
 
       - name: Upload reports
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: reports
@@ -84,7 +121,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload APKs
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: apks-unsigned-and-debug
