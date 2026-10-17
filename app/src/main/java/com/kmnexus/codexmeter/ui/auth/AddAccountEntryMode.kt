@@ -4,7 +4,13 @@ sealed class AddAccountEntryMode {
     /** First screen: pick a provider to add. Replaces the old Choose mode. */
     data object ProviderSelection : AddAccountEntryMode()
 
-    /** Codex device-code sign-in in the external browser. */
+    /**
+     * Codex sign-in in the browser (authorization code + PKCE, loopback redirect), as `codex login`
+     * does it. For a re-login, [expectedProviderAccountId] is the account's chatgpt_account_id.
+     */
+    data class CodexBrowserLogin(val expectedProviderAccountId: String? = null) : AddAccountEntryMode()
+
+    /** Codex device-code sign-in in the external browser (alternative offered by the browser sign-in). */
     data object LoginToCodex : AddAccountEntryMode()
 
     /**
@@ -22,6 +28,7 @@ sealed class AddAccountEntryMode {
     val routeValue: String
         get() = when (this) {
             is ProviderSelection -> "select"
+            is CodexBrowserLogin -> "codexbrowser:${expectedProviderAccountId.orEmpty()}"
             is LoginToCodex -> "login"
             is CodexRelogin -> "codexrelogin:${expectedProviderAccountId.orEmpty()}"
             is ClaudeLogin -> "claudelogin:${expectedProviderAccountId.orEmpty()}"
@@ -36,6 +43,8 @@ sealed class AddAccountEntryMode {
             return when {
                 routeValue == "select" -> ProviderSelection
                 routeValue == "login" -> LoginToCodex
+                routeValue.startsWith("codexbrowser:") ->
+                    CodexBrowserLogin(routeValue.removePrefix("codexbrowser:").takeIf { it.isNotBlank() })
                 routeValue.startsWith("codexrelogin:") ->
                     CodexRelogin(routeValue.removePrefix("codexrelogin:").takeIf { it.isNotBlank() })
                 routeValue.startsWith("claudelogin:") ->

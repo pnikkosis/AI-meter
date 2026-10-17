@@ -59,6 +59,8 @@ import com.kmnexus.codexmeter.providers.codex.CodexSessionCipher
 import com.kmnexus.codexmeter.providers.codex.CodexTokenRefresh
 import com.kmnexus.codexmeter.providers.codex.CodexUsageFetcher
 import com.kmnexus.codexmeter.providers.codex.auth.CodexSessionImporter
+import com.kmnexus.codexmeter.providers.codex.auth.CodexBrowserConnect
+import com.kmnexus.codexmeter.providers.codex.auth.CodexBrowserConnector
 import com.kmnexus.codexmeter.providers.codex.auth.CodexDeviceCodeClient
 import com.kmnexus.codexmeter.providers.codex.auth.CodexDeviceCodeLoginController
 import com.kmnexus.codexmeter.providers.codex.auth.CodexDeviceCodeLoginUseCase
@@ -131,6 +133,7 @@ class AppContainer private constructor(
     val widgetQuotaStateLoader: WidgetQuotaStateLoader,
     val startupMaintenance: StartupMaintenance,
     val claudeConnect: ClaudeConnect,
+    val codexBrowserConnect: CodexBrowserConnect,
     val appearancePreferences: AppearancePreferenceStore,
     val initialThemeMode: ThemeMode,
     val currencyPreferences: CurrencyPreferencesDataStore,
@@ -409,6 +412,12 @@ class AppContainer private constructor(
                 persistence = importPersistence,
                 clock = clock,
             )
+            val codexTokenExchanger = CodexOAuthTokenExchanger(httpClient)
+            val codexBrowserConnector = CodexBrowserConnector(
+                exchange = codexTokenExchanger::exchange,
+                prepare = sessionImporter::prepareBrowserSession,
+                commit = sessionImporter::commitPreparedDeviceCodeSession,
+            )
             val codexDeviceCodeClient = CodexDeviceCodeClient(httpClient)
             val codexDeviceCodeLoginUseCase = CodexDeviceCodeLoginUseCase(
                 deviceCodeClient = object : CodexDeviceCodeLoginUseCase.DeviceCodeClient {
@@ -419,7 +428,7 @@ class AppContainer private constructor(
                         codexDeviceCodeClient.pollAuthorization(challenge)
                 },
                 tokenExchanger = CodexDeviceCodeLoginUseCase.TokenExchanger(
-                    CodexOAuthTokenExchanger(httpClient)::exchange,
+                    codexTokenExchanger::exchange,
                 ),
                 sessionImporter = object : CodexDeviceCodeLoginUseCase.SessionImporter {
                     override suspend fun prepareDeviceCodeSession(
@@ -574,6 +583,7 @@ class AppContainer private constructor(
                     clock = clock,
                 ),
                 claudeConnect = claudeAccountConnector,
+                codexBrowserConnect = codexBrowserConnector,
                 appearancePreferences = appearancePreferences,
                 initialThemeMode = initialThemeMode,
                 currencyPreferences = currencyPreferences,

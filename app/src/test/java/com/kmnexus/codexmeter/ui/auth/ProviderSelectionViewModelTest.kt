@@ -15,10 +15,10 @@ class ProviderSelectionViewModelTest {
     }
 
     @Test
-    fun `providerSelection Codex uses device code auth`() {
+    fun `providerSelection Codex signs in through the browser`() {
         val codex = ProviderRegistry.all.find { it.providerId.value == "codex" }
         assertNotNull(codex)
-        assertEquals(ProviderAuthKind.DeviceCode, codex!!.authKind)
+        assertEquals(ProviderAuthKind.OAuthPkceLogin, codex!!.authKind)
         assertEquals("Codex", codex.displayName)
     }
 

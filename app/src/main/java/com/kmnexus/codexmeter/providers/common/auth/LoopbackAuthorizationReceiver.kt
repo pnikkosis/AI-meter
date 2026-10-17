@@ -31,7 +31,8 @@ interface AuthorizationCallbackReceiver : Closeable {
  * sign-in that runs in the user's own browser instead of an embedded WebView.
  *
  * - Listens on the loopback interface only (127.0.0.1, plus ::1 on the same port when available),
- *   never on an address reachable from the network, on an ephemeral port chosen by the OS.
+ *   never on an address reachable from the network, on an ephemeral port chosen by the OS or on
+ *   the first free port of a fixed list (for clients whose redirect URIs name exact ports).
  * - Only `GET <callbackPath>` is handled; any other request gets an error status and the receiver
  *   keeps waiting.
  * - A callback whose `state` does not match (compared in constant time) is answered with 400 and
@@ -147,7 +148,10 @@ class LoopbackAuthorizationReceiver private constructor(
         }
         params["error"]?.let { error ->
             respond(socket, 200, pages.failure)
-            return CallbackResult.ProviderError(sanitizeErrorCode(error))
+            return CallbackResult.ProviderError(
+                error = sanitizeErrorCode(error),
+                description = params["error_description"]?.let(::sanitizeErrorDescription),
+            )
         }
         val code = params["code"]
         if (code.isNullOrBlank() || code.length > MAX_CODE_LENGTH) {
@@ -199,8 +203,11 @@ class LoopbackAuthorizationReceiver private constructor(
             override fun toString(): String = "Code(redacted)"
         }
 
-        /** The provider redirected back with `error` (for example `access_denied`). */
-        data class ProviderError(val error: String) : CallbackResult
+        /**
+         * The provider redirected back with `error` (for example `access_denied`) and, when it sent
+         * one, `error_description` reduced to plain text.
+         */
+        data class ProviderError(val error: String, val description: String? = null) : CallbackResult
 
         data object TimedOut : CallbackResult
     }
@@ -258,16 +265,19 @@ class LoopbackAuthorizationReceiver private constructor(
             "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
         /**
-         * Binds the loopback sockets. Throws [IOException] when no loopback port can be opened.
+         * Binds the loopback sockets on the first free port of [ports] (0 lets the OS choose).
+         * Throws [IOException] when no loopback port can be opened.
          */
         fun start(
             expectedState: String,
             pages: CallbackPages,
             callbackPath: String = "/callback",
+            ports: List<Int> = listOf(0),
             ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
         ): LoopbackAuthorizationReceiver {
             require(expectedState.isNotEmpty()) { "state must not be empty" }
-            val ipv4 = ServerSocket(0, BACKLOG, InetAddress.getByName("127.0.0.1"))
+            require(ports.isNotEmpty()) { "at least one port is needed" }
+            val ipv4 = bindFirstFree(ports)
             // Browsers may resolve `localhost` to ::1 first; listen there too when the device allows.
             val ipv6 = runCatching { ServerSocket(ipv4.localPort, BACKLOG, InetAddress.getByName("::1")) }.getOrNull()
             return LoopbackAuthorizationReceiver(
@@ -280,6 +290,18 @@ class LoopbackAuthorizationReceiver private constructor(
         }
 
         private const val BACKLOG = 4
+
+        private fun bindFirstFree(ports: List<Int>): ServerSocket {
+            var lastFailure: IOException? = null
+            for (port in ports) {
+                try {
+                    return ServerSocket(port, BACKLOG, InetAddress.getByName("127.0.0.1"))
+                } catch (exception: IOException) {
+                    lastFailure = exception
+                }
+            }
+            throw lastFailure ?: IOException("no loopback port")
+        }
 
         /** Reads up to the first CRLF (or LF), bounded so a misbehaving client cannot exhaust memory. */
         internal fun readRequestLine(input: InputStream): String? {
@@ -343,11 +365,21 @@ class LoopbackAuthorizationReceiver private constructor(
         private fun decode(value: String): String? =
             runCatching { URLDecoder.decode(value, Charsets.UTF_8.name()) }.getOrNull()
 
-        /** Keeps only a short token-like error code; the provider's free text is never kept. */
+        /** Keeps only a short token-like error code. */
         internal fun sanitizeErrorCode(error: String): String =
             error.filter { it.isLetterOrDigit() || it == '_' || it == '-' || it == '.' }
                 .take(64)
                 .ifEmpty { "unknown_error" }
+
+        /**
+         * The provider's free text, reduced to letters, digits and plain punctuation. It is only
+         * matched against known causes (for example a missing Codex entitlement), never shown or logged.
+         */
+        internal fun sanitizeErrorDescription(description: String): String? =
+            description.filter { it.isLetterOrDigit() || it in " _-.,:'" }
+                .trim()
+                .take(200)
+                .ifEmpty { null }
 
         private fun reasonPhrase(status: Int): String = when (status) {
             200 -> "OK"

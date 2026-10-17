@@ -234,7 +234,7 @@ private fun ClaudeStatusCard(
 }
 
 @Composable
-private fun ProgressRow(text: String) {
+internal fun ProgressRow(text: String) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
@@ -263,9 +263,10 @@ private fun ClaudeSurfaceCard(content: @Composable () -> Unit) {
 
 /**
  * Opens [url] in a Custom Tab of the user's browser (falls back to any browser). Returns false
- * when no app can handle it. The URL is only ever an https claude.com authorization page.
+ * when no app can handle it. The URL is only ever an https authorization page of the provider
+ * (claude.com or auth.openai.com).
  */
-private fun Context.openInBrowser(url: String): Boolean =
+internal fun Context.openInBrowser(url: String): Boolean =
     try {
         CustomTabsIntent.Builder()
             .setShareState(CustomTabsIntent.SHARE_STATE_OFF)

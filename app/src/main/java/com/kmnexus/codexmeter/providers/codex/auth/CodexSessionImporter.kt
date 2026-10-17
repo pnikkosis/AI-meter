@@ -37,6 +37,13 @@ class CodexSessionImporter(
     suspend fun commitPreparedDeviceCodeSession(preparedImport: PreparedImport): Result =
         savePreparedImport(preparedImport)
 
+    /** Same validation for a session from the browser sign-in (authorization code + PKCE). */
+    suspend fun prepareBrowserSession(payload: CodexSessionPayload): PrepareResult =
+        prepareSessionPayload(
+            payload = payload,
+            source = QuotaSnapshotSource.OAuthPkceLogin,
+        )
+
     private suspend fun prepareSessionPayload(
         payload: CodexSessionPayload,
         source: QuotaSnapshotSource,

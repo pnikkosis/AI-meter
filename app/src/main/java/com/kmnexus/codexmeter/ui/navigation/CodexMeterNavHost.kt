@@ -63,6 +63,7 @@ import com.kmnexus.codexmeter.domain.auth.NoopDeviceCodeLoginNotifier
 import com.kmnexus.codexmeter.domain.model.ProviderAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.providers.claude.auth.ClaudeConnect
+import com.kmnexus.codexmeter.providers.codex.auth.CodexBrowserConnect
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
@@ -84,6 +85,7 @@ import com.kmnexus.codexmeter.refresh.RefreshWorkScheduler
 import com.kmnexus.codexmeter.ui.auth.ProviderSelectionScreen
 import com.kmnexus.codexmeter.ui.auth.ProviderSelectionSheet
 import com.kmnexus.codexmeter.ui.auth.ClaudeLoginRoute
+import com.kmnexus.codexmeter.ui.auth.CodexLoginRoute
 import com.kmnexus.codexmeter.ui.components.CodexMeterBackdrop
 import com.kmnexus.codexmeter.ui.components.LiquidGlassSurfaceRole
 import com.kmnexus.codexmeter.ui.components.QmLiquidGlassSurface
@@ -142,6 +144,7 @@ fun CodexMeterNavHost(
     settingsDiagnosticsReader: SettingsDiagnosticsReader = DefaultSettingsDiagnosticsReader,
     quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
     claudeConnect: ClaudeConnect? = null,
+    codexBrowserConnect: CodexBrowserConnect? = null,
     notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
         NotificationWindowChoicesLoader { _, _ -> emptyList() },
     appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
@@ -170,13 +173,13 @@ fun CodexMeterNavHost(
         }
     }
 
+    // Both providers sign in through the browser, each on its own screen; Codex's screen also offers
+    // its device-code sign-in as an alternative.
     fun navigateBasedOnAuthType(providerId: com.kmnexus.codexmeter.domain.model.ProviderId) {
-        val config = com.kmnexus.codexmeter.providers.ProviderRegistry.configFor(providerId)
-        val nextMode = when (config.authKind) {
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.DeviceCode ->
-                AddAccountEntryMode.LoginToCodex
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthPkceLogin ->
-                AddAccountEntryMode.ClaudeLogin()
+        val nextMode = if (providerId == com.kmnexus.codexmeter.providers.ProviderRegistry.CLAUDE) {
+            AddAccountEntryMode.ClaudeLogin()
+        } else {
+            AddAccountEntryMode.CodexBrowserLogin()
         }
         navigateToAddAccount(nextMode)
     }
@@ -188,12 +191,10 @@ fun CodexMeterNavHost(
         localAccountId: com.kmnexus.codexmeter.domain.model.LocalAccountId,
         providerAccountId: String?,
     ) {
-        val config = com.kmnexus.codexmeter.providers.ProviderRegistry.configFor(providerId)
-        val nextMode = when (config.authKind) {
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.DeviceCode ->
-                AddAccountEntryMode.CodexRelogin(providerAccountId)
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthPkceLogin ->
-                AddAccountEntryMode.ClaudeLogin(expectedProviderAccountId = providerAccountId)
+        val nextMode = if (providerId == com.kmnexus.codexmeter.providers.ProviderRegistry.CLAUDE) {
+            AddAccountEntryMode.ClaudeLogin(expectedProviderAccountId = providerAccountId)
+        } else {
+            AddAccountEntryMode.CodexBrowserLogin(expectedProviderAccountId = providerAccountId)
         }
         navigateToAddAccount(nextMode)
     }
@@ -234,6 +235,34 @@ fun CodexMeterNavHost(
                             onBackClick = { navController.popBackStack() },
                             onLoginSaved = { navigateToAccountAfterSave() },
                         )
+                    }
+                }
+                is AddAccountEntryMode.CodexBrowserLogin -> {
+                    CodexMeterDestination(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = innerPadding,
+                    ) {
+                        val connector = codexBrowserConnect
+                        if (connector != null) {
+                            CodexLoginRoute(
+                                connector = connector,
+                                expectedProviderAccountId = entryMode.expectedProviderAccountId?.let(::ProviderAccountId),
+                                onBack = { navController.popBackStack() },
+                                onConnected = { navigateToAccountAfterSave() },
+                                onUseDeviceCode = {
+                                    val deviceCodeMode = entryMode.expectedProviderAccountId
+                                        ?.let { AddAccountEntryMode.CodexRelogin(it) }
+                                        ?: AddAccountEntryMode.LoginToCodex
+                                    navController.popBackStack()
+                                    navigateToAddAccount(deviceCodeMode)
+                                },
+                            )
+                        } else {
+                            StubAuthScreen(
+                                title = "Codex",
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
                     }
                 }
                 is AddAccountEntryMode.ClaudeLogin -> {

@@ -45,6 +45,22 @@ class CodexSessionImporterTest {
     }
 
     @Test
+    fun `a browser sign-in session is validated the same way and marked as a PKCE login`() = runTest {
+        val persistence = RecordingPersistence()
+        val importer = importer(
+            usageClient = RecordingUsageClient(successUsage()),
+            persistence = persistence,
+        )
+
+        val result = importer.prepareBrowserSession(session())
+
+        val prepared = (result as CodexSessionImporter.PrepareResult.Success).preparedImport
+        assertEquals(ProviderAccountId("acct-123"), prepared.account.providerAccountId)
+        assertEquals(QuotaSnapshotSource.OAuthPkceLogin, prepared.snapshot.source)
+        assertEquals(0, persistence.saved.size)
+    }
+
+    @Test
     fun `commit prepared device code session saves sanitized account session and snapshot`() = runTest {
         val persistence = RecordingPersistence()
         val importer = importer(

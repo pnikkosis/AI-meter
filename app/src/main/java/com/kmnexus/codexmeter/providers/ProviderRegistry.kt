@@ -31,7 +31,7 @@ object ProviderRegistry {
             providerId = CODEX,
             displayName = "Codex",
             iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_codex,
-            authKind = ProviderAuthKind.DeviceCode,
+            authKind = ProviderAuthKind.OAuthPkceLogin,
             supportsBalance = false,
             supportsRefill = false,
             supportsInviteLimitSnooping = false,
@@ -55,10 +55,13 @@ object ProviderRegistry {
 }
 
 enum class ProviderAuthKind {
-    /** Codex OAuth device-code sign-in: the user approves a code in the external browser. */
+    /**
+     * OAuth device-code sign-in: the user approves a code in the external browser. Codex keeps it
+     * as an alternative to its browser sign-in (OpenAI only allows it once the user enables it).
+     */
     DeviceCode,
 
-    /** Claude OAuth authorization-code + PKCE sign-in in the browser, loopback redirect. */
+    /** OAuth authorization-code + PKCE sign-in in the browser with a loopback redirect (both providers). */
     OAuthPkceLogin,
 }
 

@@ -5,6 +5,7 @@ import com.kmnexus.codexmeter.providers.common.auth.LoopbackAuthorizationReceive
 import java.io.IOException
 import java.net.ConnectException
 import java.net.InetAddress
+import java.net.ServerSocket
 import java.net.Socket
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -138,7 +139,23 @@ class LoopbackAuthorizationReceiverTest {
 
         assertTrue(response.startsWith("HTTP/1.1 200"))
         assertTrue(response.contains("Not signed in"))
-        assertEquals(CallbackResult.ProviderError("access_deniedscript"), result.await())
+        assertEquals(CallbackResult.ProviderError("access_deniedscript", description = "no"), result.await())
+    }
+
+    @Test
+    fun `the provider's error description is kept as plain text without markup`() = runBlocking {
+        val receiver = start()
+        val result = async { receiver.awaitResult(timeoutMillis = 10_000) }
+
+        get(
+            receiver.port,
+            "/callback?error=access_denied&error_description=Codex%3A+missing_codex_entitlement%3Cb%3E&state=$state",
+        )
+
+        assertEquals(
+            CallbackResult.ProviderError("access_denied", description = "Codex: missing_codex_entitlementb"),
+            result.await(),
+        )
     }
 
     @Test
@@ -222,6 +239,44 @@ class LoopbackAuthorizationReceiverTest {
         assertEquals("invalid_scope", LoopbackAuthorizationReceiver.sanitizeErrorCode("invalid_scope"))
         assertEquals("unknown_error", LoopbackAuthorizationReceiver.sanitizeErrorCode("<>\"'"))
         assertEquals(64, LoopbackAuthorizationReceiver.sanitizeErrorCode("a".repeat(500)).length)
+    }
+
+    @Test
+    fun `a fixed port list binds the first free port and serves the given path`() = runBlocking {
+        val taken = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))
+        val free = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { it.localPort }
+        try {
+            val receiver = LoopbackAuthorizationReceiver.start(
+                expectedState = state,
+                pages = pages,
+                callbackPath = "/auth/callback",
+                ports = listOf(taken.localPort, free),
+            ).also { receiver = it }
+            assertEquals(free, receiver.port)
+            val result = async { receiver.awaitResult(timeoutMillis = 10_000) }
+
+            val wrongPath = get(receiver.port, "/callback?code=x&state=$state")
+            val real = get(receiver.port, "/auth/callback?code=browser-code&state=$state")
+
+            assertTrue(wrongPath.startsWith("HTTP/1.1 404"))
+            assertTrue(real.startsWith("HTTP/1.1 200"))
+            assertEquals("browser-code", (result.await() as CallbackResult.Code).code)
+        } finally {
+            taken.close()
+        }
+    }
+
+    @Test
+    fun `when every listed port is taken the start fails`() {
+        val taken = ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))
+        try {
+            LoopbackAuthorizationReceiver.start(expectedState = state, pages = pages, ports = listOf(taken.localPort))
+            fail("expected IOException")
+        } catch (_: IOException) {
+            // expected
+        } finally {
+            taken.close()
+        }
     }
 
     @Test

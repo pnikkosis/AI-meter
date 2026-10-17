@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.kmnexus.codexmeter.providers.claude.auth.ClaudeConnect
+import com.kmnexus.codexmeter.providers.codex.auth.CodexBrowserConnect
 
 class CodexMeterApp :
     Application(),
@@ -117,6 +118,9 @@ class CodexMeterApp :
 
     val claudeConnect: ClaudeConnect
         get() = appContainer.claudeConnect
+
+    val codexBrowserConnect: CodexBrowserConnect
+        get() = appContainer.codexBrowserConnect
 
     val currencyPreferenceReader: CurrencyPreferenceReader
         get() = appContainer.currencyPreferences

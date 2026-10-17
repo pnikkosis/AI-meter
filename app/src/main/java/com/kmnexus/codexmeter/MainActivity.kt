@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                     settingsDiagnosticsReader = codexMeterApp.settingsDiagnosticsReader,
                     quotaHistoryClearUseCase = codexMeterApp.quotaHistoryClearUseCase,
                     claudeConnect = codexMeterApp.claudeConnect,
+                    codexBrowserConnect = codexMeterApp.codexBrowserConnect,
                     currencyPreferenceReader = codexMeterApp.currencyPreferenceReader,
                     exchangeRateReader = codexMeterApp.exchangeRateReader,
                     notificationWindowChoicesLoader = codexMeterApp.notificationWindowChoicesLoader,

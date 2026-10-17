@@ -79,4 +79,24 @@ class CodexMeterRouteTest {
             AddAccountEntryMode.fromRouteValue("unexpected"),
         )
     }
+
+    @Test
+    fun `codex browser sign-in route keeps the account being re-authenticated`() {
+        assertEquals(
+            "add_account/codexbrowser:",
+            CodexMeterRoute.AddAccount.routeFor(AddAccountEntryMode.CodexBrowserLogin()),
+        )
+        assertEquals(
+            "add_account/codexbrowser:chatgpt-account-1",
+            CodexMeterRoute.AddAccount.routeFor(AddAccountEntryMode.CodexBrowserLogin("chatgpt-account-1")),
+        )
+        assertEquals(
+            AddAccountEntryMode.CodexBrowserLogin("chatgpt-account-1"),
+            AddAccountEntryMode.fromRouteValue("codexbrowser:chatgpt-account-1"),
+        )
+        assertEquals(
+            AddAccountEntryMode.CodexBrowserLogin(null),
+            AddAccountEntryMode.fromRouteValue("codexbrowser:"),
+        )
+    }
 }

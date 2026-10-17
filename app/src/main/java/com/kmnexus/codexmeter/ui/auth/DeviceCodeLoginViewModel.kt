@@ -81,6 +81,7 @@ class DeviceCodeLoginViewModel(
             is AddAccountEntryMode.LoginToCodex -> startDeviceCodeLogin()
             is AddAccountEntryMode.CodexRelogin -> startDeviceCodeRelogin(entryMode.expectedProviderAccountId)
             is AddAccountEntryMode.ClaudeLogin -> Unit // handled by the Claude sign-in screen
+            is AddAccountEntryMode.CodexBrowserLogin -> Unit // handled by the Codex browser sign-in screen
         }
     }
 
