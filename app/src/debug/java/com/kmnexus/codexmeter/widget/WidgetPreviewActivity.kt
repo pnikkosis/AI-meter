@@ -11,8 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.ExperimentalGlanceRemoteViewsApi
 import androidx.glance.appwidget.GlanceRemoteViews
 import androidx.lifecycle.lifecycleScope
-import com.kmnexus.codexmeter.providers.ProviderRegistry
-import com.kmnexus.codexmeter.domain.model.ProviderId
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -66,7 +64,6 @@ class WidgetPreviewActivity : ComponentActivity() {
     )
 
     private fun specFor(name: String): Spec {
-        val codexIcon = ProviderRegistry.iconFor(ProviderId("codex"))
         val now = Instant.parse("2026-06-02T09:00:00Z")
         fun pct(id: String, percent: Int, tone: WidgetQuotaTone, reset: Boolean = true) = WidgetField(
             windowId = id, isBalance = false, percent = percent,
@@ -81,7 +78,7 @@ class WidgetPreviewActivity : ComponentActivity() {
             status = WidgetQuotaStatus.Fresh, providerName = "Codex", providerId = "codex",
             localAccountId = "acc-1", accountName = "个人开发号", tone = WidgetQuotaTone.Success,
             clickTarget = WidgetClickTarget.Home, fields = fields,
-            isUnconfigured = false, hasAccounts = true, providerIconRes = codexIcon,
+            isUnconfigured = false, hasAccounts = true,
         )
         return when (name) {
             "3x1" -> Spec(WidgetLayoutVariant.ThreeByOne, 252, 110, data(listOf(pct("five_hour", 87, WidgetQuotaTone.Success))))
@@ -95,7 +92,7 @@ class WidgetPreviewActivity : ComponentActivity() {
                 status = WidgetQuotaStatus.NoAccount, providerName = "CodexMeter", providerId = null,
                 localAccountId = null, accountName = null, tone = WidgetQuotaTone.Neutral,
                 clickTarget = WidgetClickTarget.Home, fields = emptyList(),
-                isUnconfigured = true, hasAccounts = true, providerIconRes = null,
+                isUnconfigured = true, hasAccounts = true,
             ))
             else -> Spec(WidgetLayoutVariant.FourByTwo, 340, 210, data(listOf(
                 pct("five_hour", 87, WidgetQuotaTone.Success), pct("weekly", 42, WidgetQuotaTone.Warning),

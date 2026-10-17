@@ -2,31 +2,23 @@ package com.kmnexus.codexmeter.ui.navigation
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,13 +31,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -87,8 +77,6 @@ import com.kmnexus.codexmeter.ui.auth.ProviderSelectionSheet
 import com.kmnexus.codexmeter.ui.auth.ClaudeLoginRoute
 import com.kmnexus.codexmeter.ui.auth.CodexLoginRoute
 import com.kmnexus.codexmeter.ui.components.CodexMeterBackdrop
-import com.kmnexus.codexmeter.ui.components.LiquidGlassSurfaceRole
-import com.kmnexus.codexmeter.ui.components.QmLiquidGlassSurface
 import com.kmnexus.codexmeter.data.currency.ExchangeRateReader
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
@@ -98,12 +86,8 @@ import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
 import com.kmnexus.codexmeter.ui.home.HomeRefreshUseCase
 import com.kmnexus.codexmeter.ui.home.HomeTrendHistoryLoader
 import com.kmnexus.codexmeter.ui.home.HomeRoute
-import com.kmnexus.codexmeter.ui.motion.CodexMeterMotion
 import com.kmnexus.codexmeter.ui.motion.CodexMeterPageCascade
-import com.kmnexus.codexmeter.ui.motion.rememberCodexMeterAnimatorsEnabled
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
-import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
-import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
 import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.ui.settings.InMemoryNotificationPreferenceStore
 import com.kmnexus.codexmeter.ui.settings.InMemoryRetentionPreferenceStore
@@ -199,11 +183,33 @@ fun CodexMeterNavHost(
         navigateToAddAccount(nextMode)
     }
 
+    // The per-provider login flow is a full-screen modal; the tab bar only shows on the three tabs.
+    val showBottomBar = tabs.any { it.route == currentRoute }
+
     Box(modifier = modifier.fillMaxSize()) {
         CodexMeterBackdrop(modifier = Modifier.fillMaxSize())
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent,
+            bottomBar = {
+                if (showBottomBar) {
+                    CodexMeterBottomBar(
+                        tabs = tabs,
+                        currentRoute = currentRoute,
+                        onTabSelected = { tab ->
+                            // Don't leave the picker hovering over a freshly switched tab.
+                            providerSheetVisible = false
+                            navController.navigate(tab.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                    )
+                }
+            },
         ) { innerPadding ->
         @Composable
         fun AddAccountDestination(entryMode: AddAccountEntryMode) {
@@ -377,29 +383,8 @@ fun CodexMeterNavHost(
             }
         }
         }
-        // The per-provider login flow is a full-screen modal; hiding the tab bar there keeps its
-        // actions and error text from being covered by the floating bar.
-        val showBottomBar = tabs.any { it.route == currentRoute }
-        if (showBottomBar) {
-        CodexMeterBottomBar(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            tabs = tabs,
-            currentRoute = currentRoute,
-            onTabSelected = { tab ->
-                // Don't leave the picker hovering over a freshly switched tab.
-                providerSheetVisible = false
-                navController.navigate(tab.route) {
-                    popUpTo(navController.graph.findStartDestination().id) {
-                        saveState = true
-                    }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
-        )
-        }
         // Provider picker sheet — rendered LAST so it paints over the tab bar: the panel grows up
-        // out of the bar's position and covers it while open. Dismisses before branching into the
+        // from the bottom edge and covers the bar while open. Dismisses before branching into the
         // per-provider full-screen login.
         ProviderSelectionSheet(
             visible = providerSheetVisible,
@@ -432,111 +417,35 @@ private fun CodexMeterDestination(
 
 @Composable
 private fun CodexMeterBottomBar(
-    modifier: Modifier = Modifier,
     tabs: List<CodexMeterRoute>,
     currentRoute: String,
     onTabSelected: (CodexMeterRoute) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .background(
-                Brush.verticalGradient(
-                    0.00f to Color.Transparent,
-                    0.24f to Color.Transparent,
-                    0.58f to CodexMeterTheme.colors.neutral.copy(alpha = 0.54f),
-                    1.00f to CodexMeterTheme.colors.neutralAlt.copy(alpha = 0.90f),
-                ),
-            )
-            .padding(
-                top = CodexMeterSpacing.xxl,
-                start = CodexMeterSpacing.xl,
-                end = CodexMeterSpacing.xl,
-                bottom = CodexMeterSpacing.md,
-            ),
-        contentAlignment = Alignment.Center,
+            .background(CodexMeterTheme.colors.neutral),
     ) {
-        QmLiquidGlassSurface(
+        HorizontalDivider(thickness = 1.dp, color = CodexMeterTheme.colors.border)
+        Row(
             modifier = Modifier
-                .fillMaxWidth(0.86f)
-                .height(68.dp),
-            role = LiquidGlassSurfaceRole.Navigation,
-            cornerRadius = 34.dp,
-            contentPadding = PaddingValues(5.dp),
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(64.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            val currentIndex = tabs.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
-            val animatorsEnabled = rememberCodexMeterAnimatorsEnabled()
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                val tabSpacing = CodexMeterSpacing.xs
-                val indicatorGeometry = CodexMeterMotion.bottomTabIndicatorGeometry(
-                    selectedIndex = currentIndex,
-                    tabCount = tabs.size,
-                    containerWidth = maxWidth.value,
-                    itemSpacing = tabSpacing.value,
-                )
-                val indicatorStyle = CodexMeterMotion.bottomTabIndicatorStyle()
-                val indicatorOffset by animateDpAsState(
-                    targetValue = indicatorGeometry.offset.dp,
-                    animationSpec = if (animatorsEnabled) {
-                        tween(
-                            durationMillis = CodexMeterMotion.BottomTabDurationMillis,
-                            easing = FastOutSlowInEasing,
-                        )
-                    } else {
-                        snap()
+            tabs.forEach { tab ->
+                val selected = currentRoute == tab.route
+                CodexMeterBottomBarItem(
+                    tab = tab,
+                    selected = selected,
+                    onClick = {
+                        if (!selected) {
+                            onTabSelected(tab)
+                        }
                     },
-                    label = "bottom_tab_indicator_offset",
                 )
-                val indicatorWidth by animateDpAsState(
-                    targetValue = indicatorGeometry.width.dp,
-                    animationSpec = if (animatorsEnabled) {
-                        tween(
-                            durationMillis = CodexMeterMotion.BottomTabDurationMillis,
-                            easing = FastOutSlowInEasing,
-                        )
-                    } else {
-                        snap()
-                    },
-                    label = "bottom_tab_indicator_width",
-                )
-                Box(
-                    modifier = Modifier
-                        .offset(x = indicatorOffset)
-                        .width(indicatorWidth)
-                        .height(56.dp)
-                        .align(Alignment.CenterStart)
-                        .clip(CodexMeterShapes.lg)
-                        .background(
-                            // Light: a near-opaque raised pill. Dark: a faint white sheen so the
-                            // selected tab reads as gently raised, not a bright light blob.
-                            if (CodexMeterTheme.colors.isDark) {
-                                Color.White.copy(alpha = 0.12f)
-                            } else {
-                                indicatorStyle.color.copy(alpha = indicatorStyle.alpha)
-                            },
-                        ),
-                )
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(tabSpacing),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    tabs.forEach { tab ->
-                        val selected = currentRoute == tab.route
-                        CodexMeterBottomBarItem(
-                            tab = tab,
-                            selected = selected,
-                            onClick = {
-                                if (!selected) {
-                                    onTabSelected(tab)
-                                }
-                            },
-                        )
-                    }
-                }
             }
         }
     }
@@ -548,75 +457,34 @@ private fun RowScope.CodexMeterBottomBarItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val animatorsEnabled = rememberCodexMeterAnimatorsEnabled()
-    val tabInteractionSource = remember { MutableInteractionSource() }
-    val tabPressIndication = if (CodexMeterMotion.bottomTabPressIndicationEnabled()) {
-        LocalIndication.current
-    } else {
-        null
-    }
-    val colorAnimationSpec = if (animatorsEnabled) {
-        tween<Color>(
-            durationMillis = CodexMeterMotion.BottomTabDurationMillis,
-            easing = FastOutSlowInEasing,
-        )
-    } else {
-        snap()
-    }
-    val contentColor by animateColorAsState(
-        targetValue = if (selected) {
-            CodexMeterTheme.colors.accent
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        },
-        animationSpec = colorAnimationSpec,
-        label = "bottom_tab_content_color",
-    )
-    val iconScale by animateFloatAsState(
-        targetValue = CodexMeterMotion.bottomTabScale(selected),
-        animationSpec = if (animatorsEnabled) {
-            tween(
-                durationMillis = CodexMeterMotion.BottomTabDurationMillis,
-                easing = FastOutSlowInEasing,
-            )
-        } else {
-            snap()
-        },
-        label = "bottom_tab_icon_scale",
-    )
+    val contentColor = if (selected) CodexMeterTheme.colors.primary else CodexMeterTheme.colors.secondary
     Column(
         modifier = Modifier
             .weight(1f)
-            .height(56.dp)
-            .clip(CodexMeterShapes.lg)
+            .fillMaxHeight()
             .selectable(
                 selected = selected,
-                interactionSource = tabInteractionSource,
-                indication = tabPressIndication,
                 role = Role.Tab,
                 onClick = onClick,
-            )
-            .padding(vertical = 7.dp),
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             painter = painterResource(tab.iconResId),
-            contentDescription = stringResource(tab.contentDescriptionResId),
-            modifier = Modifier
-                .size(24.dp)
-                .graphicsLayer {
-                    scaleX = iconScale
-                    scaleY = iconScale
-                },
+            // The label below names the tab; the icon would only repeat it.
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
             tint = contentColor,
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(tab.labelResId),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            ),
             color = contentColor,
             maxLines = 1,
         )
     }
 }
-

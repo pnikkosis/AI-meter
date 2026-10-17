@@ -135,7 +135,6 @@ private fun ThreeByOneContent(context: Context, state: WidgetQuotaState) {
             contentScale = ContentScale.FillBounds,
         )
         Spacer(GlanceModifier.width(9.dp))
-        WidgetBrandIcon(state, sizeDp = 18)
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(
                 text = state.headerTitle(wide = false),
@@ -265,7 +264,6 @@ private fun WidgetHeaderRow(
         modifier = modifier.fillMaxWidth().padding(horizontal = 6.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
     ) {
-        WidgetBrandIcon(state, sizeDp = 18)
         // A row measures its unweighted children first, in order: the provider name is never cut,
         // the status after it gets what is left, and the weighted account name gives way first.
         Text(
@@ -324,7 +322,6 @@ private fun QuadrantHeader(context: Context, state: WidgetQuotaState, modifier: 
     ) {
         Column(horizontalAlignment = Alignment.Horizontal.CenterHorizontally) {
             Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
-                WidgetBrandIcon(state, sizeDp = 16)
                 Text(
                     text = state.headerTitle(wide = false),
                     style = TextStyle(color = WidgetTextProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
@@ -484,7 +481,6 @@ private fun StatusOnlyContent(context: Context, state: WidgetQuotaState) {
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
         Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
-            WidgetBrandIcon(state, sizeDp = 16)
             Text(
                 text = state.headerTitle(wide = true),
                 style = TextStyle(color = WidgetTextProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
@@ -537,7 +533,6 @@ private fun UnconfiguredWidgetContent(context: Context, state: WidgetQuotaState)
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
-        WidgetBrandIcon(state, sizeDp = 22)
         Spacer(GlanceModifier.height(6.dp))
         Text(
             text = context.getString(R.string.widget_unconfigured_title),
@@ -560,18 +555,6 @@ private fun UnconfiguredWidgetContent(context: Context, state: WidgetQuotaState)
             maxLines = 1,
         )
     }
-}
-
-@Composable
-private fun WidgetBrandIcon(state: WidgetQuotaState, sizeDp: Int) {
-    val iconRes = state.providerIconRes ?: return
-    Image(
-        provider = ImageProvider(iconRes),
-        contentDescription = null,
-        modifier = GlanceModifier.width(sizeDp.dp).height(sizeDp.dp),
-        colorFilter = ColorFilter.tint(WidgetTextProvider),
-    )
-    Spacer(modifier = GlanceModifier.width(6.dp))
 }
 
 private fun WidgetField.titleResId(): Int =

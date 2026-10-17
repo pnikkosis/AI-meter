@@ -1,6 +1,7 @@
 package com.kmnexus.codexmeter.ui.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,14 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.model.ProviderId
-import com.kmnexus.codexmeter.providers.ProviderAuthKind
 import com.kmnexus.codexmeter.providers.ProviderConfig
 import com.kmnexus.codexmeter.providers.ProviderRegistry
 import com.kmnexus.codexmeter.ui.components.CodexMeterBackdrop
@@ -118,34 +116,13 @@ internal fun ProviderListItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(CodexMeterShapes.lg)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        CodexMeterTheme.colors.surface,
-                        CodexMeterTheme.colors.surfaceSoft,
-                    ),
-                ),
-            )
+            .background(CodexMeterTheme.colors.surface)
+            .border(1.dp, CodexMeterTheme.colors.border, CodexMeterShapes.lg)
             .clickable(onClick = onClick)
             .padding(CodexMeterSpacing.lg),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md),
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(CodexMeterTheme.colors.accentSoft),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(provider.iconResId),
-                contentDescription = null,
-                tint = CodexMeterTheme.colors.primary,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = provider.displayName,
@@ -156,11 +133,9 @@ internal fun ProviderListItem(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = authTypeLabel(provider.authKind),
+                text = stringResource(provider.descriptionResId),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
 
@@ -174,11 +149,3 @@ internal fun ProviderListItem(
         )
     }
 }
-
-@Composable
-private fun authTypeLabel(authKind: ProviderAuthKind): String = stringResource(
-    when (authKind) {
-        ProviderAuthKind.DeviceCode -> R.string.auth_method_device_code
-        ProviderAuthKind.OAuthPkceLogin -> R.string.auth_method_oauth_pkce
-    },
-)

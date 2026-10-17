@@ -616,23 +616,7 @@ private fun StatusBadge(account: AccountItemUi) {
 
 @Composable
 private fun AccountAvatar(account: AccountItemUi, size: Dp) {
-    val iconRes = account.providerIconResId
-    if (iconRes != null) {
-        Box(
-            modifier = Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(CodexMeterTheme.colors.accentSoft),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                tint = CodexMeterTheme.colors.primary,
-                modifier = Modifier.size(size * 0.56f),
-            )
-        }
-    } else {
+    run {
         Box(
             modifier = Modifier
                 .size(size)

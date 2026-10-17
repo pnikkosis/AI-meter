@@ -25,7 +25,7 @@ class SettingsAboutCopyTest {
         val version = context.getString(R.string.settings_about_version_format, "1.0.0", "release")
         val privacy = context.getString(R.string.settings_about_privacy)
 
-        assertEquals("AI Usage Widget 1.0.0", version)
+        assertEquals("AIMeter 1.0.0", version)
         assertTrue(privacy.contains("Android Keystore"))
         assertTrue(privacy.contains("OpenAI for Codex"))
         assertTrue(privacy.contains("Anthropic for Claude"))
@@ -57,7 +57,7 @@ class SettingsAboutCopyTest {
         val version = context.getString(R.string.settings_about_version_format, "1.0.0", "release")
         val privacy = context.getString(R.string.settings_about_privacy)
 
-        assertEquals("AI Usage Widget 1.0.0", version)
+        assertEquals("AIMeter 1.0.0", version)
         assertTrue(privacy.contains("Android Keystore"))
         assertEquals("许可证", context.getString(R.string.settings_about_licenses_label))
     }

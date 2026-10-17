@@ -1,11 +1,8 @@
 package com.kmnexus.codexmeter.ui.motion
 
-import androidx.compose.ui.graphics.Color
-
 object CodexMeterMotion {
     const val PercentDurationMillis = 620
     const val ProgressRailDurationMillis = 620
-    const val BottomTabDurationMillis = 240
     const val TrendRedrawDurationMillis = 560
     const val RefreshSweepDurationMillis = 920
     const val RefreshSweepStartProgress = -0.35f
@@ -92,42 +89,6 @@ object CodexMeterMotion {
     fun refreshSweepShouldDraw(progress: Float): Boolean =
         progress < RefreshSweepVisibleUntilProgress
 
-    fun bottomTabScale(selected: Boolean): Float =
-        if (selected) 1.06f else 1f
-
-    fun bottomTabIndicatorOffsetFraction(selectedIndex: Int, tabCount: Int): Float {
-        if (tabCount <= 0) return 0f
-        return selectedIndex.coerceIn(0, tabCount - 1).toFloat() / tabCount.toFloat()
-    }
-
-    fun bottomTabIndicatorGeometry(
-        selectedIndex: Int,
-        tabCount: Int,
-        containerWidth: Float,
-        itemSpacing: Float,
-    ): BottomTabIndicatorGeometry {
-        if (tabCount <= 0 || containerWidth <= 0f) {
-            return BottomTabIndicatorGeometry(width = 0f, offset = 0f)
-        }
-        val spacing = itemSpacing.coerceAtLeast(0f)
-        val totalSpacing = spacing * (tabCount - 1).coerceAtLeast(0)
-        val width = ((containerWidth - totalSpacing) / tabCount).coerceAtLeast(0f)
-        val index = selectedIndex.coerceIn(0, tabCount - 1)
-        return BottomTabIndicatorGeometry(
-            width = width,
-            offset = (width + spacing) * index,
-        )
-    }
-
-    fun bottomTabIndicatorStyle(): BottomTabIndicatorStyle =
-        BottomTabIndicatorStyle(
-            color = Color(0xFFF5F7FB),
-            alpha = 0.90f,
-            borderWidthDp = 0f,
-        )
-
-    fun bottomTabPressIndicationEnabled(): Boolean = false
-
     fun shouldRunRefreshSweep(previousSuccessCount: Int, nextSuccessCount: Int, animatorsEnabled: Boolean): Boolean =
         animatorsEnabled && nextSuccessCount > previousSuccessCount
 
@@ -153,15 +114,4 @@ data class TrendUsageBar(
     val bucketIndex: Int,
     val x: Float,
     val value: Float,
-)
-
-data class BottomTabIndicatorGeometry(
-    val width: Float,
-    val offset: Float,
-)
-
-data class BottomTabIndicatorStyle(
-    val color: Color,
-    val alpha: Float,
-    val borderWidthDp: Float,
 )

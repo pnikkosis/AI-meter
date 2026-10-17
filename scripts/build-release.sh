@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds, verifies and fingerprints a signed release APK of AI Usage Widget.
+# Builds, verifies and fingerprints a signed release APK of AIMeter.
 #
 # Signing material stays outside the repository (see docs/BUILDING.md):
 #   - AIUW_RELEASE_STORE_FILE / AIUW_RELEASE_STORE_PASSWORD / AIUW_RELEASE_KEY_ALIAS /
@@ -8,7 +8,7 @@
 #     AIUW_RELEASE_PROPERTIES) with storeFile / storePassword / keyAlias / keyPassword.
 # This script never prints passwords or key material.
 #
-# Output: dist/AIUsageWidget-<version>.apk plus a .sha256 file next to it.
+# Output: dist/AIMeter-<version>.apk plus a .sha256 file next to it.
 # Pass --skip-tests to skip the JVM unit tests.
 
 set -euo pipefail
@@ -50,7 +50,7 @@ apk_path=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
 [[ -n "$apk_path" ]] || die "no release APK produced"
 
 mkdir -p dist
-dest="dist/AIUsageWidget-${version}.apk"
+dest="dist/AIMeter-${version}.apk"
 cp "$apk_path" "$dest"
 
 # ── verify ───────────────────────────────────────────────────────────────────

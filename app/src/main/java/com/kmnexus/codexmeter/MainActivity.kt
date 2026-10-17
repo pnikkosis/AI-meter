@@ -12,7 +12,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kmnexus.codexmeter.domain.theme.resolveDarkAppearance
 import com.kmnexus.codexmeter.ui.navigation.CodexMeterNavHost
 import com.kmnexus.codexmeter.ui.navigation.CodexMeterRoute
-import com.kmnexus.codexmeter.ui.theme.CodexMeterFontScheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 
 class MainActivity : ComponentActivity() {
@@ -35,7 +34,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            CodexMeterTheme(themeMode = themeMode, fontScheme = CodexMeterFontScheme.MonoFocusGeistMono) {
+            CodexMeterTheme(themeMode = themeMode) {
                 CodexMeterNavHost(
                     startDestination = startDestination,
                     deviceCodeLoginControllers = codexMeterApp.deviceCodeLoginControllers,

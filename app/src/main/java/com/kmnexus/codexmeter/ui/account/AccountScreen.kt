@@ -34,7 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import com.kmnexus.codexmeter.ui.components.GlassPullToRefreshIndicator
+import com.kmnexus.codexmeter.ui.components.AppPullToRefreshIndicator
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -162,7 +162,7 @@ fun AccountScreen(
         modifier = modifier.fillMaxSize(),
         state = pullState,
         indicator = {
-            GlassPullToRefreshIndicator(
+            AppPullToRefreshIndicator(
                 isRefreshing = uiState.isRefreshing,
                 state = pullState,
                 modifier = Modifier.align(Alignment.TopCenter),

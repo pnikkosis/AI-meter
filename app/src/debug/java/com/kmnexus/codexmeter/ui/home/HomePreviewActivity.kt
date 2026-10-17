@@ -8,12 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.kmnexus.codexmeter.R
-import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
-import com.kmnexus.codexmeter.providers.ProviderRegistry
 import com.kmnexus.codexmeter.ui.components.CodexMeterBackdrop
-import com.kmnexus.codexmeter.ui.theme.CodexMeterFontScheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import java.time.Instant
 
@@ -31,10 +28,7 @@ class HomePreviewActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CodexMeterTheme(
-                themeMode = ThemeMode.SYSTEM,
-                fontScheme = CodexMeterFontScheme.MonoFocusGeistMono,
-            ) {
+            CodexMeterTheme(themeMode = ThemeMode.SYSTEM) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     CodexMeterBackdrop(modifier = Modifier.fillMaxSize())
                     HomeScreen(uiState = previewHomeUiState())
@@ -47,7 +41,6 @@ class HomePreviewActivity : ComponentActivity() {
 @Composable
 private fun previewHomeUiState(): HomeUiState {
     val now = Instant.parse("2026-06-02T09:00:00Z")
-    val codexIcon = ProviderRegistry.iconFor(ProviderId("codex"))
     return HomeUiState(
         contentStatus = HomeContentStatus.Fresh,
         titleResId = R.string.app_name,
@@ -60,7 +53,6 @@ private fun previewHomeUiState(): HomeUiState {
             avatarColorKey = "preview-account",
             planType = "Pro 5x",
             credits = HomeCreditsUi.Balance(amount = 8.5),
-            providerIconResId = codexIcon,
         ),
         quotaCards = listOf(
             previewQuotaCard(

@@ -12,7 +12,7 @@
 # storePassword / keyAlias / keyPassword. Passwords are handed to apksigner through environment
 # variables, never on the command line, and are never printed.
 #
-# Output: dist/AIUsageWidget-<version>.apk plus a .sha256 file next to it.
+# Output: dist/AIMeter-<version>.apk plus a .sha256 file next to it.
 
 set -euo pipefail
 
@@ -45,7 +45,7 @@ version=$(grep -E '^val appVersionName = "' "$PROJECT_ROOT/app/build.gradle.kts"
 [[ -n "$version" ]] || die "could not read appVersionName from app/build.gradle.kts"
 
 mkdir -p "$PROJECT_ROOT/dist"
-dest="$PROJECT_ROOT/dist/AIUsageWidget-${version}.apk"
+dest="$PROJECT_ROOT/dist/AIMeter-${version}.apk"
 rm -f "$dest" "$dest.idsig"
 
 # v2 + v3 signatures (minSdk 31 needs no v1 JAR signature).

@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AIUsageWidget"
+rootProject.name = "AIMeter"
 include(":app")

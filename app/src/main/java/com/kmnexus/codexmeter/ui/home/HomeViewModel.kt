@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
-import com.kmnexus.codexmeter.providers.ProviderRegistry
 import com.kmnexus.codexmeter.ui.quota.quotaErrorMessageRes
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelName
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
@@ -202,7 +201,6 @@ class HomeViewModel(
                     avatarColorKey = it.avatarColorKey,
                     planType = providerPlanDisplayName(it.providerId, state.snapshot?.planType),
                     credits = state.snapshot?.credits.toHomeCredits(),
-                    providerIconResId = ProviderRegistry.iconFor(it.providerId),
                 )
             },
             quotaCards = quotaCards,

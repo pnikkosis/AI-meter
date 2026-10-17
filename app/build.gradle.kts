@@ -7,12 +7,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// AI Usage Widget is an independent build of the CodexMeter code base (see NOTICE.md). The version is
+// AIMeter is an independent build of the CodexMeter code base (see NOTICE.md). The version is
 // declared here instead of being derived from git tags: the upstream repository's tags must never
 // leak into this app's versionCode, and the same commit must always produce the same version.
 // Bump both values for every APK you install over a previous one (versionCode must increase).
-val appVersionName = "1.0.2"
-val appVersionCode = 3
+val appVersionName = "1.1.0"
+val appVersionCode = 4
 
 // Release signing material is read from outside the repository: either the AIUW_RELEASE_* environment
 // variables or a properties file (default ~/.android/aiusagewidget-release.properties, overridable via
@@ -129,7 +129,6 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.qm.liquidglass.core)
     implementation("androidx.browser:browser:1.8.0")
 
     debugImplementation(libs.compose.ui.tooling)

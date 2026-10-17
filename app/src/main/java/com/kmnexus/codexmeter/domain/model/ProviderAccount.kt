@@ -1,6 +1,5 @@
 package com.kmnexus.codexmeter.domain.model
 
-import androidx.annotation.DrawableRes
 import java.time.Instant
 
 enum class AccountStatus { Active, NeedsReauth, Disabled, Deleted }
@@ -16,7 +15,6 @@ data class ProviderAccount(
     val createdAt: Instant,
     val updatedAt: Instant,
     val lastSuccessfulRefreshAt: Instant?,
-    @param:DrawableRes val providerIconResId: Int? = null,
 ) {
     companion object {
         private const val ZERO_WIDTH_JOINER = 0x200D
@@ -115,7 +113,6 @@ data class ProviderAccount(
             status = status,
             createdAt = createdAt,
             lastSuccessfulRefreshAt = lastSuccessfulRefreshAt,
-            providerIconResId = providerIconResId,
         )
     }
 }

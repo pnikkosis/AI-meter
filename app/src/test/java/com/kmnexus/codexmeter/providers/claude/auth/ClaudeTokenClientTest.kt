@@ -49,7 +49,7 @@ class ClaudeTokenClientTest {
         assertEquals("/v1/oauth/token", request.url.encodedPath)
         assertTrue(request.headers["Content-Type"].orEmpty().startsWith("application/json"))
         assertEquals("application/json", request.headers["Accept"])
-        assertEquals("AIUsageWidget/1.0.2 (Android)", request.headers["User-Agent"])
+        assertEquals("AIMeter/1.1.0 (Android)", request.headers["User-Agent"])
         val body = Json.parseToJsonElement(request.body?.utf8().orEmpty()) as JsonObject
         assertEquals(
             mapOf(

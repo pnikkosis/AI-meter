@@ -43,12 +43,17 @@ class ProviderRegistryTest {
         assertEquals("Claude", config.displayName)
         assertEquals(ProviderAuthKind.OAuthPkceLogin, config.authKind)
         assertFalse(config.isDefault)
-        assertEquals(com.kmnexus.codexmeter.R.drawable.ic_brand_claude, config.iconResId)
+        assertEquals(com.kmnexus.codexmeter.R.string.provider_claude_description, config.descriptionResId)
     }
 
     @Test
-    fun unknownProviderFallsBackToRawIdWithoutIcon() {
+    fun codexProviderIsDescribedInWords() {
+        val config = ProviderRegistry.configFor(ProviderRegistry.CODEX)
+        assertEquals(com.kmnexus.codexmeter.R.string.provider_codex_description, config.descriptionResId)
+    }
+
+    @Test
+    fun unknownProviderFallsBackToRawId() {
         assertEquals("deepseek", ProviderRegistry.displayNameFor(ProviderId("deepseek")))
-        assertEquals(null, ProviderRegistry.iconFor(ProviderId("deepseek")))
     }
 }

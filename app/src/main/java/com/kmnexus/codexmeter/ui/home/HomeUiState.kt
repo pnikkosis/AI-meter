@@ -1,6 +1,5 @@
 package com.kmnexus.codexmeter.ui.home
 
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
@@ -42,7 +41,6 @@ data class HomeAccountUi(
     val avatarColorKey: String,
     val planType: String?,
     val credits: HomeCreditsUi,
-    @param:DrawableRes val providerIconResId: Int? = null,
 )
 
 sealed class HomeCreditsUi {

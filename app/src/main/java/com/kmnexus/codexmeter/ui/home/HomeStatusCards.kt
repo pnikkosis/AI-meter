@@ -35,8 +35,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
-import com.kmnexus.codexmeter.ui.components.LiquidGlassSurfaceRole
-import com.kmnexus.codexmeter.ui.components.QmLiquidGlassSurface
+import com.kmnexus.codexmeter.ui.components.AppCard
 import com.kmnexus.codexmeter.ui.motion.CodexMeterMotion
 import com.kmnexus.codexmeter.ui.motion.TrendUsagePoint
 import com.kmnexus.codexmeter.ui.motion.rememberCodexMeterAnimatorsEnabled
@@ -290,10 +289,8 @@ internal fun HomeActionCard(
     uiState: HomeUiState,
     onLoginClick: () -> Unit,
 ) {
-    QmLiquidGlassSurface(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        role = LiquidGlassSurfaceRole.Hero,
-        cornerRadius = 28.dp,
         contentPadding = PaddingValues(CodexMeterSpacing.lg),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
@@ -333,10 +330,8 @@ internal fun HomeActionCard(
 
 @Composable
 private fun HomeSurfaceCard(content: @Composable () -> Unit) {
-    QmLiquidGlassSurface(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        role = LiquidGlassSurfaceRole.Card,
-        cornerRadius = 28.dp,
         contentPadding = PaddingValues(CodexMeterSpacing.lg),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {

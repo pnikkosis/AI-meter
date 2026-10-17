@@ -5,8 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.kmnexus.codexmeter.domain.model.ProviderId
-import com.kmnexus.codexmeter.providers.ProviderRegistry
 import java.time.Instant
 
 internal fun Preferences.toWidgetQuotaState(): WidgetQuotaState {
@@ -29,7 +27,6 @@ internal fun Preferences.toWidgetQuotaState(): WidgetQuotaState {
         hasAccounts = this[WidgetQuotaPreferenceKeys.hasAccounts] ?: false,
         // Resolve the brand icon from the provider id at read time — resource ids aren't stable
         // enough to persist across app updates, so we never serialize them.
-        providerIconRes = providerId?.takeIf { it.isNotBlank() }?.let { ProviderRegistry.iconFor(ProviderId(it)) },
         lastUpdatedAt = this[WidgetQuotaPreferenceKeys.lastUpdatedAt]?.toInstantOrNull(),
         errorMessageKey = this[WidgetQuotaPreferenceKeys.errorMessageKey],
     )
@@ -195,4 +192,4 @@ internal object WidgetQuotaPreferenceKeys {
     fun fieldLabelName(i: Int) = stringPreferencesKey("widget_field_${i}_label_name")
 }
 
-private const val DEFAULT_PROVIDER_NAME = "AI Usage Widget"
+private const val DEFAULT_PROVIDER_NAME = "AIMeter"

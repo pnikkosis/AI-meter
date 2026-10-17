@@ -1,6 +1,5 @@
 package com.kmnexus.codexmeter.domain.model
 
-import com.kmnexus.codexmeter.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -93,18 +92,6 @@ class ProviderAccountTest {
         val account = createAccount(displayName = "🇺🇸 Flag")
 
         assertEquals("🇺🇸", account.avatarInitial)
-    }
-
-    @Test
-    fun providerAccount_providerIconResId_carriesIcon() {
-        val account = ProviderAccount.createNew(
-            localAccountId = LocalAccountId("acc_1"),
-            providerId = ProviderId("claude"),
-            providerAccountId = null,
-            displayName = "Test Account",
-            now = Instant.EPOCH,
-        ).copy(providerIconResId = R.drawable.ic_brand_claude)
-        assertEquals(R.drawable.ic_brand_claude, account.providerIconResId)
     }
 
     private fun createAccount(

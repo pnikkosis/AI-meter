@@ -46,7 +46,6 @@ class WidgetQuotaStateFactory(
         return WidgetQuotaState(
             status = state.status.toWidgetStatus(),
             providerName = ProviderRegistry.displayNameFor(account.providerId),
-            providerIconRes = ProviderRegistry.iconFor(account.providerId),
             providerId = account.providerId.value,
             localAccountId = account.localAccountId.value,
             accountName = account.displayName,
@@ -150,6 +149,6 @@ class WidgetQuotaStateFactory(
 
     private companion object {
         // Header shown on the unconfigured/no-account widget: app branding, not a single provider.
-        const val UNCONFIGURED_HEADER = "AI Usage Widget"
+        const val UNCONFIGURED_HEADER = "AIMeter"
     }
 }

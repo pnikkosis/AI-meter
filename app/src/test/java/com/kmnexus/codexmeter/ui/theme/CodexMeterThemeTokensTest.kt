@@ -7,32 +7,62 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CodexMeterThemeTokensTest {
     @Test
-    fun `air glass color tokens match design values`() {
-        assertEquals(Color(0xFF17181C), LightCodexMeterColors.primary)
-        assertEquals(Color(0xFF6A7280), LightCodexMeterColors.secondary)
-        assertEquals(Color(0xFF8A94A6), LightCodexMeterColors.tertiary)
-        assertEquals(Color(0xFFF5F7FB), LightCodexMeterColors.neutral)
-        assertEquals(Color(0xFFEEF2F8), LightCodexMeterColors.neutralAlt)
-        assertEquals(Color(0xFFFFFFFF), LightCodexMeterColors.surface)
-        assertEquals(Color(0xFFFAFCFF), LightCodexMeterColors.surfaceSoft)
-        assertEquals(Color(0xFFE5EAF2), LightCodexMeterColors.border)
-        assertEquals(Color(0xFF0071E3), LightCodexMeterColors.accent)
-        assertEquals(Color(0xFFF8FBFF), LightCodexMeterColors.accentSoft)
-        assertEquals(Color(0xFF18A058), LightCodexMeterColors.success)
-        assertEquals(Color(0xFFEAF7F0), LightCodexMeterColors.successSoft)
-        assertEquals(Color(0xFFD97706), LightCodexMeterColors.warning)
-        assertEquals(Color(0xFFFFF4E4), LightCodexMeterColors.warningSoft)
-        assertEquals(Color(0xFFDC2626), LightCodexMeterColors.danger)
-        assertEquals(Color(0xFFFEEDEE), LightCodexMeterColors.dangerSoft)
+    fun `sobria light color tokens match design values`() {
+        val c = LightCodexMeterColors
+        assertFalse(c.isDark)
+        assertEquals(Color(0xFF14171C), c.primary)
+        assertEquals(Color(0xFF5B6472), c.secondary)
+        assertEquals(Color(0xFF8A93A0), c.tertiary)
+        assertEquals(Color(0xFFF4F5F7), c.neutral)
+        assertEquals(Color(0xFFECEEF1), c.neutralAlt)
+        assertEquals(Color(0xFFFFFFFF), c.surface)
+        assertEquals(Color(0xFFF7F8FA), c.surfaceSoft)
+        assertEquals(Color(0xFFE2E5EA), c.border)
+        assertEquals(Color(0xFFC9CED6), c.borderStrong)
+        assertEquals(Color(0xFFE3E7ED), c.track)
+        assertEquals(Color(0xFF2F6BEF), c.accent)
+        assertEquals(Color(0xFFEAF0FE), c.accentSoft)
+        assertEquals(Color(0xFF1F9D63), c.success)
+        assertEquals(Color(0xFFE6F5EE), c.successSoft)
+        assertEquals(Color(0xFFB7791F), c.warning)
+        assertEquals(Color(0xFFFBF1E1), c.warningSoft)
+        assertEquals(Color(0xFFD9452F), c.danger)
+        assertEquals(Color(0xFFFCEBE8), c.dangerSoft)
     }
 
     @Test
-    fun `air glass spacing tokens match design values`() {
+    fun `sobria dark color tokens match design values`() {
+        val c = DarkCodexMeterColors
+        assertTrue(c.isDark)
+        assertEquals(Color(0xFFEDEFF3), c.primary)
+        assertEquals(Color(0xFFA3ABB7), c.secondary)
+        assertEquals(Color(0xFF747C88), c.tertiary)
+        assertEquals(Color(0xFF0E1013), c.neutral)
+        assertEquals(Color(0xFF0B0D10), c.neutralAlt)
+        assertEquals(Color(0xFF171A1F), c.surface)
+        assertEquals(Color(0xFF1D2127), c.surfaceSoft)
+        assertEquals(Color(0xFF23272E), c.border)
+        assertEquals(Color(0xFF3A404A), c.borderStrong)
+        assertEquals(Color(0xFF2A3039), c.track)
+        assertEquals(Color(0xFF6E9BFF), c.accent)
+        assertEquals(Color(0xFF1A2436), c.accentSoft)
+        assertEquals(Color(0xFF4CC38A), c.success)
+        assertEquals(Color(0xFF13261C), c.successSoft)
+        assertEquals(Color(0xFFF2B24C), c.warning)
+        assertEquals(Color(0xFF2B2212), c.warningSoft)
+        assertEquals(Color(0xFFFF7A66), c.danger)
+        assertEquals(Color(0xFF2D1814), c.dangerSoft)
+    }
+
+    @Test
+    fun `spacing tokens match design values`() {
         assertEquals(4.dp, CodexMeterSpacing.xs)
         assertEquals(8.dp, CodexMeterSpacing.sm)
         assertEquals(12.dp, CodexMeterSpacing.md)
@@ -42,33 +72,41 @@ class CodexMeterThemeTokensTest {
     }
 
     @Test
-    fun `air glass shape tokens match design values`() {
-        assertEquals(RoundedCornerShape(8.dp), CodexMeterShapes.xs)
-        assertEquals(RoundedCornerShape(13.dp), CodexMeterShapes.sm)
+    fun `shape tokens match design values`() {
+        assertEquals(RoundedCornerShape(6.dp), CodexMeterShapes.xs)
+        assertEquals(RoundedCornerShape(12.dp), CodexMeterShapes.sm)
         assertEquals(RoundedCornerShape(16.dp), CodexMeterShapes.md)
         assertEquals(RoundedCornerShape(22.dp), CodexMeterShapes.lg)
         assertEquals(RoundedCornerShape(28.dp), CodexMeterShapes.xl)
-        assertEquals(RoundedCornerShape(39.dp), CodexMeterShapes.screen)
         assertEquals(RoundedCornerShape(999.dp), CodexMeterShapes.pill)
     }
 
     @Test
-    fun `air glass typography tokens expose design text styles`() {
-        assertEquals(31.sp, CodexMeterTypography.display.fontSize)
-        assertEquals(FontWeight(800), CodexMeterTypography.display.fontWeight)
-        assertEquals(20.sp, CodexMeterTypography.title.fontSize)
-        assertEquals(FontWeight(760), CodexMeterTypography.title.fontWeight)
+    fun `typography tokens match design values`() {
+        assertEquals(28.sp, CodexMeterTypography.display.fontSize)
+        assertEquals(FontWeight.SemiBold, CodexMeterTypography.display.fontWeight)
+        assertEquals(17.sp, CodexMeterTypography.title.fontSize)
+        assertEquals(FontWeight.SemiBold, CodexMeterTypography.title.fontWeight)
         assertEquals(14.sp, CodexMeterTypography.body.fontSize)
-        assertEquals(FontWeight(500), CodexMeterTypography.body.fontWeight)
-        assertEquals(12.sp, CodexMeterTypography.label.fontSize)
-        assertEquals(FontWeight(720), CodexMeterTypography.label.fontWeight)
-        assertEquals(39.sp, CodexMeterTypography.number.fontSize)
-        assertEquals(FontWeight(850), CodexMeterTypography.number.fontWeight)
+        assertEquals(FontWeight.Normal, CodexMeterTypography.body.fontWeight)
+        assertEquals(13.sp, CodexMeterTypography.label.fontSize)
+        assertEquals(FontWeight.Medium, CodexMeterTypography.label.fontWeight)
+        assertEquals(34.sp, CodexMeterTypography.number.fontSize)
+        assertEquals(FontWeight.SemiBold, CodexMeterTypography.number.fontWeight)
     }
 
     @Test
-    fun `air glass typography keeps implementation-safe letter spacing`() {
-        // Token names, sizes, and weights follow DESIGN.md; app-level UI guardrails keep letter spacing at 0.sp.
+    fun `one sans family everywhere and tabular figures for numbers`() {
+        val t = CodexMeterTypography
+        assertNotEquals(FontFamily.Default, t.display.fontFamily)
+        listOf(t.title, t.body, t.label, t.number).forEach { style ->
+            assertEquals(t.display.fontFamily, style.fontFamily)
+        }
+        assertEquals("tnum", t.number.fontFeatureSettings)
+    }
+
+    @Test
+    fun `typography keeps zero letter spacing`() {
         assertEquals(0.sp, CodexMeterTypography.display.letterSpacing)
         assertEquals(0.sp, CodexMeterTypography.title.letterSpacing)
         assertEquals(0.sp, CodexMeterTypography.body.letterSpacing)
@@ -81,35 +119,29 @@ class CodexMeterThemeTokensTest {
         val material = CodexMeterTypography.material
 
         assertEquals(CodexMeterTypography.display, material.headlineMedium)
-        assertEquals(CodexMeterTypography.body, material.bodySmall)
-        assertEquals(CodexMeterTypography.label, material.labelSmall)
-    }
-
-    @Test
-    fun `font schemes map display body label and number families`() {
-        val system = CodexMeterTypography.forScheme(CodexMeterFontScheme.SystemDefault)
-        val geist = CodexMeterTypography.forScheme(CodexMeterFontScheme.GeistHybrid)
-        val inter = CodexMeterTypography.forScheme(CodexMeterFontScheme.InterJetBrainsMono)
-        val monoFocus = CodexMeterTypography.forScheme(CodexMeterFontScheme.MonoFocusGeistMono)
-
-        assertEquals(FontFamily.Default, system.display.fontFamily)
-        assertNotEquals(FontFamily.Default, geist.display.fontFamily)
-        assertNotEquals(geist.display.fontFamily, geist.number.fontFamily)
-        assertNotEquals(inter.display.fontFamily, inter.number.fontFamily)
-        assertEquals(monoFocus.display.fontFamily, monoFocus.body.fontFamily)
-        assertEquals(monoFocus.display.fontFamily, monoFocus.number.fontFamily)
-        assertEquals("tnum", geist.number.fontFeatureSettings)
+        assertEquals(CodexMeterTypography.title, material.titleMedium)
+        assertEquals(CodexMeterTypography.body, material.bodyMedium)
+        assertEquals(CodexMeterTypography.label, material.labelMedium)
     }
 
     @Test
     fun `material color roles map to codexmeter tokens`() {
-        val material = materialScheme(LightCodexMeterColors, dark = false)
+        val light = materialScheme(LightCodexMeterColors, dark = false)
+        assertEquals(LightCodexMeterColors.accent, light.primary)
+        assertEquals(LightCodexMeterColors.neutral, light.background)
+        assertEquals(LightCodexMeterColors.surface, light.surface)
+        assertEquals(LightCodexMeterColors.secondary, light.onSurfaceVariant)
+        assertEquals(LightCodexMeterColors.border, light.outlineVariant)
+        assertEquals(LightCodexMeterColors.borderStrong, light.outline)
+        assertEquals(LightCodexMeterColors.danger, light.error)
 
-        assertEquals(LightCodexMeterColors.accentSoft, material.primaryContainer)
-        assertEquals(LightCodexMeterColors.border, material.outlineVariant)
-        assertEquals(LightCodexMeterColors.accent, material.surfaceTint)
-        assertEquals(LightCodexMeterColors.surfaceSoft, material.surfaceContainerLow)
-        assertEquals(LightCodexMeterColors.neutral, material.surfaceContainer)
-        assertEquals(LightCodexMeterColors.neutralAlt, material.surfaceContainerHighest)
+        val dark = materialScheme(DarkCodexMeterColors, dark = true)
+        assertEquals(DarkCodexMeterColors.accent, dark.primary)
+        assertEquals(DarkCodexMeterColors.neutral, dark.background)
+        assertEquals(DarkCodexMeterColors.surface, dark.surface)
+        assertEquals(DarkCodexMeterColors.secondary, dark.onSurfaceVariant)
+        assertEquals(DarkCodexMeterColors.border, dark.outlineVariant)
+        assertEquals(DarkCodexMeterColors.borderStrong, dark.outline)
+        assertEquals(DarkCodexMeterColors.danger, dark.error)
     }
 }

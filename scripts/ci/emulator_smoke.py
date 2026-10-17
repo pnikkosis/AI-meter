@@ -222,7 +222,7 @@ def check(condition, message):
 
 def back_to_app():
     for _ in range(3):
-        if visible(["AI Usage Widget", "Inicio", "Home", "Conectar Claude", "Connect Claude",
+        if visible(["AIMeter", "Inicio", "Home", "Conectar Claude", "Connect Claude",
                     "Conectar Codex", "Connect Codex"]):
             return
         adb("shell", "input", "keyevent", "KEYCODE_BACK")

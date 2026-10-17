@@ -34,7 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -50,8 +50,8 @@ private const val SHEET_DURATION_MILLIS = 320
 private const val SHEET_EXIT_DURATION_MILLIS = 250
 
 /**
- * Provider picker presented as a bottom sheet that grows up and out of the floating tab bar and
- * collapses back down into it on dismiss. Painted over the tab bar so the panel covers it while
+ * Provider picker presented as a bottom sheet that grows up from the tab bar and collapses back
+ * down into it on dismiss. Painted over the tab bar so the panel covers it while
  * open, reinforcing the "unfolding out of the bar" motion. Reuses [ProviderListItem] so the list
  * rows stay identical to the rest of the add-account flow.
  */
@@ -71,7 +71,7 @@ fun ProviderSelectionSheet(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(CodexMeterTheme.colors.glassInk.copy(alpha = 0.30f))
+                    .background(Color.Black.copy(alpha = 0.45f))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -115,15 +115,11 @@ private fun ProviderSheetPanel(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(CodexMeterTheme.colors.surface, CodexMeterTheme.colors.surfaceSoft),
-                ),
-            )
+            .background(CodexMeterTheme.colors.surface)
             .navigationBarsPadding()
             .padding(horizontal = CodexMeterSpacing.xl)
-            // The sheet now covers the floating tab bar, so it reaches the navigation bar directly
-            // and only needs comfortable inner breathing room at the bottom.
+            // The sheet covers the tab bar, so it reaches the navigation bar directly and only
+            // needs comfortable inner breathing room at the bottom.
             .padding(top = CodexMeterSpacing.md, bottom = CodexMeterSpacing.xxl),
     ) {
         Box(

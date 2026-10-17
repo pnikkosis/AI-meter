@@ -1,13 +1,13 @@
 <resources>
-    <string name="app_name">AI Usage Widget</string>
+    <string name="app_name">AIMeter</string>
     <string name="tab_home">首页</string>
     <string name="tab_home_content_description">首页标签</string>
     <string name="tab_account">账号</string>
     <string name="tab_account_content_description">账号标签</string>
     <string name="tab_settings">设置</string>
     <string name="tab_settings_content_description">设置标签</string>
-    <string name="auth_method_oauth_pkce">OAuth 登录</string>
-    <string name="auth_method_device_code">设备码登录</string>
+    <string name="provider_codex_description">ChatGPT 套餐中的 Codex 额度</string>
+    <string name="provider_claude_description">Claude 套餐的用量限制</string>
     <string name="add_provider_title">添加供应商</string>
     <string name="add_provider_subtitle">选择要连接的服务。</string>
     <string name="auth_back">返回</string>
@@ -82,7 +82,7 @@
     <string name="add_account_restart_login">重新生成 code</string>
     <string name="add_account_device_code_idle">生成 device code 后，在 Codex 验证页输入授权码。</string>
     <string name="add_account_device_code_requesting">正在请求 Codex device code…</string>
-    <string name="add_account_device_code_waiting">点“打开 Codex 验证页”跳转浏览器完成授权。AI Usage Widget 正在轮询授权结果。</string>
+    <string name="add_account_device_code_waiting">点“打开 Codex 验证页”跳转浏览器完成授权。AIMeter 正在轮询授权结果。</string>
     <string name="add_account_device_code_polling">正在检查授权是否完成…</string>
     <string name="add_account_device_code_exchanging">已收到授权，正在交换 Codex 会话…</string>
     <string name="add_account_device_code_validating">正在用 Codex 额度接口校验会话…</string>
@@ -176,7 +176,7 @@
     <string name="settings_quota_alerts_description">主额度进入紧张或耗尽状态时提醒。</string>
     <string name="settings_account_errors_title">账号与错误提醒</string>
     <string name="settings_account_errors_description">当前账号需要重新登录或连续刷新失败时提醒。</string>
-    <string name="settings_notification_permission_title">允许 AI Usage Widget 发送通知？</string>
+    <string name="settings_notification_permission_title">允许 AIMeter 发送通知？</string>
     <string name="settings_notification_permission_description">仅用于可选的状态提示、额度告警和账号错误提醒；不授予也不影响 App 与微件。</string>
     <string name="settings_notification_permission_allow">允许通知</string>
     <string name="notification_channel_status_name">额度状态</string>
@@ -185,7 +185,7 @@
     <string name="notification_channel_quota_alerts_description">主额度紧张或耗尽时提醒。</string>
     <string name="notification_channel_account_errors_name">账号与错误</string>
     <string name="notification_channel_account_errors_description">重新登录和刷新失败提醒。</string>
-    <string name="notification_status_title">AI Usage Widget</string>
+    <string name="notification_status_title">AIMeter</string>
     <string name="notification_status_title_percent_format">剩余 %1$d%%</string>
     <string name="notification_status_title_balance_format">剩余 %1$s</string>
     <!-- Provider·account identity line shared by the status and account-error notifications. -->
@@ -214,9 +214,9 @@
     <string name="notification_auth_login_connected_title">%1$s 账号连接成功</string>
     <string name="notification_auth_login_connected_body_format">%1$s 已可用于额度刷新。</string>
     <string name="notification_auth_login_expired_title">%1$s 登录已过期</string>
-    <string name="notification_auth_login_expired_body">回到 AI Usage Widget 重新生成授权码。</string>
+    <string name="notification_auth_login_expired_body">回到 AIMeter 重新生成授权码。</string>
     <string name="notification_auth_login_failed_title">%1$s 登录失败</string>
-    <string name="notification_auth_login_failed_body">回到 AI Usage Widget 重试。安全原因：%1$s。</string>
+    <string name="notification_auth_login_failed_body">回到 AIMeter 重试。安全原因：%1$s。</string>
     <string name="notification_auth_login_validation_failed_title">%1$s 额度校验失败</string>
     <string name="notification_auth_login_validation_failed_body">授权已完成，但额度校验未通过。安全原因：%1$s。</string>
     <string name="widget_description">Codex 与 Claude 用量限制</string>
@@ -236,11 +236,11 @@
     <string name="widget_status_auth_required">需重新登录</string>
     <string name="widget_status_refresh_failed">刷新失败</string>
     <string name="widget_status_no_data">暂无数据</string>
-    <string name="widget_config_title">配置 AI Usage Widget 微件</string>
+    <string name="widget_config_title">配置 AIMeter 微件</string>
     <string name="widget_config_description">选择此微件显示的账号与额度字段。微件会按尺寸显示前 1–4 个字段。</string>
     <string name="widget_config_loading">正在加载微件设置…</string>
     <string name="widget_config_account_section">账号</string>
-    <string name="widget_config_no_accounts">暂无已保存账号，请先在 AI Usage Widget 中添加账号。</string>
+    <string name="widget_config_no_accounts">暂无已保存账号，请先在 AIMeter 中添加账号。</string>
     <string name="widget_config_account_none">未选择账号</string>
     <string name="widget_config_account_current">当前账号</string>
     <string name="widget_config_fields_section">显示字段</string>
@@ -301,10 +301,10 @@
     <string name="settings_diagnostics_show">显示诊断</string>
     <string name="settings_diagnostics_hide">隐藏诊断</string>
     <string name="settings_diagnostics_collapsed_state">诊断默认折叠，复制或刷新后显示摘要。</string>
-    <string name="settings_diagnostics_clipboard_label">AI Usage Widget 诊断</string>
+    <string name="settings_diagnostics_clipboard_label">AIMeter 诊断</string>
     <string name="settings_diagnostics_copy">复制诊断</string>
     <string name="settings_diagnostics_recheck">重新检测</string>
-    <string name="settings_about_version_format">AI Usage Widget %1$s</string>
+    <string name="settings_about_version_format">AIMeter %1$s</string>
     <string name="settings_about_data_source">用量数据来自各服务商自己的服务器。这些用量接口未公开文档化，可能随时变化。</string>
     <string name="settings_about_privacy">登录令牌仅保存在本设备，并使用 Android Keystore 密钥加密。App 只连接各服务商自己的服务器（Codex 为 OpenAI，Claude 为 Anthropic），不包含开发者服务器、统计、广告或遥测。</string>
     <string name="error_auth_required">会话已过期或被撤销，请重新登录此账号。</string>
@@ -335,10 +335,10 @@
     <string name="claude_login_connecting">正在向 Claude 验证登录…</string>
     <string name="claude_login_done">完成</string>
     <string name="claude_login_retry">重试</string>
-    <string name="claude_login_page_success_title">已登录 AI Usage Widget</string>
+    <string name="claude_login_page_success_title">已登录 AIMeter</string>
     <string name="claude_login_page_success_message">可以关闭此标签页并返回应用。</string>
     <string name="claude_login_page_failure_title">登录未完成</string>
-    <string name="claude_login_page_failure_message">请关闭此标签页，并在 AI Usage Widget 中重试。</string>
+    <string name="claude_login_page_failure_message">请关闭此标签页，并在 AIMeter 中重试。</string>
     <string name="claude_login_error_browser_unavailable">没有可用的浏览器来打开 Claude 登录页面。</string>
     <string name="claude_login_error_loopback_unavailable">无法在本设备上打开登录返回通道，请重试。</string>
     <string name="claude_login_error_denied">登录已在浏览器中取消或被拒绝。</string>

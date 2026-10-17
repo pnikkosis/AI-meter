@@ -31,8 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
-import com.kmnexus.codexmeter.ui.components.LiquidGlassSurfaceRole
-import com.kmnexus.codexmeter.ui.components.QmLiquidGlassSurface
+import com.kmnexus.codexmeter.ui.components.AppCard
 import com.kmnexus.codexmeter.ui.motion.AnimatedQuotaPercent
 import com.kmnexus.codexmeter.ui.motion.CodexMeterMotion
 import com.kmnexus.codexmeter.ui.motion.MotionQuotaRail
@@ -82,10 +81,8 @@ private fun QuotaCard(
     card: HomeQuotaCardUi,
     modifier: Modifier = Modifier,
 ) {
-    QmLiquidGlassSurface(
+    AppCard(
         modifier = modifier,
-        role = LiquidGlassSurfaceRole.Card,
-        cornerRadius = 28.dp,
         contentPadding = PaddingValues(CodexMeterSpacing.lg),
     ) {
         when (card.displayKind) {

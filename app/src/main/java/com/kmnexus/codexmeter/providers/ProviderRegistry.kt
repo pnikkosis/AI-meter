@@ -3,7 +3,7 @@ package com.kmnexus.codexmeter.providers
 import com.kmnexus.codexmeter.domain.model.ProviderId
 
 /**
- * The two subscriptions AI Usage Widget tracks. Upstream CodexMeter registered nine more providers;
+ * The two subscriptions AIMeter tracks. Upstream CodexMeter registered nine more providers;
  * they were removed on purpose (scope: Codex + Claude only), together with their network clients.
  */
 object ProviderRegistry {
@@ -20,7 +20,7 @@ object ProviderRegistry {
         ProviderConfig(
             providerId = CLAUDE,
             displayName = "Claude",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_claude,
+            descriptionResId = com.kmnexus.codexmeter.R.string.provider_claude_description,
             authKind = ProviderAuthKind.OAuthPkceLogin,
             supportsBalance = false,
             supportsRefill = false,
@@ -30,7 +30,7 @@ object ProviderRegistry {
         ProviderConfig(
             providerId = CODEX,
             displayName = "Codex",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_codex,
+            descriptionResId = com.kmnexus.codexmeter.R.string.provider_codex_description,
             authKind = ProviderAuthKind.OAuthPkceLogin,
             supportsBalance = false,
             supportsRefill = false,
@@ -41,11 +41,6 @@ object ProviderRegistry {
 
     fun configFor(providerId: ProviderId): ProviderConfig =
         all.first { it.providerId == providerId }
-
-    /** Brand icon for a provider, or null if the provider id is unknown (e.g. legacy data). */
-    @androidx.annotation.DrawableRes
-    fun iconFor(providerId: ProviderId): Int? =
-        all.firstOrNull { it.providerId == providerId }?.iconResId
 
     /** Human-facing display name for a provider, falling back to the raw id when unknown. */
     fun displayNameFor(providerId: ProviderId): String =
@@ -68,7 +63,8 @@ enum class ProviderAuthKind {
 data class ProviderConfig(
     val providerId: ProviderId,
     val displayName: String,
-    @androidx.annotation.DrawableRes val iconResId: Int,
+    /** What the app reads for this provider, in words: the app shows no provider logos. */
+    @androidx.annotation.StringRes val descriptionResId: Int,
     val authKind: ProviderAuthKind,
     val supportsBalance: Boolean,
     val supportsRefill: Boolean,

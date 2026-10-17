@@ -11,11 +11,11 @@ class SettingsHiddenEntryPolicyTest {
         val settingsCards = sourceFile("src/main/java/com/kmnexus/codexmeter/ui/settings/SettingsCards.kt").readText()
 
         assertFalse(
-            "Font scheme is fixed to Mono Focus; Settings must not expose a font scheme choice dialog.",
+            "There is one typography; Settings must not expose a font scheme choice dialog.",
             settingsScreen.contains("SettingsChoiceDialog.FontScheme"),
         )
         assertFalse(
-            "Font scheme is fixed to Mono Focus; DisplayCard must not show a font scheme row.",
+            "There is one typography; DisplayCard must not show a font scheme row.",
             settingsCards.contains("settings_font_scheme_title"),
         )
     }

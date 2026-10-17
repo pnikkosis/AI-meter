@@ -7,16 +7,16 @@ import org.junit.Test
 
 class MainActivityFontPolicyTest {
     @Test
-    fun `main activity uses mono focus font scheme directly`() {
+    fun `main activity uses the single app typography`() {
         val source = sourceFile("src/main/java/com/kmnexus/codexmeter/MainActivity.kt").readText()
 
         assertTrue(
-            "CodexMeter should be fixed to Mono Focus in the CodexMeterTheme call.",
-            source.contains("CodexMeterTheme(themeMode = themeMode, fontScheme = CodexMeterFontScheme.MonoFocusGeistMono)"),
+            "MainActivity should apply CodexMeterTheme with the theme mode only.",
+            source.contains("CodexMeterTheme(themeMode = themeMode)"),
         )
         assertFalse(
-            "Runtime font preference collection must not override the fixed Mono Focus scheme.",
-            source.contains("fontSchemePreferenceFlow()") || source.contains("toCodexMeterFontScheme"),
+            "There is one typography (Geist with tabular numbers); no font scheme may be passed or collected.",
+            source.contains("fontScheme") || source.contains("FontScheme"),
         )
     }
 

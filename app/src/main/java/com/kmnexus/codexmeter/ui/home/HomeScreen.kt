@@ -29,7 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.kmnexus.codexmeter.ui.components.GlassPullToRefreshIndicator
+import com.kmnexus.codexmeter.ui.components.AppPullToRefreshIndicator
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -110,7 +110,7 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         state = pullState,
         indicator = {
-            GlassPullToRefreshIndicator(
+            AppPullToRefreshIndicator(
                 isRefreshing = uiState.isRefreshing,
                 state = pullState,
                 modifier = Modifier.align(Alignment.TopCenter),

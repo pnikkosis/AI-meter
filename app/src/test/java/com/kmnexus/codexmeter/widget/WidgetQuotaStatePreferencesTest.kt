@@ -24,7 +24,6 @@ class WidgetQuotaStatePreferencesTest {
             ),
             isUnconfigured = false,
             hasAccounts = true,
-            providerIconRes = null,
             lastUpdatedAt = Instant.parse("2026-06-02T10:00:00Z"),
             errorMessageKey = "error_network",
         )

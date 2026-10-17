@@ -7,10 +7,10 @@ package com.kmnexus.codexmeter.core.network
  * Claude Code strings), so provider-side logs show exactly which software made the call.
  */
 object AppUserAgent {
-    const val PRODUCT = "AIUsageWidget"
+    const val PRODUCT = "AIMeter"
 
     /** Used by clients built without an explicit version (unit tests, previews). */
-    const val DEFAULT = "$PRODUCT/1.0.2 (Android)"
+    const val DEFAULT = "$PRODUCT/1.1.0 (Android)"
 
     fun forVersion(versionName: String): String = "$PRODUCT/${versionName.ifBlank { "unknown" }} (Android)"
 }

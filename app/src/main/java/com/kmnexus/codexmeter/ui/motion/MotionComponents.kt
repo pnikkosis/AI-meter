@@ -8,9 +8,6 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,17 +18,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
+import com.kmnexus.codexmeter.ui.components.UsageBar
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
-import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 
 @Composable
 internal fun rememberCodexMeterAnimatorsEnabled(): Boolean =
@@ -116,7 +113,8 @@ internal fun MotionQuotaRail(
     percent: Int?,
     color: Color,
     modifier: Modifier = Modifier,
-    trackColor: Color = CodexMeterTheme.colors.neutralAlt,
+    height: Dp = 8.dp,
+    trackColor: Color = CodexMeterTheme.colors.track,
 ) {
     val animatorsEnabled = rememberCodexMeterAnimatorsEnabled()
     var previousPercent by remember { mutableStateOf<Int?>(null) }
@@ -144,13 +142,11 @@ internal fun MotionQuotaRail(
         label = "quota_progress",
     )
 
-    LinearProgressIndicator(
-        progress = { animatedFraction },
-        modifier = modifier
-            .fillMaxWidth()
-            .height(6.dp)
-            .clip(CodexMeterShapes.pill),
+    UsageBar(
+        fraction = animatedFraction,
         color = color,
+        modifier = modifier,
+        height = height,
         trackColor = trackColor,
     )
 }

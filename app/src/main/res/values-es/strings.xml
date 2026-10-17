@@ -1,13 +1,13 @@
 <resources>
-    <string name="app_name">AI Usage Widget</string>
+    <string name="app_name">AIMeter</string>
     <string name="tab_home">Inicio</string>
     <string name="tab_home_content_description">Pestaña Inicio</string>
     <string name="tab_account">Cuentas</string>
     <string name="tab_account_content_description">Pestaña Cuentas</string>
     <string name="tab_settings">Ajustes</string>
     <string name="tab_settings_content_description">Pestaña Ajustes</string>
-    <string name="auth_method_oauth_pkce">Inicio de sesión OAuth</string>
-    <string name="auth_method_device_code">Inicio de sesión con código</string>
+    <string name="provider_codex_description">Límites de Codex de tu plan de ChatGPT</string>
+    <string name="provider_claude_description">Límites de uso de tu plan de Claude</string>
     <string name="add_provider_title">Agregar un proveedor</string>
     <string name="add_provider_subtitle">Elegir el servicio que se va a conectar.</string>
     <string name="auth_back">Atrás</string>
@@ -82,7 +82,7 @@
     <string name="add_account_restart_login">Generar código nuevo</string>
     <string name="add_account_device_code_idle">Generar un código de dispositivo e introducirlo en la página de verificación de Codex.</string>
     <string name="add_account_device_code_requesting">Pidiendo un código de dispositivo a Codex…</string>
-    <string name="add_account_device_code_waiting">Tocar “Abrir la página de verificación” para continuar en el navegador. AI Usage Widget está esperando la autorización.</string>
+    <string name="add_account_device_code_waiting">Tocar “Abrir la página de verificación” para continuar en el navegador. AIMeter está esperando la autorización.</string>
     <string name="add_account_device_code_polling">Comprobando si se completó la autorización…</string>
     <string name="add_account_device_code_exchanging">Autorización recibida. Obteniendo la sesión de Codex…</string>
     <string name="add_account_device_code_validating">Validando la sesión con el consumo de Codex…</string>
@@ -176,7 +176,7 @@
     <string name="settings_quota_alerts_description">Avisar cuando la ventana principal quede escasa o agotada.</string>
     <string name="settings_account_errors_title">Alertas de cuenta y errores</string>
     <string name="settings_account_errors_description">Avisar cuando la cuenta actual requiera iniciar sesión o fallen varias actualizaciones seguidas.</string>
-    <string name="settings_notification_permission_title">¿Permitir notificaciones de AI Usage Widget?</string>
+    <string name="settings_notification_permission_title">¿Permitir notificaciones de AIMeter?</string>
     <string name="settings_notification_permission_description">Solo se usan para el estado opcional, las alertas de límite y las alertas de errores de cuenta. La app y el widget funcionan sin ellas.</string>
     <string name="settings_notification_permission_allow">Permitir notificaciones</string>
     <string name="notification_channel_status_name">Estado de los límites</string>
@@ -185,7 +185,7 @@
     <string name="notification_channel_quota_alerts_description">Alertas de límite principal escaso o agotado.</string>
     <string name="notification_channel_account_errors_name">Cuenta y errores</string>
     <string name="notification_channel_account_errors_description">Alertas de inicio de sesión requerido y de actualizaciones fallidas.</string>
-    <string name="notification_status_title">AI Usage Widget</string>
+    <string name="notification_status_title">AIMeter</string>
     <string name="notification_status_title_percent_format">%1$d%% disponible</string>
     <string name="notification_status_title_balance_format">Quedan %1$s</string>
     <!-- Provider·account identity line shared by the status and account-error notifications. -->
@@ -214,9 +214,9 @@
     <string name="notification_auth_login_connected_title">Cuenta de %1$s conectada</string>
     <string name="notification_auth_login_connected_body_format">Ya se puede consultar el consumo de %1$s.</string>
     <string name="notification_auth_login_expired_title">Venció el inicio de sesión en %1$s</string>
-    <string name="notification_auth_login_expired_body">Volver a AI Usage Widget para generar un código nuevo.</string>
+    <string name="notification_auth_login_expired_body">Volver a AIMeter para generar un código nuevo.</string>
     <string name="notification_auth_login_failed_title">Falló el inicio de sesión en %1$s</string>
-    <string name="notification_auth_login_failed_body">Volver a AI Usage Widget para reintentar. Motivo: %1$s.</string>
+    <string name="notification_auth_login_failed_body">Volver a AIMeter para reintentar. Motivo: %1$s.</string>
     <string name="notification_auth_login_validation_failed_title">Falló la validación del consumo de %1$s</string>
     <string name="notification_auth_login_validation_failed_body">La autorización terminó, pero la validación del consumo no pasó. Motivo: %1$s.</string>
     <string name="widget_description">Límites de uso de Codex y Claude</string>
@@ -236,11 +236,11 @@
     <string name="widget_status_auth_required">Sesión vencida</string>
     <string name="widget_status_refresh_failed">Error al actualizar</string>
     <string name="widget_status_no_data">Sin datos todavía</string>
-    <string name="widget_config_title">Configurar AI Usage Widget</string>
+    <string name="widget_config_title">Configurar AIMeter</string>
     <string name="widget_config_description">Elegir la cuenta y los límites que se muestran. El widget muestra los primeros 1 a 4 campos según su tamaño.</string>
     <string name="widget_config_loading">Cargando la configuración del widget…</string>
     <string name="widget_config_account_section">Cuenta</string>
-    <string name="widget_config_no_accounts">Todavía no hay cuentas guardadas. Primero hay que agregar una cuenta en AI Usage Widget.</string>
+    <string name="widget_config_no_accounts">Todavía no hay cuentas guardadas. Primero hay que agregar una cuenta en AIMeter.</string>
     <string name="widget_config_account_none">Ninguna cuenta elegida</string>
     <string name="widget_config_account_current">Cuenta actual</string>
     <string name="widget_config_fields_section">Campos visibles</string>
@@ -301,10 +301,10 @@
     <string name="settings_diagnostics_show">Mostrar diagnóstico</string>
     <string name="settings_diagnostics_hide">Ocultar diagnóstico</string>
     <string name="settings_diagnostics_collapsed_state">El diagnóstico queda oculto hasta copiarlo o actualizarlo.</string>
-    <string name="settings_diagnostics_clipboard_label">Diagnóstico de AI Usage Widget</string>
+    <string name="settings_diagnostics_clipboard_label">Diagnóstico de AIMeter</string>
     <string name="settings_diagnostics_copy">Copiar diagnóstico</string>
     <string name="settings_diagnostics_recheck">Volver a comprobar</string>
-    <string name="settings_about_version_format">AI Usage Widget %1$s</string>
+    <string name="settings_about_version_format">AIMeter %1$s</string>
     <string name="settings_about_data_source">Los datos de consumo vienen de los servidores de cada proveedor. Esos endpoints de uso no están documentados públicamente y pueden cambiar.</string>
     <string name="settings_about_privacy">Los tokens de inicio de sesión se guardan en este dispositivo, cifrados con una clave del Android Keystore. La app solo se comunica con los servidores de los proveedores (OpenAI para Codex, Anthropic para Claude). No hay servidor del desarrollador, analíticas, publicidad ni telemetría.</string>
     <string name="error_auth_required">La sesión venció o fue revocada. Hay que volver a iniciar sesión en esta cuenta.</string>
@@ -335,10 +335,10 @@
     <string name="claude_login_connecting">Comprobando el inicio de sesión con Claude…</string>
     <string name="claude_login_done">Listo</string>
     <string name="claude_login_retry">Reintentar</string>
-    <string name="claude_login_page_success_title">Sesión iniciada en AI Usage Widget</string>
+    <string name="claude_login_page_success_title">Sesión iniciada en AIMeter</string>
     <string name="claude_login_page_success_message">Ya se puede cerrar esta pestaña y volver a la app.</string>
     <string name="claude_login_page_failure_title">No se completó el inicio de sesión</string>
-    <string name="claude_login_page_failure_message">Cerrar esta pestaña y volver a intentar desde AI Usage Widget.</string>
+    <string name="claude_login_page_failure_message">Cerrar esta pestaña y volver a intentar desde AIMeter.</string>
     <string name="claude_login_error_browser_unavailable">No hay un navegador disponible para abrir la página de inicio de sesión de Claude.</string>
     <string name="claude_login_error_loopback_unavailable">No se pudo abrir en este dispositivo el canal local de retorno del inicio de sesión. Se puede intentar de nuevo.</string>
     <string name="claude_login_error_denied">El inicio de sesión se canceló o se rechazó en el navegador.</string>

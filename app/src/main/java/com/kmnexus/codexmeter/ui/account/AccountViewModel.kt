@@ -1,6 +1,5 @@
 package com.kmnexus.codexmeter.ui.account
 
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -128,7 +127,6 @@ data class AccountItemUi(
     val alertToggles: List<AccountAlertToggleUi>,
     val quotaSummaries: List<AccountQuotaSummaryUi>,
     val modelFamilies: List<AccountModelFamilyUi> = emptyList(),
-    @param:DrawableRes val providerIconResId: Int? = null,
 )
 
 data class AccountDeleteConfirmationUi(
@@ -577,7 +575,6 @@ class AccountViewModel(
             alertToggles = buildAlertToggles(latestQuotaSnapshot, notificationPreferences),
             quotaSummaries = buildQuotaSummaries(latestQuotaSnapshot),
             modelFamilies = buildModelFamilies(latestQuotaSnapshot),
-            providerIconResId = ProviderRegistry.iconFor(providerId),
         )
     }
 
