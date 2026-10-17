@@ -217,8 +217,8 @@
     <string name="notification_auth_login_failed_body">Return to AI Usage Widget to retry. Safe reason: %1$s.</string>
     <string name="notification_auth_login_validation_failed_title">%1$s quota validation failed</string>
     <string name="notification_auth_login_validation_failed_body">Authorization finished, but quota validation did not pass. Safe reason: %1$s.</string>
-    <string name="widget_description">Codex quota status</string>
-    <string name="widget_loading">Loading Codex quota</string>
+    <string name="widget_description">Codex and Claude usage limits</string>
+    <string name="widget_loading">Loading usage…</string>
     <string name="widget_percent_format">%1$d%%</string>
     <string name="widget_percent_unavailable">--</string>
     <string name="widget_account_line_format">%1$s · %2$s</string>
@@ -230,10 +230,10 @@
     <string name="widget_provider_status_line_format">%1$s · %2$s</string>
     <string name="widget_connect_codex">Tap to connect an AI provider</string>
     <string name="widget_status_possibly_stale">Possibly stale</string>
-    <string name="widget_status_expired">Expired</string>
-    <string name="widget_status_auth_required">Log in again</string>
+    <string name="widget_status_expired">Outdated</string>
+    <string name="widget_status_auth_required">Sign in again</string>
     <string name="widget_status_refresh_failed">Refresh failed</string>
-    <string name="widget_status_no_data">No quota yet</string>
+    <string name="widget_status_no_data">No data yet</string>
     <string name="widget_config_title">Configure AI Usage Widget</string>
     <string name="widget_config_description">Choose the account and which quota fields to show. The widget shows the first 1–4 fields based on its size.</string>
     <string name="widget_config_loading">Loading widget settings…</string>
@@ -355,4 +355,14 @@
     <string name="account_disconnected_local_only">%1$s: the data on this device was deleted. The provider offers no remote revocation for this sign-in.</string>
     <string name="account_disconnected_revoke_failed">%1$s: the data on this device was deleted, but the provider could not be reached to revoke the sign-in. On the provider\'s side it stays valid until it expires.</string>
     <string name="account_disconnected_ok">OK</string>
+    <string name="quota_window_remaining_format">%1$s · left</string>
+    <string name="widget_status_updated_format">%1$s · Updated %2$s</string>
+    <string name="widget_refresh_content_description">Refresh now</string>
+    <string name="widget_status_offline">No connection</string>
+    <string name="widget_status_rate_limited">Rate limited</string>
+    <string name="widget_status_provider_error">Provider error</string>
+    <string name="widget_status_unreadable">Unreadable data</string>
+    <string name="widget_message_sign_in_again">Open the app and sign in to this account again.</string>
+    <string name="widget_message_no_data">No usage data yet. Tap refresh or open the app.</string>
+    <string name="widget_message_no_limits">The provider reported no limits to show.</string>
 </resources>

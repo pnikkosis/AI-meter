@@ -114,6 +114,55 @@ class WidgetQuotaStateFactoryTest {
     }
 
     @Test
+    fun `a spent window is shown as zero left in danger instead of being hidden`() {
+        val depleted = percentWindow("five_hour", usedPercent = 100).copy(availability = QuotaWindowAvailability.Depleted)
+        val result = factory.create(freshState(windows = listOf(depleted)), selectedWindowIds = listOf("five_hour"))
+
+        val field = result.fields.single()
+        assertEquals(0, field.percent)
+        assertEquals(WidgetQuotaTone.Danger, field.tone)
+    }
+
+    @Test
+    fun `values that are not current are muted and carry the error kind and data time`() {
+        val base = freshState(windows = listOf(percentWindow("five_hour", usedPercent = 10)))
+        val offline = base.copy(
+            status = CurrentQuotaStatus.ErrorWithLastKnownGood,
+            error = com.kmnexus.codexmeter.domain.refresh.QuotaError.Network(diagnosticsDigest = "d"),
+        )
+
+        val fresh = factory.create(base, selectedWindowIds = listOf("five_hour"))
+        val stale = factory.create(offline, selectedWindowIds = listOf("five_hour"))
+
+        assertEquals(WidgetQuotaTone.Success, fresh.fields.single().tone)
+        assertEquals(Instant.parse("2026-06-02T10:00:00Z"), fresh.lastUpdatedAt)
+        assertEquals(null, fresh.errorMessageKey)
+        assertEquals(WidgetQuotaStatus.ErrorWithLastKnownGood, stale.status)
+        assertEquals(90, stale.fields.single().percent)
+        assertEquals(WidgetQuotaTone.Neutral, stale.fields.single().tone)
+        assertEquals("error_network", stale.errorMessageKey)
+        assertEquals(Instant.parse("2026-06-02T10:00:00Z"), stale.lastUpdatedAt)
+    }
+
+    @Test
+    fun `no snapshot means no fields and no update time, never a zero value`() {
+        val noData = freshState(windows = emptyList()).copy(
+            status = CurrentQuotaStatus.NoData,
+            snapshot = null,
+            primaryWindow = null,
+            error = com.kmnexus.codexmeter.domain.refresh.QuotaError.RateLimited(diagnosticsDigest = "d"),
+        )
+
+        val result = factory.create(noData)
+
+        assertTrue(result.fields.isEmpty())
+        assertEquals(WidgetQuotaStatus.NoData, result.status)
+        assertEquals(null, result.lastUpdatedAt)
+        assertEquals("error_rate_limited", result.errorMessageKey)
+        assertEquals("Codex", result.providerName)
+    }
+
+    @Test
     fun `unconfigured with accounts yields onboarding state`() {
         val result = factory.unconfigured(hasAccounts = true)
         assertTrue(result.isUnconfigured)

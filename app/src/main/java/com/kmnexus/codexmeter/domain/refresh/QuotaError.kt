@@ -32,14 +32,17 @@ sealed class QuotaError {
         override val userActionRequired: Boolean = false
     }
 
-    /** The provider answered HTTP 429. [retryAfterSeconds] comes from `Retry-After` when sent. */
+    /**
+     * The provider answered HTTP 429. [retryAfterSeconds] comes from `Retry-After` when sent. Not
+     * [retryable]: background work waits for its next period instead of retrying into the limit.
+     */
     data class RateLimited(
         override val diagnosticsDigest: String?,
         val retryAfterSeconds: Long? = null,
     ) : QuotaError() {
         override val safeMessageKey: String = "error_rate_limited"
         override val httpStatus: Int? = HTTP_TOO_MANY_REQUESTS
-        override val retryable: Boolean = true
+        override val retryable: Boolean = false
         override val userActionRequired: Boolean = false
     }
 
@@ -53,13 +56,16 @@ sealed class QuotaError {
         override val userActionRequired: Boolean = false
     }
 
-    /** A successful HTTP answer whose body is not usable quota data (format change, no windows). */
+    /**
+     * A successful HTTP answer whose body is not usable quota data (format change, no windows). An
+     * immediate retry would get the same answer, so it is not [retryable].
+     */
     data class ResponseInvalid(
         override val diagnosticsDigest: String?,
     ) : QuotaError() {
         override val safeMessageKey: String = "error_response_invalid"
         override val httpStatus: Int? = null
-        override val retryable: Boolean = true
+        override val retryable: Boolean = false
         override val userActionRequired: Boolean = false
     }
 

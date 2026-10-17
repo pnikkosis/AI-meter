@@ -39,6 +39,8 @@ class WidgetQuotaStateFactory(
             return unconfigured(hasAccounts = false)
         }
         val fields = state.buildFields(selectedWindowIds, notificationPreferences)
+            // Values that are not current are drawn muted so they never read as live usage.
+            .let { built -> if (state.status == CurrentQuotaStatus.Fresh) built else built.map { it.copy(tone = WidgetQuotaTone.Neutral) } }
         val firstField = fields.firstOrNull()
         return WidgetQuotaState(
             status = state.status.toWidgetStatus(),
@@ -52,6 +54,8 @@ class WidgetQuotaStateFactory(
             fields = fields,
             isUnconfigured = false,
             hasAccounts = true,
+            lastUpdatedAt = state.snapshot?.fetchedAt,
+            errorMessageKey = state.error?.safeMessageKey,
         )
     }
 
@@ -123,6 +127,7 @@ class WidgetQuotaStateFactory(
         }
         val percent = displayPercent
         return when {
+            availability == QuotaWindowAvailability.Depleted -> WidgetQuotaTone.Danger
             availability != QuotaWindowAvailability.Available || percent == null -> WidgetQuotaTone.Neutral
             percent <= notificationPreferences.limitThreshold -> WidgetQuotaTone.Danger
             percent <= notificationPreferences.warningThreshold -> WidgetQuotaTone.Danger
@@ -135,13 +140,14 @@ class WidgetQuotaStateFactory(
         when (displayKind) {
             QuotaWindowDisplayKind.Balance ->
                 availability == QuotaWindowAvailability.Available && !balanceAmount.isNullOrBlank()
+            // A spent window is shown as 0 % left: hiding it would hide the most important number.
             else ->
-                availability == QuotaWindowAvailability.Available && displayPercent != null
+                (availability == QuotaWindowAvailability.Available || availability == QuotaWindowAvailability.Depleted) &&
+                    displayPercent != null
         }
 
     private companion object {
-        // Header shown on the unconfigured/no-account widget: app branding, not a single provider,
-        // since CodexMeter now supports multiple AI providers.
-        const val UNCONFIGURED_HEADER = "CodexMeter"
+        // Header shown on the unconfigured/no-account widget: app branding, not a single provider.
+        const val UNCONFIGURED_HEADER = "AI Usage Widget"
     }
 }

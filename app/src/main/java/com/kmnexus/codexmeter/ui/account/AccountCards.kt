@@ -314,7 +314,7 @@ internal fun AccountSurfaceCard(content: @Composable () -> Unit) {
 
 @Composable
 private fun PlanCreditsRow(account: AccountItemUi) {
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.ROOT
     // Providers expose different fields: show only the tiles that actually have data so that, e.g.,
     // Kimi (no plan/credits) or Antigravity (plan only) don't render "Unavailable" placeholders.
     val planType = account.planType
@@ -385,7 +385,12 @@ private fun QuotaSummaryRow(summaries: List<AccountQuotaSummaryUi>) {
                 verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.xs),
             ) {
                 Text(
-                    text = stringResource(summary.labelResId),
+                    text = if (summary.valueText == null && summary.percent != null) {
+                        // Percent values are the share LEFT in the window.
+                        stringResource(R.string.quota_window_remaining_format, stringResource(summary.labelResId))
+                    } else {
+                        stringResource(summary.labelResId)
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

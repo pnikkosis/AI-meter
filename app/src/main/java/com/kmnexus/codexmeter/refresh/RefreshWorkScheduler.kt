@@ -46,18 +46,26 @@ class RefreshWorkScheduler(
         const val UNIQUE_PERIODIC_WORK_NAME = "quota_periodic_refresh"
         val PERIODIC_REFRESH_INTERVAL: Duration = Duration.ofMinutes(15)
 
+        /**
+         * The periodic work also runs without a network: a failed attempt is what turns the widget
+         * from "Normal" into "No connection · Updated <time>". Waiting for connectivity instead would
+         * leave old numbers on screen with nothing saying they are old. Doze and App Standby still
+         * decide when it actually runs.
+         */
+        private const val REQUIRES_CONNECTED_NETWORK = false
+
         fun periodicRefreshPlan(): RefreshWorkPlan =
             RefreshWorkPlan(
                 uniqueWorkName = UNIQUE_PERIODIC_WORK_NAME,
                 repeatInterval = PERIODIC_REFRESH_INTERVAL,
-                requiresConnectedNetwork = true,
+                requiresConnectedNetwork = REQUIRES_CONNECTED_NETWORK,
             )
 
         fun planForMinutes(intervalMinutes: Int): RefreshWorkPlan =
             RefreshWorkPlan(
                 uniqueWorkName = UNIQUE_PERIODIC_WORK_NAME,
                 repeatInterval = Duration.ofMinutes(intervalMinutes.toLong()).coerceAtLeast(PERIODIC_REFRESH_INTERVAL),
-                requiresConnectedNetwork = true,
+                requiresConnectedNetwork = REQUIRES_CONNECTED_NETWORK,
             )
 
         fun from(context: Context): RefreshWorkScheduler =

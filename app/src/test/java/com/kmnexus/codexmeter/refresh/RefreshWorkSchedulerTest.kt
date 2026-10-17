@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,10 +38,9 @@ class RefreshWorkSchedulerTest {
     }
 
     @Test
-    fun `periodic refresh waits for connected network`() {
-        val plan = RefreshWorkScheduler.periodicRefreshPlan()
-
-        assertTrue(plan.requiresConnectedNetwork)
+    fun `periodic refresh also runs offline so the widget can report the lost connection`() {
+        assertFalse(RefreshWorkScheduler.periodicRefreshPlan().requiresConnectedNetwork)
+        assertFalse(RefreshWorkScheduler.planForMinutes(30).requiresConnectedNetwork)
     }
 
     @Test
@@ -99,12 +99,31 @@ class RefreshWorkSchedulerTest {
     }
 
     @Test
-    fun `retryable refresh failure asks WorkManager to retry`() = runTest {
+    fun `offline refresh is recorded without asking WorkManager for backoff retries`() = runTest {
         val dependencies = RecordingRefreshDependenciesProvider(
             account = account(),
             refreshCoordinator = RefreshCoordinator(
                 provider = RecordingRefreshProvider(
-                    com.kmnexus.codexmeter.domain.refresh.QuotaError.Network(
+                    com.kmnexus.codexmeter.domain.refresh.QuotaError.Network(diagnosticsDigest = "safe"),
+                ),
+                snapshotStore = EmptySnapshotStore,
+                attemptStore = RecordingAttemptStore(),
+                attemptIdProvider = AttemptIdProvider { RefreshAttemptId("attempt-1") },
+                clock = Clock.fixed(Instant.parse("2026-05-23T12:00:00Z"), ZoneOffset.UTC),
+            ),
+        )
+
+        assertEquals(QuotaRefreshWorkerOutcome.Success, QuotaRefreshWorkerOutcome.fromDependencies(dependencies))
+    }
+
+    @Test
+    fun `provider server error asks WorkManager to retry`() = runTest {
+        val dependencies = RecordingRefreshDependenciesProvider(
+            account = account(),
+            refreshCoordinator = RefreshCoordinator(
+                provider = RecordingRefreshProvider(
+                    com.kmnexus.codexmeter.domain.refresh.QuotaError.ProviderUnavailable(
+                        httpStatus = 503,
                         diagnosticsDigest = "safe",
                     ),
                 ),

@@ -19,6 +19,7 @@ import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -97,6 +98,9 @@ internal fun CodexMeterWidgetContent(
         ) {
             when {
                 state.isUnconfigured -> UnconfiguredWidgetContent(context, state)
+                // Nothing current to show (signed out, no data yet, failed without a last snapshot):
+                // say so instead of drawing empty value cells that could read as "no usage".
+                state.fields.isEmpty() && state.status != WidgetQuotaStatus.Fresh -> StatusOnlyContent(context, state)
                 else -> when (layoutVariant) {
                     WidgetLayoutVariant.ThreeByOne -> ThreeByOneContent(context, state)
                     WidgetLayoutVariant.FourByOne -> FourByOneContent(context, state)
@@ -131,20 +135,22 @@ private fun ThreeByOneContent(context: Context, state: WidgetQuotaState) {
         WidgetBrandIcon(state, sizeDp = 18)
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(
-                text = state.accountName ?: state.providerName,
+                text = state.headerTitle(wide = false),
                 style = TextStyle(color = WidgetTextProvider, fontSize = 13.sp, fontWeight = FontWeight.Medium),
                 maxLines = 1,
             )
-            Text(
-                text = state.headerStatusResetLine(context, field),
-                modifier = GlanceModifier.padding(top = 2.dp),
-                style = TextStyle(color = WidgetMutedTextProvider, fontSize = 10.sp, fontWeight = FontWeight.Medium),
-                maxLines = 1,
-            )
+            StatusRefreshRow(context, state, modifier = GlanceModifier.padding(top = 2.dp))
+            field?.resetLine(context)?.let { reset ->
+                Text(
+                    text = reset,
+                    style = TextStyle(color = WidgetMutedTextProvider, fontSize = 10.sp, fontWeight = FontWeight.Medium),
+                    maxLines = 1,
+                )
+            }
         }
         Spacer(GlanceModifier.width(10.dp))
         if (field == null) {
-            EmptyFieldsHint(context, modifier = GlanceModifier.padding(end = 6.dp))
+            EmptyFieldsHint(context, state, modifier = GlanceModifier.padding(end = 6.dp))
         } else {
             FieldValueColumn(
                 context, field, valueSizeSp = 30, alignment = Alignment.Horizontal.End,
@@ -258,15 +264,34 @@ private fun WidgetHeaderRow(
     ) {
         WidgetBrandIcon(state, sizeDp = 18)
         Text(
-            text = state.accountName ?: state.providerName,
+            text = state.headerTitle(wide = true),
             modifier = GlanceModifier.defaultWeight(),
             style = TextStyle(color = WidgetTextProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
         )
+        Spacer(GlanceModifier.width(6.dp))
+        StatusRefreshRow(context, state)
+    }
+}
+
+/**
+ * Status word plus the time of the data on screen ("Normal · Updated 14:05", "No connection ·
+ * Updated 09:12"), followed by a refresh button that fetches new data in the background.
+ */
+@Composable
+private fun StatusRefreshRow(context: Context, state: WidgetQuotaState, modifier: GlanceModifier = GlanceModifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.Vertical.CenterVertically) {
         Text(
-            text = state.statusLabel(context),
+            text = state.statusLine(context),
             style = TextStyle(color = state.tone.statusAccentProvider(), fontSize = 10.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
+        )
+        Spacer(GlanceModifier.width(4.dp))
+        Image(
+            provider = ImageProvider(R.drawable.ic_action_refresh),
+            contentDescription = context.getString(R.string.widget_refresh_content_description),
+            modifier = GlanceModifier.width(16.dp).height(16.dp).clickable(actionRunCallback<WidgetRefreshAction>()),
+            colorFilter = ColorFilter.tint(WidgetMutedTextProvider),
         )
     }
 }
@@ -283,17 +308,12 @@ private fun QuadrantHeader(context: Context, state: WidgetQuotaState, modifier: 
             Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
                 WidgetBrandIcon(state, sizeDp = 16)
                 Text(
-                    text = state.accountName ?: state.providerName,
+                    text = state.headerTitle(wide = false),
                     style = TextStyle(color = WidgetTextProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
                     maxLines = 1,
                 )
             }
-            Text(
-                text = state.statusLabel(context),
-                modifier = GlanceModifier.padding(top = 4.dp),
-                style = TextStyle(color = state.tone.statusAccentProvider(), fontSize = 10.sp, fontWeight = FontWeight.Medium),
-                maxLines = 1,
-            )
+            StatusRefreshRow(context, state, modifier = GlanceModifier.padding(top = 4.dp))
         }
     }
 }
@@ -328,7 +348,7 @@ private fun GridFieldCell(
         ) {
             Column(horizontalAlignment = Alignment.Horizontal.CenterHorizontally) {
                 Text(
-                    text = context.getString(field.titleResId()),
+                    text = field.title(context),
                     style = TextStyle(color = WidgetMutedTextProvider, fontSize = 9.sp, fontWeight = FontWeight.Medium),
                     maxLines = 1,
                 )
@@ -354,7 +374,7 @@ private fun GridFieldCell(
     ) {
         Column(modifier = GlanceModifier.defaultWeight(), verticalAlignment = Alignment.Vertical.CenterVertically) {
             Text(
-                text = context.getString(field.titleResId()),
+                text = field.title(context),
                 style = TextStyle(color = WidgetMutedTextProvider, fontSize = 9.sp, fontWeight = FontWeight.Medium),
                 maxLines = 1,
             )
@@ -390,7 +410,7 @@ private fun RowScope.FieldCellOrHint(context: Context, field: WidgetField?) {
     ) {
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(
-                text = context.getString(field.titleResId()),
+                text = field.title(context),
                 style = TextStyle(color = WidgetMutedTextProvider, fontSize = 9.sp, fontWeight = FontWeight.Medium),
                 maxLines = 1,
             )
@@ -421,7 +441,7 @@ private fun FieldValueColumn(
 ) {
     Column(modifier = modifier, horizontalAlignment = alignment, verticalAlignment = Alignment.Vertical.CenterVertically) {
         Text(
-            text = context.getString(field.titleResId()),
+            text = field.title(context),
             style = TextStyle(color = WidgetMutedTextProvider, fontSize = 8.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
         )
@@ -439,7 +459,45 @@ private fun VerticalDivider() {
 }
 
 @Composable
-private fun EmptyFieldsHint(context: Context, modifier: GlanceModifier = GlanceModifier) {
+private fun StatusOnlyContent(context: Context, state: WidgetQuotaState) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize(),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
+            WidgetBrandIcon(state, sizeDp = 16)
+            Text(
+                text = state.headerTitle(wide = true),
+                style = TextStyle(color = WidgetTextProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                maxLines = 1,
+            )
+        }
+        StatusRefreshRow(context, state, modifier = GlanceModifier.padding(top = 2.dp))
+        Text(
+            text = context.getString(state.statusMessageResId()),
+            modifier = GlanceModifier.padding(top = 2.dp),
+            style = TextStyle(color = WidgetMutedTextProvider, fontSize = 9.sp, fontWeight = FontWeight.Medium),
+            maxLines = 2,
+        )
+    }
+}
+
+@Composable
+private fun EmptyFieldsHint(
+    context: Context,
+    state: WidgetQuotaState? = null,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    if (state != null && state.status != WidgetQuotaStatus.Fresh) {
+        Text(
+            text = context.getString(state.statusMessageResId()),
+            modifier = modifier,
+            style = TextStyle(color = WidgetMutedTextProvider, fontSize = 8.sp, fontWeight = FontWeight.Medium),
+            maxLines = 3,
+        )
+        return
+    }
     Column(modifier = modifier, horizontalAlignment = Alignment.Horizontal.CenterHorizontally) {
         Text(
             text = context.getString(R.string.widget_no_more_fields),
@@ -501,6 +559,39 @@ private fun WidgetBrandIcon(state: WidgetQuotaState, sizeDp: Int) {
 private fun WidgetField.titleResId(): Int =
     com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes(windowId, limitWindowSeconds)
 
+/** Window label that also says the number is what is LEFT ("5h quota · left"); balances keep theirs. */
+private fun WidgetField.title(context: Context): String {
+    val label = context.getString(titleResId())
+    return if (isBalance) label else context.getString(R.string.quota_window_remaining_format, label)
+}
+
+/** Provider first so it is never cut off; wide layouts add the account name after it. */
+private fun WidgetQuotaState.headerTitle(wide: Boolean): String {
+    val account = accountName?.takeIf { it.isNotBlank() && it != providerName }
+    return if (wide && account != null) "$providerName · $account" else providerName
+}
+
+/** "Normal · Updated 14:05"; just the status word when there is no data yet. */
+private fun WidgetQuotaState.statusLine(context: Context): String {
+    val status = context.getString(statusLabelResId())
+    val updated = lastUpdatedAt ?: return status
+    return context.getString(R.string.widget_status_updated_format, status, updated.formatUpdatedTime(context))
+}
+
+@androidx.annotation.StringRes
+internal fun WidgetQuotaState.statusMessageResId(): Int = when (status) {
+    WidgetQuotaStatus.AuthRequired -> R.string.widget_message_sign_in_again
+    WidgetQuotaStatus.NoData, WidgetQuotaStatus.ErrorWithLastKnownGood ->
+        if (errorMessageKey != null) {
+            com.kmnexus.codexmeter.ui.quota.quotaErrorMessageRes(errorMessageKey)
+        } else {
+            R.string.widget_message_no_data
+        }
+    WidgetQuotaStatus.PossiblyStale, WidgetQuotaStatus.Expired -> R.string.widget_message_no_limits
+    WidgetQuotaStatus.Fresh -> R.string.widget_message_no_limits
+    WidgetQuotaStatus.NoAccount -> R.string.widget_no_accounts_hint
+}
+
 private fun WidgetField.valueText(context: Context): String =
     if (isBalance) {
         com.kmnexus.codexmeter.ui.quota.formatProviderBalance(balanceAmount, balanceCurrency)
@@ -516,15 +607,6 @@ private fun WidgetField.resetLine(context: Context): String? =
 /** Bare reset stamp (short date + time) without the "Reset" prefix — for the narrow header/grid cells. */
 private fun WidgetField.compactResetTime(context: Context): String? =
     resetAt?.formatShortDateTime(context)
-
-private fun WidgetQuotaState.headerStatusResetLine(context: Context, field: WidgetField?): String {
-    val status = context.getString(statusLabelResId())
-    // Bare reset time (no "Reset" prefix) so the enlarged 3x1 secondary line stays on one line.
-    val reset = field?.compactResetTime(context)
-    return if (reset != null) context.getString(R.string.widget_provider_status_line_format, status, reset) else status
-}
-
-private fun WidgetQuotaState.statusLabel(context: Context): String = context.getString(statusLabelResId())
 
 private fun WidgetQuotaState.launchIntent(context: Context): Intent =
     Intent(context, MainActivity::class.java).apply {
@@ -551,9 +633,20 @@ internal fun WidgetQuotaState.statusLabelResId(): Int =
         WidgetQuotaStatus.PossiblyStale -> R.string.widget_status_possibly_stale
         WidgetQuotaStatus.Expired -> R.string.widget_status_expired
         WidgetQuotaStatus.AuthRequired -> R.string.widget_status_auth_required
-        WidgetQuotaStatus.ErrorWithLastKnownGood -> R.string.widget_status_refresh_failed
-        WidgetQuotaStatus.NoData -> R.string.widget_status_no_data
+        WidgetQuotaStatus.ErrorWithLastKnownGood -> errorStatusResId() ?: R.string.widget_status_refresh_failed
+        WidgetQuotaStatus.NoData -> errorStatusResId() ?: R.string.widget_status_no_data
     }
+
+/** Short status word naming the kind of the last error, so "offline" never looks like "no usage". */
+private fun WidgetQuotaState.errorStatusResId(): Int? = when (errorMessageKey) {
+    null -> null
+    "error_network" -> R.string.widget_status_offline
+    "error_rate_limited" -> R.string.widget_status_rate_limited
+    "error_provider_unavailable" -> R.string.widget_status_provider_error
+    "error_response_invalid" -> R.string.widget_status_unreadable
+    "error_auth_required" -> R.string.widget_status_auth_required
+    else -> R.string.widget_status_refresh_failed
+}
 
 // Status label accent per tone (day = readable-on-light, night = pastel-on-dark).
 internal fun WidgetQuotaTone.statusAccentProvider(): UnitColorProvider = when (this) {
@@ -589,6 +682,15 @@ internal fun WidgetQuotaTone.statusAccentArgb(): Int = when (this) {
 
 internal fun WidgetQuotaTone.statusGlowArgb(): Int =
     statusGlowColor().toArgb()
+
+/** Time only when the data is from today, otherwise short date + time. */
+private fun Instant.formatUpdatedTime(context: Context): String {
+    val locale = context.resources.configuration.locales[0]
+    val zone = ZoneId.systemDefault()
+    val sameDay = atZone(zone).toLocalDate() == java.time.LocalDate.now(zone)
+    val pattern = DateFormat.getBestDateTimePattern(locale, if (sameDay) "jm" else "Mdjm")
+    return DateTimeFormatter.ofPattern(pattern, locale).withZone(zone).format(this)
+}
 
 private fun Instant.formatShortDateTime(context: Context): String {
     val locale = context.resources.configuration.locales[0]

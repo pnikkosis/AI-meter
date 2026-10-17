@@ -50,7 +50,7 @@ class QuotaRefreshWorkerTest {
     fun `retryable failure in any account asks WorkManager to retry`() = runTest {
         val refreshProvider = RecordingRefreshProvider(
             failures = mapOf(
-                LocalAccountId("local-1") to QuotaError.Network(diagnosticsDigest = "safe"),
+                LocalAccountId("local-1") to QuotaError.ProviderUnavailable(httpStatus = 502, diagnosticsDigest = "safe"),
             ),
         )
         val dependencies = RecordingRefreshDependenciesProvider(
@@ -66,7 +66,7 @@ class QuotaRefreshWorkerTest {
     @Test
     fun `terminal auth failure fails only when no retryable work remains`() = runTest {
         val authRequired = QuotaError.AuthRequired(httpStatus = 401, diagnosticsDigest = "safe")
-        val retryable = QuotaError.Network(diagnosticsDigest = "safe")
+        val retryable = QuotaError.ProviderUnavailable(httpStatus = 503, diagnosticsDigest = "safe")
         val authOnlyProvider = RecordingRefreshProvider(
             failures = mapOf(LocalAccountId("local-1") to authRequired),
         )

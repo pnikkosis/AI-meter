@@ -59,6 +59,31 @@ class WidgetQuotaStatusLabelTest {
     }
 
     @Test
+    fun `a failed refresh names the kind of error, with or without old data`() {
+        val cases = mapOf(
+            "error_network" to R.string.widget_status_offline,
+            "error_rate_limited" to R.string.widget_status_rate_limited,
+            "error_provider_unavailable" to R.string.widget_status_provider_error,
+            "error_response_invalid" to R.string.widget_status_unreadable,
+            "error_unknown" to R.string.widget_status_refresh_failed,
+        )
+        cases.forEach { (key, expected) ->
+            assertEquals(key, expected, stateWith(WidgetQuotaStatus.ErrorWithLastKnownGood).copy(errorMessageKey = key).statusLabelResId())
+            assertEquals(key, expected, stateWith(WidgetQuotaStatus.NoData).copy(errorMessageKey = key).statusLabelResId())
+        }
+    }
+
+    @Test
+    fun `status-only widgets explain what to do instead of showing empty values`() {
+        assertEquals(R.string.widget_message_sign_in_again, stateWith(WidgetQuotaStatus.AuthRequired).statusMessageResId())
+        assertEquals(R.string.widget_message_no_data, stateWith(WidgetQuotaStatus.NoData).statusMessageResId())
+        assertEquals(
+            R.string.error_network,
+            stateWith(WidgetQuotaStatus.NoData).copy(errorMessageKey = "error_network").statusMessageResId(),
+        )
+    }
+
+    @Test
     fun `compact status rail glow stays narrow and uses semantic accent`() {
         val style = WidgetStatusGlowRenderer.styleSpec(WidgetQuotaTone.Success)
 

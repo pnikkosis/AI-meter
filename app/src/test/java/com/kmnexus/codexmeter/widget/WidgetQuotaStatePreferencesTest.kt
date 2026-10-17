@@ -25,9 +25,20 @@ class WidgetQuotaStatePreferencesTest {
             isUnconfigured = false,
             hasAccounts = true,
             providerIconRes = null,
+            lastUpdatedAt = Instant.parse("2026-06-02T10:00:00Z"),
+            errorMessageKey = "error_network",
         )
         val prefs = mutablePreferencesOf().apply { writeWidgetQuotaState(state) }
         val restored = prefs.toWidgetQuotaState()
+
+        assertEquals(Instant.parse("2026-06-02T10:00:00Z"), restored.lastUpdatedAt)
+        assertEquals("error_network", restored.errorMessageKey)
+        val cleared = mutablePreferencesOf().apply {
+            writeWidgetQuotaState(state)
+            writeWidgetQuotaState(state.copy(lastUpdatedAt = null, errorMessageKey = null))
+        }.toWidgetQuotaState()
+        assertEquals(null, cleared.lastUpdatedAt)
+        assertEquals(null, cleared.errorMessageKey)
 
         assertEquals(2, restored.fields.size)
         assertEquals("five_hour", restored.fields[0].windowId)

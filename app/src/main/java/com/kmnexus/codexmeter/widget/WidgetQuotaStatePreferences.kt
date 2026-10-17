@@ -30,6 +30,8 @@ internal fun Preferences.toWidgetQuotaState(): WidgetQuotaState {
         // Resolve the brand icon from the provider id at read time — resource ids aren't stable
         // enough to persist across app updates, so we never serialize them.
         providerIconRes = providerId?.takeIf { it.isNotBlank() }?.let { ProviderRegistry.iconFor(ProviderId(it)) },
+        lastUpdatedAt = this[WidgetQuotaPreferenceKeys.lastUpdatedAt]?.toInstantOrNull(),
+        errorMessageKey = this[WidgetQuotaPreferenceKeys.errorMessageKey],
     )
 }
 
@@ -59,6 +61,8 @@ internal fun MutablePreferences.writeWidgetQuotaState(state: WidgetQuotaState) {
     this[WidgetQuotaPreferenceKeys.clickTarget] = state.clickTarget.name
     this[WidgetQuotaPreferenceKeys.isUnconfigured] = state.isUnconfigured
     this[WidgetQuotaPreferenceKeys.hasAccounts] = state.hasAccounts
+    putOrRemove(WidgetQuotaPreferenceKeys.lastUpdatedAt, state.lastUpdatedAt?.toString())
+    putOrRemove(WidgetQuotaPreferenceKeys.errorMessageKey, state.errorMessageKey)
     writeFields(state.fields)
 }
 
@@ -84,6 +88,8 @@ internal fun MutablePreferences.clearWidgetQuotaStateIfAccountMatches(
                 clickTarget = WidgetClickTarget.Home,
                 fields = emptyList(),
                 isUnconfigured = true,
+                lastUpdatedAt = null,
+                errorMessageKey = null,
             ),
         )
     }
@@ -168,6 +174,8 @@ internal object WidgetQuotaPreferenceKeys {
     val clickTarget = stringPreferencesKey("widget_click_target")
     val isUnconfigured = booleanPreferencesKey("widget_is_unconfigured")
     val hasAccounts = booleanPreferencesKey("widget_has_accounts")
+    val lastUpdatedAt = stringPreferencesKey("widget_last_updated_at")
+    val errorMessageKey = stringPreferencesKey("widget_error_message_key")
     val fieldCount = intPreferencesKey("widget_field_count")
     val configProviderId = stringPreferencesKey("widget_config_provider_id")
     val configLocalAccountId = stringPreferencesKey("widget_config_local_account_id")
@@ -183,4 +191,4 @@ internal object WidgetQuotaPreferenceKeys {
     fun fieldLimitWindowSeconds(i: Int) = intPreferencesKey("widget_field_${i}_limit_window_seconds")
 }
 
-private const val DEFAULT_PROVIDER_NAME = "CodexMeter"
+private const val DEFAULT_PROVIDER_NAME = "AI Usage Widget"

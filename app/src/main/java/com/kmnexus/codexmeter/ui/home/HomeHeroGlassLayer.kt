@@ -51,7 +51,7 @@ import java.util.Locale
 internal fun HomeHeroGlassLayer(uiState: HomeUiState) {
     val account = uiState.account ?: return
     val primaryCard = uiState.fiveHourCard ?: uiState.weeklyCard
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.ROOT
     Box(modifier = Modifier.fillMaxWidth()) {
         QmLiquidGlassSurface(
             modifier = Modifier.fillMaxWidth(),

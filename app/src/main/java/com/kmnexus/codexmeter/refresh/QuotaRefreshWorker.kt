@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
+import com.kmnexus.codexmeter.domain.refresh.QuotaError
 import com.kmnexus.codexmeter.domain.refresh.RefreshTrigger
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -97,5 +98,10 @@ class MultiAccountRefreshRunner(
     }
 }
 
+/**
+ * Only a provider-side failure (5xx) asks WorkManager for an early retry. Being offline is left to the
+ * next period — retrying with backoff would only spin while there is no connection — and a rate
+ * limit or an unreadable answer would not change on an immediate retry either.
+ */
 private fun RefreshResult.isRetryableFailure(): Boolean =
-    this is RefreshResult.Failure && error.retryable
+    this is RefreshResult.Failure && error.retryable && error !is QuotaError.Network

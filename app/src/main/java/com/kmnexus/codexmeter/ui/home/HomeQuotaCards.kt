@@ -109,7 +109,8 @@ private fun PercentQuotaCard(card: HomeQuotaCardUi) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(card.titleResId),
+                // The big number below is the share LEFT; say so next to the window name.
+                text = stringResource(R.string.quota_window_remaining_format, stringResource(card.titleResId)),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

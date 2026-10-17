@@ -52,4 +52,8 @@ data class WidgetQuotaState(
     // 引导态时区分「无任何账号」(false) 与「有账号待配置」(true)。
     val hasAccounts: Boolean = true,
     @get:androidx.annotation.DrawableRes val providerIconRes: Int? = null,
+    /** When the shown values were fetched from the provider; null when there is no snapshot. */
+    val lastUpdatedAt: Instant? = null,
+    /** `QuotaError.safeMessageKey` of the latest failed refresh, to name the kind of error shown. */
+    val errorMessageKey: String? = null,
 )

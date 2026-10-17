@@ -41,7 +41,8 @@ class NotificationOrchestratorTest {
         assertEquals("quota_alerts", NotificationChannels.QUOTA_ALERTS_CHANNEL_ID)
         assertEquals("account_errors", NotificationChannels.ACCOUNT_ERRORS_CHANNEL_ID)
         assertEquals(
-            listOf("quota_status", "quota_alerts", "account_errors", "app_updates"),
+            // No app-update channel: the fork has no update checker.
+            listOf("quota_status", "quota_alerts", "account_errors"),
             NotificationChannels.definitions.map { it.id },
         )
     }

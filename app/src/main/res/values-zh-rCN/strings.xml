@@ -217,8 +217,8 @@
     <string name="notification_auth_login_failed_body">回到 AI Usage Widget 重试。安全原因：%1$s。</string>
     <string name="notification_auth_login_validation_failed_title">%1$s 额度校验失败</string>
     <string name="notification_auth_login_validation_failed_body">授权已完成，但额度校验未通过。安全原因：%1$s。</string>
-    <string name="widget_description">Codex 额度状态</string>
-    <string name="widget_loading">正在加载 Codex 额度</string>
+    <string name="widget_description">Codex 与 Claude 用量限制</string>
+    <string name="widget_loading">正在加载用量…</string>
     <string name="widget_percent_format">%1$d%%</string>
     <string name="widget_percent_unavailable">--</string>
     <string name="widget_account_line_format">%1$s · %2$s</string>
@@ -230,10 +230,10 @@
     <string name="widget_provider_status_line_format">%1$s · %2$s</string>
     <string name="widget_connect_codex">点按连接 AI 供应商</string>
     <string name="widget_status_possibly_stale">可能已过期</string>
-    <string name="widget_status_expired">已过期</string>
-    <string name="widget_status_auth_required">需要重新登录</string>
+    <string name="widget_status_expired">数据已过时</string>
+    <string name="widget_status_auth_required">需重新登录</string>
     <string name="widget_status_refresh_failed">刷新失败</string>
-    <string name="widget_status_no_data">暂无额度数据</string>
+    <string name="widget_status_no_data">暂无数据</string>
     <string name="widget_config_title">配置 AI Usage Widget 微件</string>
     <string name="widget_config_description">选择此微件显示的账号与额度字段。微件会按尺寸显示前 1–4 个字段。</string>
     <string name="widget_config_loading">正在加载微件设置…</string>
@@ -354,4 +354,14 @@
     <string name="account_disconnected_local_only">%1$s：本设备上的数据已删除。服务商不提供远程撤销此登录的方式。</string>
     <string name="account_disconnected_revoke_failed">%1$s：本设备上的数据已删除，但无法连接服务商撤销该登录。在服务商一侧，它在过期前仍然有效。</string>
     <string name="account_disconnected_ok">确定</string>
+    <string name="quota_window_remaining_format">%1$s · 剩余</string>
+    <string name="widget_status_updated_format">%1$s · %2$s 更新</string>
+    <string name="widget_refresh_content_description">立即刷新</string>
+    <string name="widget_status_offline">无网络连接</string>
+    <string name="widget_status_rate_limited">请求受限</string>
+    <string name="widget_status_provider_error">服务商错误</string>
+    <string name="widget_status_unreadable">数据无法解析</string>
+    <string name="widget_message_sign_in_again">请打开应用并重新登录此账号。</string>
+    <string name="widget_message_no_data">暂无用量数据。点击刷新或打开应用。</string>
+    <string name="widget_message_no_limits">服务商未报告可显示的限制。</string>
 </resources>
