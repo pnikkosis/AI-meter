@@ -54,7 +54,7 @@
     <string name="home_last_refresh_format">最近成功刷新 %1$s</string>
     <string name="home_last_attempt_format">最近尝试 %1$s</string>
     <string name="home_loading_card_title">正在加载额度</string>
-    <string name="home_loading_card_description">首次显示额度卡前，正在获取 Codex 官方用量。</string>
+    <string name="home_loading_card_description">首次显示卡片前，正在从服务商获取用量。</string>
     <string name="home_trend_placeholder_title">最近 24 小时</string>
     <string name="home_trend_placeholder_description">数据积累中</string>
     <string name="home_trend_axis_24h_ago">24 小时前</string>
@@ -303,7 +303,7 @@
     <string name="settings_diagnostics_copy">复制诊断</string>
     <string name="settings_diagnostics_recheck">重新检测</string>
     <string name="settings_about_version_format">AI Usage Widget %1$s</string>
-    <string name="settings_about_data_source">额度数据来自各供应商官方 API。</string>
+    <string name="settings_about_data_source">用量数据来自各服务商自己的服务器。这些用量接口未公开文档化，可能随时变化。</string>
     <string name="settings_about_privacy">登录令牌仅保存在本设备，并使用 Android Keystore 密钥加密。App 只连接各服务商自己的服务器（Codex 为 OpenAI，Claude 为 Anthropic），不包含开发者服务器、统计、广告或遥测。</string>
     <string name="error_auth_required">会话已过期或被撤销，请重新登录此账号。</string>
     <string name="error_network">无网络连接：无法访问服务商。</string>
@@ -324,7 +324,7 @@
     <string name="claude_login_disclosure_title">继续之前</string>
     <string name="claude_login_disclosure_browser">登录在你的浏览器中的 claude.ai 完成。本应用不会看到你的密码或浏览器 Cookie，只会在本设备上收到一次性授权码。</string>
     <string name="claude_login_disclosure_client">授权页面会显示 Claude Code：Anthropic 没有为其他应用提供公开的登录方式，因此本应用使用 Anthropic 的 Claude Code CLI 的公开登录客户端。</string>
-    <string name="claude_login_disclosure_scope">申请的权限：user:profile，用于读取账号资料及其用量限制。本应用不申请 user:inference 或 org:create_api_key，因此其令牌无法发送消息或创建 API 密钥。但它仍是你 Claude 账号的凭据。</string>
+    <string name="claude_login_disclosure_scope">申请的权限：user:profile。本应用只用它读取账号资料和用量限制。本应用不申请 user:inference（使用你的套餐发送消息）或 org:create_api_key（创建 API 密钥）。Anthropic 没有公开 user:profile 允许的全部操作，因此不要把该令牌视为只读：它是你 Claude 账号的凭据。</string>
     <string name="claude_login_disclosure_storage">令牌仅保存在本设备上，并使用 Android Keystore 密钥加密。断开连接会从设备上删除它们；Anthropic 没有提供让本应用在其服务器上撤销授权的方式。</string>
     <string name="claude_login_disclosure_policy">Anthropic 的条款将此登录方式保留给 Claude Code 和 Anthropic 自己的应用，并可能限制在其他地方使用它的账号。只有在接受此风险时才继续。不登录的话，可以在官方 Claude 应用或 claude.ai 的“设置 &gt; 用量”中查看用量。</string>
     <string name="claude_login_continue">在浏览器中继续</string>
@@ -347,12 +347,12 @@
     <string name="claude_login_error_usage_not_allowed">Claude 接受了登录，但拒绝提供用量数据。未保存任何内容。</string>
     <string name="claude_login_error_account_mismatch">你登录的是另一个 Claude 账号，原账号未被更改。</string>
     <string name="claude_login_mismatch_signed_in_as">当前登录：%1$s</string>
-    <string name="account_delete_dialog_message_codex">应用会从本设备删除 %1$s 的登录令牌、用量历史和小组件数据，并请求 OpenAI 撤销该登录。若无法连接 OpenAI，本地数据仍会被删除。</string>
+    <string name="account_delete_dialog_message_codex">应用会从本设备删除 %1$s 的登录令牌、用量历史和小组件数据，并请求 OpenAI 撤销该登录。即使撤销失败，本地数据仍会被删除。</string>
     <string name="account_delete_dialog_message_claude">应用会从本设备删除 %1$s 的登录令牌、用量历史和小组件数据。Anthropic 没有提供让应用远程撤销此登录的方式。浏览器中的 claude.ai 会话不受影响。</string>
     <string name="account_disconnected_title">账号已断开</string>
-    <string name="account_disconnected_revoked">%1$s：本设备上的数据已删除，服务商已确认撤销该登录。</string>
+    <string name="account_disconnected_revoked">%1$s：本设备上的数据已删除，服务商已接受撤销该登录的请求。</string>
     <string name="account_disconnected_local_only">%1$s：本设备上的数据已删除。服务商不提供远程撤销此登录的方式。</string>
-    <string name="account_disconnected_revoke_failed">%1$s：本设备上的数据已删除，但无法连接服务商撤销该登录。在服务商一侧，它在过期前仍然有效。</string>
+    <string name="account_disconnected_revoke_failed">%1$s：本设备上的数据已删除，但服务商未确认撤销（无网络连接或返回错误）。在服务商一侧，该登录在过期前可能仍然有效。</string>
     <string name="account_disconnected_ok">确定</string>
     <string name="quota_window_remaining_format">%1$s · 剩余</string>
     <string name="widget_status_updated_format">%1$s · %2$s 更新</string>

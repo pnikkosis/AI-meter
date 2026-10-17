@@ -54,7 +54,7 @@
     <string name="home_last_refresh_format">Last successful refresh %1$s</string>
     <string name="home_last_attempt_format">Last attempt %1$s</string>
     <string name="home_loading_card_title">Loading quota</string>
-    <string name="home_loading_card_description">Fetching official Codex usage before any quota card is available.</string>
+    <string name="home_loading_card_description">Fetching usage from the provider before any card can be shown.</string>
     <string name="home_trend_placeholder_title">Recent 24 hours</string>
     <string name="home_trend_placeholder_description">Data accumulating</string>
     <string name="home_trend_axis_24h_ago">24h ago</string>
@@ -303,7 +303,7 @@
     <string name="settings_diagnostics_copy">Copy diagnostics</string>
     <string name="settings_diagnostics_recheck">Recheck</string>
     <string name="settings_about_version_format">AI Usage Widget %1$s</string>
-    <string name="settings_about_data_source">Quota data comes from each provider\'s official APIs.</string>
+    <string name="settings_about_data_source">Usage data comes from each provider\'s own servers. These usage endpoints are not publicly documented and may change.</string>
     <string name="settings_about_privacy">Sign-in tokens are stored on this device, encrypted with an Android Keystore key. The app only talks to the providers\' own servers (OpenAI for Codex, Anthropic for Claude). There is no developer server, analytics, ads or telemetry.</string>
     <string name="error_auth_required">The session expired or was revoked. Sign in to this account again.</string>
     <string name="error_network">No connection: the provider could not be reached.</string>
@@ -325,7 +325,7 @@
     <string name="claude_login_disclosure_title">Before you continue</string>
     <string name="claude_login_disclosure_browser">Sign-in happens on claude.ai in your browser. This app never sees your password or your browser cookies; it only receives a one-time authorization code on this device.</string>
     <string name="claude_login_disclosure_client">The authorization page will name Claude Code: Anthropic offers no public sign-in for other apps, so this app uses the public sign-in client of Anthropic\'s Claude Code CLI.</string>
-    <string name="claude_login_disclosure_scope">Permission requested: user:profile, to read your account profile and its usage limits. The app does not request user:inference or org:create_api_key, so its token cannot send messages or create API keys. It is still a credential for your Claude account.</string>
+    <string name="claude_login_disclosure_scope">Permission requested: user:profile. The app uses it only to read your profile and usage limits. It does not request user:inference (sending messages with your plan) or org:create_api_key (creating API keys). Anthropic does not document everything user:profile allows, so do not treat the token as read-only: it is a credential for your Claude account.</string>
     <string name="claude_login_disclosure_storage">The tokens stay on this device, encrypted with an Android Keystore key. Disconnecting deletes them from the device; Anthropic provides no way for this app to revoke the authorization on its servers.</string>
     <string name="claude_login_disclosure_policy">Anthropic\'s terms reserve this sign-in for Claude Code and Anthropic\'s own apps, and Anthropic may restrict accounts that use it elsewhere. Continue only if you accept that risk. Without signing in, you can check usage in the official Claude app or on claude.ai under Settings &gt; Usage.</string>
     <string name="claude_login_continue">Continue in browser</string>
@@ -348,12 +348,12 @@
     <string name="claude_login_error_usage_not_allowed">Claude accepted the sign-in but refused to report usage for it. Nothing was saved.</string>
     <string name="claude_login_error_account_mismatch">You signed in to a different Claude account. The existing account was not changed.</string>
     <string name="claude_login_mismatch_signed_in_as">Signed in as %1$s</string>
-    <string name="account_delete_dialog_message_codex">The app deletes the sign-in tokens, usage history and widget data of %1$s from this device and asks OpenAI to revoke the sign-in. If OpenAI cannot be reached, the local data is deleted anyway.</string>
+    <string name="account_delete_dialog_message_codex">The app deletes the sign-in tokens, usage history and widget data of %1$s from this device and asks OpenAI to revoke the sign-in. If the revocation fails, the local data is deleted anyway.</string>
     <string name="account_delete_dialog_message_claude">The app deletes the sign-in tokens, usage history and widget data of %1$s from this device. Anthropic offers no way for apps to revoke this sign-in remotely. Your browser\'s claude.ai session is not affected.</string>
     <string name="account_disconnected_title">Account disconnected</string>
-    <string name="account_disconnected_revoked">%1$s: the data on this device was deleted and the provider confirmed that the sign-in was revoked.</string>
+    <string name="account_disconnected_revoked">%1$s: the data on this device was deleted and the provider accepted the request to revoke the sign-in.</string>
     <string name="account_disconnected_local_only">%1$s: the data on this device was deleted. The provider offers no remote revocation for this sign-in.</string>
-    <string name="account_disconnected_revoke_failed">%1$s: the data on this device was deleted, but the provider could not be reached to revoke the sign-in. On the provider\'s side it stays valid until it expires.</string>
+    <string name="account_disconnected_revoke_failed">%1$s: the data on this device was deleted, but the provider did not confirm the revocation (no connection or an error answer). On the provider\'s side the sign-in may stay valid until it expires.</string>
     <string name="account_disconnected_ok">OK</string>
     <string name="quota_window_remaining_format">%1$s · left</string>
     <string name="widget_status_updated_format">%1$s · Updated %2$s</string>

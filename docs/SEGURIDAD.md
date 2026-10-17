@@ -80,7 +80,10 @@ La única librería de terceros fuera de AndroidX/Kotlin/OkHttp es `com.qmdeve.l
 - **Desconectar:** se envía a `https://auth.openai.com/oauth/revoke` la misma revocación que hace
   `codex logout` (RFC 7009: refresh token + client id, o el access token si no hay refresh token),
   con un límite de 10 segundos. Después se borran los datos locales, aunque la revocación falle. La
-  app informa si OpenAI confirmó la revocación o si no se pudo contactar.
+  app informa si OpenAI aceptó el pedido (respuesta 2xx) o si no lo confirmó (sin conexión o
+  respuesta de error). Según RFC 7009 el servidor responde 200 también para tokens ya inválidos, y
+  si un access token ya emitido deja de valer enseguida depende de OpenAI: “aceptado” no garantiza
+  que no quede ningún token vigente hasta su vencimiento.
 
 ## Claude (Anthropic)
 
@@ -93,11 +96,19 @@ La única librería de terceros fuera de AndroidX/Kotlin/OkHttp es `com.qmdeve.l
   - se cierra al terminar o a los 10 minutos.
   El código se intercambia junto con el verificador PKCE, que nunca sale del teléfono hasta ese
   momento.
-- **Permisos (scopes):** solo `user:profile`, que es lo que necesita el endpoint de uso. La app **no**
-  pide `user:inference` (enviar mensajes con el plan) ni `org:create_api_key` (crear claves de API),
-  que el WebView del proyecto original sí pedía. Con `user:profile` el token puede leer el perfil de
-  la cuenta (email, organización, plan) y sus límites de uso. Sigue siendo una credencial de la
-  cuenta de Claude.
+- **Permisos (scopes):** solo `user:profile`. La app **no** pide `user:inference` (enviar mensajes
+  con el plan) ni `org:create_api_key` (crear claves de API), que el WebView del proyecto original sí
+  pedía. La app usa el token solo para leer el uso (`GET /api/oauth/usage`) y renovarlo.
+  - Anthropic no documenta qué permite cada scope. Claude Code usa el scope `user:profile` para leer
+    el perfil (email, organización, plan) y el uso, y con sus tokens también llama a endpoints de
+    cuenta que **modifican** datos (por ejemplo `PATCH /api/oauth/account/settings` para la
+    preferencia de uso de datos). No se pudo comprobar cuáles de esos aceptan un token con solo
+    `user:profile`, así que **no debe considerarse un token de solo lectura**: es una credencial de
+    la cuenta de Claude.
+  - Claude Code (2.1.292) solo consulta el uso cuando su token tiene `user:inference` **y**
+    `user:profile`; que el servidor acepte un token con solo `user:profile` para el endpoint de uso
+    está pendiente de comprobar con una cuenta real (ver `docs/INFORME-PRUEBAS.md`). Si no lo
+    acepta, la app lo dice al conectar y no guarda nada.
 - **Cliente OAuth:** el cliente público de Claude Code (`9d1c250a-e61b-44d9-88ed-5944d1962f5e`); la
   página de autorización lo mostrará como “Claude Code”.
 - **Desconectar:** Anthropic no publica un endpoint de revocación y Claude Code también borra solo sus
