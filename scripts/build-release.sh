@@ -56,7 +56,7 @@ cp "$apk_path" "$dest"
 # ── verify ───────────────────────────────────────────────────────────────────
 echo "→ Verifying signature"
 "$APKSIGNER" verify --verbose --print-certs "$dest" \
-  | grep -E '^Verified using|Number of signers|Signer #1 certificate (DN|SHA-256 digest)'
+  | grep -E '^Verified using|Number of signers|Signer.*certificate (DN|SHA-256 digest)'
 
 (cd dist && sha256sum "$(basename "$dest")" > "$(basename "$dest").sha256")
 echo

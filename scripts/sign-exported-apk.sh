@@ -59,7 +59,7 @@ AIUW_STORE_PASS="$(prop storePassword)" AIUW_KEY_PASS="$(prop keyPassword)" \
 
 echo "→ Verifying signature"
 java -jar "$apksigner_jar" verify --verbose --print-certs "$dest" \
-  | grep -E '^Verifies|^Verified using|Number of signers|Signer #1 certificate (DN|SHA-256 digest)'
+  | grep -E '^Verifies|^Verified using|Number of signers|Signer.*certificate (DN|SHA-256 digest)'
 
 (cd "$PROJECT_ROOT/dist" && sha256sum "$(basename "$dest")" > "$(basename "$dest").sha256")
 echo
