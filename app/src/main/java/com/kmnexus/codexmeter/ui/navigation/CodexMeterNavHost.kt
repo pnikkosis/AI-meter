@@ -91,11 +91,9 @@ import com.kmnexus.codexmeter.ui.components.LiquidGlassSurfaceRole
 import com.kmnexus.codexmeter.ui.components.QmLiquidGlassSurface
 import com.kmnexus.codexmeter.data.currency.ExchangeRateReader
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceStore
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
 import com.kmnexus.codexmeter.domain.theme.AppearancePreferenceStore
 import com.kmnexus.codexmeter.ui.settings.NoopAppearancePreferenceStore
-import com.kmnexus.codexmeter.ui.settings.NoopCurrencyPreferenceStore
 import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
 import com.kmnexus.codexmeter.ui.home.HomeRefreshUseCase
 import com.kmnexus.codexmeter.ui.home.HomeTrendHistoryLoader
@@ -148,7 +146,6 @@ fun CodexMeterNavHost(
     apiKeyLoginUseCase: SessionLoginUseCase? = null,
     notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
         NotificationWindowChoicesLoader { _, _ -> emptyList() },
-    currencyPreferenceStore: CurrencyPreferenceStore = NoopCurrencyPreferenceStore,
     appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
 ) {
     val tabs = CodexMeterRoute.bottomTabs
@@ -390,7 +387,6 @@ fun CodexMeterNavHost(
                             RefreshWorkScheduler.from(settingsContext).applyIntervalMinutes(minutes)
                         },
                         notificationWindowChoicesLoader = notificationWindowChoicesLoader,
-                        currencyPreferenceStore = currencyPreferenceStore,
                         appearancePreferenceStore = appearancePreferenceStore,
                     )
                 }

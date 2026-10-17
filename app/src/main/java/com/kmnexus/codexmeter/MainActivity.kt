@@ -58,7 +58,6 @@ class MainActivity : ComponentActivity() {
                     currencyPreferenceReader = codexMeterApp.currencyPreferenceReader,
                     exchangeRateReader = codexMeterApp.exchangeRateReader,
                     notificationWindowChoicesLoader = codexMeterApp.notificationWindowChoicesLoader,
-                    currencyPreferenceStore = codexMeterApp.currencyPreferenceStore,
                     appearancePreferenceStore = codexMeterApp.appearancePreferenceStore,
                 )
             }

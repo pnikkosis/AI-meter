@@ -54,7 +54,6 @@ import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountListUseCase
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceStore
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceStore
 import com.kmnexus.codexmeter.domain.theme.AppearancePreferenceStore
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
@@ -79,7 +78,6 @@ fun SettingsRoute(
     backgroundRefreshScheduler: BackgroundRefreshScheduler = NoopBackgroundRefreshScheduler,
     notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
         NotificationWindowChoicesLoader { _, _ -> emptyList() },
-    currencyPreferenceStore: CurrencyPreferenceStore = NoopCurrencyPreferenceStore,
     appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.factory(
@@ -91,7 +89,6 @@ fun SettingsRoute(
             quotaHistoryClearUseCase = quotaHistoryClearUseCase,
             backgroundRefreshScheduler = backgroundRefreshScheduler,
             notificationWindowChoicesLoader = notificationWindowChoicesLoader,
-            currencyPreferenceStore = currencyPreferenceStore,
             appearancePreferenceStore = appearancePreferenceStore,
         ),
     ),
@@ -169,15 +166,8 @@ fun SettingsRoute(
         onWarningThresholdChanged = { warning ->
             viewModel.updateAlertThresholds(uiState.alerts.thresholds.caution, warning)
         },
-        onBalanceCautionChanged = { caution ->
-            viewModel.updateBalanceThresholds(caution, uiState.alerts.balanceWarning)
-        },
-        onBalanceWarningChanged = { warning ->
-            viewModel.updateBalanceThresholds(uiState.alerts.balanceCaution, warning)
-        },
         onBackgroundRefreshChanged = viewModel::setBackgroundRefreshEnabled,
         onRefreshIntervalSelected = viewModel::updateRefreshInterval,
-        onCurrencyTargetSelected = viewModel::updateCurrencyTarget,
         onThemeModeSelected = viewModel::updateThemeMode,
         onRetentionSelected = viewModel::updateRetention,
         onClearCurrentHistoryClick = viewModel::requestClearCurrentHistory,
@@ -234,11 +224,8 @@ fun SettingsScreen(
     onAccountErrorsChanged: (Boolean) -> Unit = {},
     onCautionThresholdChanged: (Int) -> Unit = {},
     onWarningThresholdChanged: (Int) -> Unit = {},
-    onBalanceCautionChanged: (Double) -> Unit = {},
-    onBalanceWarningChanged: (Double) -> Unit = {},
     onBackgroundRefreshChanged: (Boolean) -> Unit = {},
     onRefreshIntervalSelected: (SettingsRefreshInterval) -> Unit = {},
-    onCurrencyTargetSelected: (String) -> Unit = {},
     onThemeModeSelected: (ThemeMode) -> Unit = {},
     onRetentionSelected: (SettingsRetentionOption) -> Unit = {},
     onClearCurrentHistoryClick: () -> Unit = {},
@@ -275,13 +262,9 @@ fun SettingsScreen(
         SettingsSectionLabel(R.string.settings_group_alerts)
         AlertsCard(
             alerts = uiState.alerts,
-            targetCurrency = uiState.currency.targetCurrency,
             onAccountErrorsChanged = onAccountErrorsChanged,
             onCautionThresholdChanged = onCautionThresholdChanged,
             onWarningThresholdChanged = onWarningThresholdChanged,
-            onBalanceCautionChanged = onBalanceCautionChanged,
-            onBalanceWarningChanged = onBalanceWarningChanged,
-            onCurrencyTargetClick = { onChoiceDialogRequested(SettingsChoiceDialog.CurrencyTarget) },
         )
         SettingsSectionLabel(R.string.settings_group_refresh)
         RefreshCard(
@@ -316,7 +299,6 @@ fun SettingsScreen(
             onPersistentNotificationWindowSelected = onPersistentNotificationWindowSelected,
             onRetentionSelected = onRetentionSelected,
             onRefreshIntervalSelected = onRefreshIntervalSelected,
-            onCurrencyTargetSelected = onCurrencyTargetSelected,
             onDismiss = onChoiceDialogDismiss,
         )
     }
@@ -471,7 +453,6 @@ private fun SettingsChoiceDialogContent(
     onPersistentNotificationWindowSelected: (QuotaWindowId) -> Unit,
     onRetentionSelected: (SettingsRetentionOption) -> Unit,
     onRefreshIntervalSelected: (SettingsRefreshInterval) -> Unit,
-    onCurrencyTargetSelected: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -484,7 +465,6 @@ private fun SettingsChoiceDialogContent(
                         SettingsChoiceDialog.NotificationWindow -> R.string.settings_notification_display_quota_title
                         SettingsChoiceDialog.Retention -> R.string.settings_retention_title
                         SettingsChoiceDialog.RefreshInterval -> R.string.settings_refresh_interval_title
-                        SettingsChoiceDialog.CurrencyTarget -> R.string.settings_currency_target_title
                     },
                 ),
             )
@@ -518,14 +498,6 @@ private fun SettingsChoiceDialogContent(
                     SettingsChoiceDialog.RefreshInterval -> SettingsRefreshInterval.entries.forEach { option ->
                         OptionButton(option.labelResId, uiState.refresh.interval == option) {
                             onRefreshIntervalSelected(option)
-                        }
-                    }
-                    SettingsChoiceDialog.CurrencyTarget -> uiState.currency.supportedCurrencies.forEach { code ->
-                        OptionTextButton(
-                            label = code,
-                            selected = uiState.currency.targetCurrency == code,
-                        ) {
-                            onCurrencyTargetSelected(code)
                         }
                     }
                 }

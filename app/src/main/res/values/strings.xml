@@ -138,7 +138,6 @@
     <string name="account_quota_percent_format">%1$d%%</string>
     <string name="account_quota_placeholder_no_data">No data</string>
     <string name="window_label_generic">Quota</string>
-    <string name="window_label_balance">Balance</string>
     <string name="window_label_daily">Daily quota</string>
     <string name="window_label_7d">7-day quota</string>
     <string name="window_label_7d_opus">7-day · Opus</string>
@@ -273,8 +272,6 @@
     <string name="settings_threshold_limit_format">Exhausted is fixed at %1$d%% left.</string>
     <string name="settings_threshold_decrease">-</string>
     <string name="settings_threshold_increase">+</string>
-    <string name="settings_balance_threshold_caption">Balance below a threshold enters that state, in your display currency.</string>
-    <string name="settings_balance_amount_format">%1$s%2$d</string>
     <string name="settings_background_refresh_title">Background refresh</string>
     <string name="settings_background_refresh_description">Refresh all accounts in the background when Android allows it.</string>
     <string name="settings_battery_optimization_title">Improve background reliability</string>
@@ -295,8 +292,6 @@
     <string name="settings_refresh_last_result_format">Last result: %1$s</string>
     <string name="settings_refresh_check_now">Check now</string>
     <string name="settings_refresh_checking">Checking</string>
-    <string name="settings_currency_target_title">Display currency</string>
-    <string name="settings_currency_target_description">Balances and balance thresholds use this currency.</string>
     <string name="settings_retention_title">History retention</string>
     <string name="settings_retention_description">Local quota history is kept for trends and diagnostics only.</string>
     <string name="settings_retention_7_days">7 days</string>

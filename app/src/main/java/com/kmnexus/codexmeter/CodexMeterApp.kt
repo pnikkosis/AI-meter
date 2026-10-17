@@ -11,7 +11,6 @@ import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.data.currency.ExchangeRateReader
 import com.kmnexus.codexmeter.domain.auth.SessionLoginUseCase
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceStore
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginNotifier
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
@@ -120,9 +119,6 @@ class CodexMeterApp :
         get() = appContainer.apiKeyLoginUseCase
 
     val currencyPreferenceReader: CurrencyPreferenceReader
-        get() = appContainer.currencyPreferences
-
-    val currencyPreferenceStore: CurrencyPreferenceStore
         get() = appContainer.currencyPreferences
 
     val exchangeRateReader: ExchangeRateReader

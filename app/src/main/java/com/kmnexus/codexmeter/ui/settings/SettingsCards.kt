@@ -184,13 +184,9 @@ internal fun PersistentNotificationCard(
 @Composable
 internal fun AlertsCard(
     alerts: SettingsAlertsUi,
-    targetCurrency: String,
     onAccountErrorsChanged: (Boolean) -> Unit,
     onCautionThresholdChanged: (Int) -> Unit,
     onWarningThresholdChanged: (Int) -> Unit,
-    onBalanceCautionChanged: (Double) -> Unit,
-    onBalanceWarningChanged: (Double) -> Unit,
-    onCurrencyTargetClick: () -> Unit,
 ) {
     SettingsSurfaceCard {
         Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
@@ -219,75 +215,9 @@ internal fun AlertsCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // Balance-type providers (DeepSeek) alert on a currency amount instead of a percent.
-            // Display currency is shown inline so the unit is obvious alongside the thresholds.
-            ChoiceSummaryTextRow(
-                titleResId = R.string.settings_currency_target_title,
-                descriptionResId = R.string.settings_currency_target_description,
-                valueText = targetCurrency,
-                onClick = onCurrencyTargetClick,
-            )
-            Text(
-                text = stringResource(R.string.settings_balance_threshold_caption),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val symbol = com.kmnexus.codexmeter.ui.quota.currencySymbol(targetCurrency)
-            BalanceStepperRow(
-                titleResId = R.string.settings_threshold_caution,
-                color = CodexMeterTheme.colors.warning,
-                currencySymbol = symbol,
-                value = alerts.balanceCaution,
-                onDecrement = { onBalanceCautionChanged(alerts.balanceCaution - 1) },
-                onIncrement = { onBalanceCautionChanged(alerts.balanceCaution + 1) },
-            )
-            BalanceStepperRow(
-                titleResId = R.string.settings_threshold_warning,
-                color = CodexMeterTheme.colors.danger,
-                currencySymbol = symbol,
-                value = alerts.balanceWarning,
-                onDecrement = { onBalanceWarningChanged(alerts.balanceWarning - 1) },
-                onIncrement = { onBalanceWarningChanged(alerts.balanceWarning + 1) },
-            )
         }
     }
 }
-
-@Composable
-private fun BalanceStepperRow(
-    titleResId: Int,
-    color: Color,
-    currencySymbol: String,
-    value: Double,
-    onDecrement: () -> Unit,
-    onIncrement: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(titleResId) + "  " + stringResource(R.string.settings_balance_amount_format, currencySymbol, value.toInt()),
-            style = MaterialTheme.typography.bodyMedium,
-            color = color,
-            modifier = Modifier.weight(1f),
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm),
-        ) {
-            OutlinedButton(onClick = onDecrement, shape = CircleShape, contentPadding = StepperButtonPadding) {
-                Text(text = "−")
-            }
-            OutlinedButton(onClick = onIncrement, shape = CircleShape, contentPadding = StepperButtonPadding) {
-                Text(text = "+")
-            }
-        }
-    }
-}
-
-private val StepperButtonPadding = androidx.compose.foundation.layout.PaddingValues(CodexMeterSpacing.sm)
 
 @Composable
 internal fun RefreshCard(

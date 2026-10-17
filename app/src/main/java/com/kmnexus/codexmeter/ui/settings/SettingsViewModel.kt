@@ -16,12 +16,8 @@ import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.app.NotificationWindowChoice
 import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceStore
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
 import com.kmnexus.codexmeter.domain.theme.AppearancePreferenceStore
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
-import com.kmnexus.codexmeter.domain.settings.DEFAULT_BALANCE_CAUTION_THRESHOLD
-import com.kmnexus.codexmeter.domain.settings.DEFAULT_BALANCE_WARNING_THRESHOLD
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_CAUTION_THRESHOLD
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_NOTIFICATION_WINDOW_ID
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_WARNING_THRESHOLD
@@ -83,7 +79,6 @@ enum class SettingsChoiceDialog {
     NotificationWindow,
     Retention,
     RefreshInterval,
-    CurrencyTarget,
 }
 
 data class SettingsAlertThresholdsUi(
@@ -97,9 +92,6 @@ data class SettingsAlertsUi(
     val quotaAlertsEnabled: Boolean = true,
     val accountErrorsEnabled: Boolean = true,
     val thresholds: SettingsAlertThresholdsUi = SettingsAlertThresholdsUi(),
-    // Balance-type providers (e.g. DeepSeek) alert on a currency amount, not a percent.
-    val balanceCaution: Double = DEFAULT_BALANCE_CAUTION_THRESHOLD,
-    val balanceWarning: Double = DEFAULT_BALANCE_WARNING_THRESHOLD,
 )
 
 sealed interface SettingsNotificationAccountSelection {
@@ -138,11 +130,6 @@ data class SettingsRefreshUi(
     @get:StringRes val lastResultLabelResId: Int = R.string.settings_refresh_last_result_no_attempts,
 )
 
-data class SettingsCurrencyUi(
-    val targetCurrency: String = CurrencyPreferences.DEFAULT_TARGET_CURRENCY,
-    val supportedCurrencies: List<String> = CurrencyPreferences.SUPPORTED_TARGET_CURRENCIES,
-)
-
 data class SettingsAppearanceUi(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
 )
@@ -154,11 +141,6 @@ fun interface BackgroundRefreshScheduler {
 
 object NoopBackgroundRefreshScheduler : BackgroundRefreshScheduler {
     override fun applyIntervalMinutes(minutes: Int) = Unit
-}
-
-internal object NoopCurrencyPreferenceStore : CurrencyPreferenceStore {
-    override suspend fun currencyPreferences(): CurrencyPreferences = CurrencyPreferences()
-    override suspend fun updateCurrencyPreferences(preferences: CurrencyPreferences) = Unit
 }
 
 internal object NoopAppearancePreferenceStore : AppearancePreferenceStore {
@@ -188,7 +170,6 @@ data class SettingsUiState(
     val persistentNotification: SettingsPersistentNotificationUi = SettingsPersistentNotificationUi(),
     val alerts: SettingsAlertsUi = SettingsAlertsUi(),
     val refresh: SettingsRefreshUi = SettingsRefreshUi(),
-    val currency: SettingsCurrencyUi = SettingsCurrencyUi(),
     val appearance: SettingsAppearanceUi = SettingsAppearanceUi(),
     val data: SettingsDataUi = SettingsDataUi(),
     val diagnostics: SettingsDiagnosticsUi = SettingsDiagnosticsUi(),
@@ -325,7 +306,6 @@ class SettingsViewModel(
     private val currentVersionName: String = BuildConfig.VERSION_NAME,
     private val notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
         NotificationWindowChoicesLoader { _, _ -> emptyList() },
-    private val currencyPreferenceStore: CurrencyPreferenceStore = NoopCurrencyPreferenceStore,
     private val appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
@@ -380,18 +360,6 @@ class SettingsViewModel(
                     warningThreshold = nextAlerts.thresholds.warning,
                     limitThreshold = nextAlerts.thresholds.limit,
                 )
-            }
-        }
-    }
-
-    fun updateBalanceThresholds(caution: Double, warning: Double) {
-        val (safeCaution, safeWarning) = normalizedBalanceThresholds(caution, warning)
-        val nextAlerts = _uiState.value.alerts.copy(balanceCaution = safeCaution, balanceWarning = safeWarning)
-        notificationPreferencesEditedLocally = true
-        update { state -> state.copy(alerts = nextAlerts) }
-        viewModelScope.launch {
-            persistNotificationPreferences {
-                it.copy(balanceCautionThreshold = safeCaution, balanceWarningThreshold = safeWarning)
             }
         }
     }
@@ -479,13 +447,6 @@ class SettingsViewModel(
         }
     }
 
-    fun updateCurrencyTarget(currency: String) {
-        update { it.copy(currency = it.currency.copy(targetCurrency = currency), pendingChoiceDialog = null) }
-        viewModelScope.launch {
-            currencyPreferenceStore.updateCurrencyPreferences(CurrencyPreferences(currency))
-        }
-    }
-
     fun updateThemeMode(mode: ThemeMode) {
         update { it.copy(appearance = it.appearance.copy(themeMode = mode)) }
         viewModelScope.launch {
@@ -539,15 +500,6 @@ class SettingsViewModel(
                 update { state ->
                     state.copy(
                         refresh = state.refresh.copy(lastResultLabelResId = status.labelResId),
-                    )
-                }
-            }
-            runCatching {
-                currencyPreferenceStore.currencyPreferences()
-            }.onSuccess { currencyPreferences ->
-                update { state ->
-                    state.copy(
-                        currency = SettingsCurrencyUi(targetCurrency = currencyPreferences.targetCurrency),
                     )
                 }
             }
@@ -799,7 +751,6 @@ class SettingsViewModel(
             currentVersionName: String = BuildConfig.VERSION_NAME,
             notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
                 NotificationWindowChoicesLoader { _, _ -> emptyList() },
-            currencyPreferenceStore: CurrencyPreferenceStore = NoopCurrencyPreferenceStore,
             appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
@@ -815,7 +766,6 @@ class SettingsViewModel(
                         backgroundRefreshScheduler = backgroundRefreshScheduler,
                         currentVersionName = currentVersionName,
                         notificationWindowChoicesLoader = notificationWindowChoicesLoader,
-                        currencyPreferenceStore = currencyPreferenceStore,
                         appearancePreferenceStore = appearancePreferenceStore,
                     ) as T
             }
@@ -829,13 +779,6 @@ class SettingsViewModel(
         val safeCaution = caution.coerceIn(CAUTION_MIN, CAUTION_MAX)
         val safeWarning = warning.coerceIn(WARNING_MIN, minOf(WARNING_MAX, safeCaution - 1))
         return SettingsAlertThresholdsUi(caution = safeCaution, warning = safeWarning)
-    }
-
-    private fun normalizedBalanceThresholds(caution: Double, warning: Double): Pair<Double, Double> {
-        val safeCaution = caution.coerceIn(BALANCE_MIN, BALANCE_MAX)
-        // Warning (urgent) must stay at or below caution.
-        val safeWarning = warning.coerceIn(BALANCE_MIN, safeCaution)
-        return safeCaution to safeWarning
     }
 
     private suspend fun persistNotificationPreferences(
@@ -915,8 +858,6 @@ private fun NotificationPreferences.toSettingsAlertsUi(): SettingsAlertsUi =
             warning = warningThreshold,
             limit = limitThreshold,
         ),
-        balanceCaution = balanceCautionThreshold,
-        balanceWarning = balanceWarningThreshold,
     )
 
 internal class InMemoryRetentionPreferenceStore : RetentionPreferenceStore {
@@ -948,5 +889,3 @@ private const val CAUTION_MIN = 2
 private const val CAUTION_MAX = 99
 private const val WARNING_MIN = 1
 private const val WARNING_MAX = 98
-private const val BALANCE_MIN = 0.0
-private const val BALANCE_MAX = 1000.0

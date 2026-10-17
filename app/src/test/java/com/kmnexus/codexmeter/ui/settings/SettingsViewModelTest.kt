@@ -3,8 +3,6 @@ package com.kmnexus.codexmeter.ui.settings
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.account.AccountListResult
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceStore
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
 import com.kmnexus.codexmeter.domain.model.ProviderAccountId
@@ -526,20 +524,6 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `currency target pick persists and updates ui state`() = runTest {
-        val store = RecordingCurrencyPreferenceStore(CurrencyPreferences())
-        val viewModel = SettingsViewModel(currencyPreferenceStore = store)
-
-        viewModel.updateCurrencyTarget("CNY")
-        runCurrent()
-
-        val currency = viewModel.uiState.value.currency
-        assertEquals("CNY", currency.targetCurrency)
-        assertNull(viewModel.uiState.value.pendingChoiceDialog)
-        assertEquals(CurrencyPreferences(targetCurrency = "CNY"), store.latest)
-    }
-
-    @Test
     fun `diagnostics output is grouped into sections`() {
         val text = viewModel.buildDiagnosticsCopyModel(
             SettingsDiagnosticsInput(generatedAtMillis = 1_700_000_000_000L),
@@ -670,19 +654,6 @@ class SettingsViewModelTest {
         assertFalse(text.contains("must_not_leak"))
         assertTrue(text.contains("## ENVIRONMENT"))
         assertTrue(text.contains("deviceModel=Pixel"))
-    }
-
-    private class RecordingCurrencyPreferenceStore(
-        private var preferences: CurrencyPreferences,
-    ) : CurrencyPreferenceStore {
-        var latest: CurrencyPreferences = preferences
-
-        override suspend fun currencyPreferences(): CurrencyPreferences = preferences
-
-        override suspend fun updateCurrencyPreferences(preferences: CurrencyPreferences) {
-            this.preferences = preferences
-            this.latest = preferences
-        }
     }
 
     private class RecordingRetentionPreferenceStore(

@@ -138,7 +138,6 @@
     <string name="account_quota_percent_format">%1$d%%</string>
     <string name="account_quota_placeholder_no_data">暂无数据</string>
     <string name="window_label_generic">额度</string>
-    <string name="window_label_balance">余额</string>
     <string name="window_label_daily">每日额度</string>
     <string name="window_label_7d">7天额度</string>
     <string name="window_label_7d_opus">7天 · Opus</string>
@@ -273,8 +272,6 @@
     <string name="settings_threshold_limit_format">耗尽固定为剩余 %1$d%%。</string>
     <string name="settings_threshold_decrease">-</string>
     <string name="settings_threshold_increase">+</string>
-    <string name="settings_balance_threshold_caption">余额低于阈值即进入对应状态，按显示货币计。</string>
-    <string name="settings_balance_amount_format">%1$s%2$d</string>
     <string name="settings_background_refresh_title">后台刷新</string>
     <string name="settings_background_refresh_description">Android 允许时在后台刷新所有账号。</string>
     <string name="settings_battery_optimization_title">提升后台刷新可靠性</string>
@@ -295,8 +292,6 @@
     <string name="settings_refresh_last_result_format">最近结果：%1$s</string>
     <string name="settings_refresh_check_now">立即检测</string>
     <string name="settings_refresh_checking">检测中</string>
-    <string name="settings_currency_target_title">显示货币</string>
-    <string name="settings_currency_target_description">余额与余额阈值按此货币显示。</string>
     <string name="settings_retention_title">历史保留周期</string>
     <string name="settings_retention_description">本地额度历史仅用于趋势和诊断。</string>
     <string name="settings_retention_7_days">7 天</string>

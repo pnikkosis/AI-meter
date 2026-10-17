@@ -74,7 +74,6 @@ import com.kmnexus.codexmeter.providers.codex.session.CodexSessionPayload
 import com.kmnexus.codexmeter.providers.claude.ClaudeRefreshProvider
 import com.kmnexus.codexmeter.providers.claude.auth.ClaudeSessionImporter
 import com.kmnexus.codexmeter.providers.claude.network.ClaudeUsageClient
-import com.kmnexus.codexmeter.data.currency.ExchangeRateClient
 import com.kmnexus.codexmeter.data.currency.ExchangeRateRepository
 import com.kmnexus.codexmeter.data.preferences.CurrencyPreferencesDataStore
 import com.kmnexus.codexmeter.refresh.AttemptIdProvider
@@ -185,10 +184,12 @@ class AppContainer private constructor(
             val widgetDeletedAccountStateCleaner = WidgetDeletedAccountStateCleaner(appContext)
             val clock = Clock.systemUTC()
             val currencyPreferences = CurrencyPreferencesDataStore(currentAccountPreferences.dataStore)
-            val exchangeRateClient = ExchangeRateClient(httpClient)
+            // Currency conversion is disabled: Codex and Claude report percentages, not balances, and
+            // the app makes no network calls besides the providers' own APIs. The repository stays
+            // as an empty cache so the balance display code paths remain inert.
             val exchangeRateRepository = ExchangeRateRepository(
                 cache = currencyPreferences,
-                fetch = { exchangeRateClient.fetchRates(clock.instant()) },
+                fetch = { null },
             )
             val defaultAccountDisplayName = appContext.getString(R.string.account_default_display_name)
             val currentQuotaStateFactory = CurrentQuotaStateFactory()
@@ -340,7 +341,7 @@ class AppContainer private constructor(
                 initialThemeMode = initialThemeMode,
                 currencyPreferences = currencyPreferences,
                 exchangeRateRepository = exchangeRateRepository,
-                exchangeRateRefresher = ExchangeRateRefresher { exchangeRateRepository.refreshIfStale(clock.instant()) },
+                exchangeRateRefresher = ExchangeRateRefresher { },
             )
         }
 
