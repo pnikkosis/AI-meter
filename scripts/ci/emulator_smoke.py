@@ -229,8 +229,26 @@ def back_to_app():
         time.sleep(2)
 
 
-def browser_sign_in(name, uid, continue_browser, cancel_sign_in, callback_path, no_browser_texts,
-                    expected_ports=None):
+def resumed_activity():
+    return [line.strip() for line in adb("shell", "dumpsys", "activity", "activities").splitlines()
+            if "topResumedActivity" in line or "mResumedActivity" in line][:1]
+
+
+def app_in_front():
+    return any(f"{PKG}/" in line for line in resumed_activity())
+
+
+def dismiss_chrome_first_run():
+    # A fresh emulator shows Chrome's first-run screens before the custom tab.
+    for labels in (
+        ["Usar sin una cuenta", "Use without an account", "Aceptar y continuar", "Accept & continue"],
+        ["No, gracias", "No thanks"],
+    ):
+        tap_label(labels, "Chrome first-run screen", required=False, timeout=5, scroll=False)
+
+
+def browser_sign_in(name, uid, continue_browser, reopen_page, cancel_sign_in, callback_path,
+                    no_browser_texts, expected_ports=None):
     """From a provider's disclosure screen: opens the sign-in page in the browser, probes the loopback
     receiver from outside the app with fake values, comes back and cancels."""
     listening_before = listening_ports(uid) if uid else set()
@@ -238,16 +256,17 @@ def browser_sign_in(name, uid, continue_browser, cancel_sign_in, callback_path, 
         return
     browser_opened = time.monotonic()
     time.sleep(6)
-    # A fresh emulator shows Chrome's first-run screens before the custom tab.
-    for labels in (
-        ["Usar sin una cuenta", "Use without an account", "Aceptar y continuar", "Accept & continue"],
-        ["No, gracias", "No thanks"],
-    ):
-        tap_label(labels, "Chrome first-run screen", required=False, timeout=5, scroll=False)
+    dismiss_chrome_first_run()
     time.sleep(8)
-    top = [line.strip() for line in adb("shell", "dumpsys", "activity", "activities").splitlines()
-           if "topResumedActivity" in line or "mResumedActivity" in line]
-    print(f"  resumed activity: {top[:1]}")
+    if app_in_front():
+        # Chrome's first start on a fresh emulator can outlast the wait above (run 13): ask the app
+        # to open the same page once more.
+        print("  the browser is not in front yet: reopening the sign-in page")
+        tap_label(reopen_page, f"reopen the sign-in page ({name})", required=False)
+        time.sleep(6)
+        dismiss_chrome_first_run()
+        time.sleep(6)
+    print(f"  resumed activity: {resumed_activity()}")
     print(f"  page texts: {page_texts()}")
     shot(f"{name}-browser")
     ports = (listening_ports(uid) - listening_before) if uid else set()
@@ -284,8 +303,10 @@ def browser_sign_in(name, uid, continue_browser, cancel_sign_in, callback_path, 
     time.sleep(max(0.0, 25 - (time.monotonic() - browser_opened)))
     if uid:
         print(f"  network policy while behind the browser tab: {network_policy(uid)}")
-    adb("shell", "input", "keyevent", "KEYCODE_BACK")
-    time.sleep(3)
+    # BACK closes the browser tab; with the app already in front it would leave the sign-in screen.
+    if not app_in_front():
+        adb("shell", "input", "keyevent", "KEYCODE_BACK")
+        time.sleep(3)
     back_to_app()
     if uid:
         print(f"  network policy back in front: {network_policy(uid)}")
@@ -385,6 +406,7 @@ def main():
     es = LOCALE.startswith("es")
     add_account = ["Agregar cuenta"] if es else ["Add account"]
     continue_browser = ["Continuar en el navegador"] if es else ["Continue in browser"]
+    reopen_page = ["Abrir otra vez la página de inicio de sesión"] if es else ["Open the sign-in page again"]
     cancel_sign_in = ["Cancelar inicio de sesión"] if es else ["Cancel sign-in"]
     settings_tab = ["Ajustes", "Pestaña Ajustes"] if es else ["Settings", "Settings tab"]
     accounts_tab = ["Cuentas", "Pestaña Cuentas"] if es else ["Account", "Account tab"]
@@ -421,6 +443,7 @@ def main():
             name="claude",
             uid=uid,
             continue_browser=continue_browser,
+            reopen_page=reopen_page,
             cancel_sign_in=cancel_sign_in,
             callback_path="/callback",
             no_browser_texts=[
@@ -443,6 +466,7 @@ def main():
             name="codex",
             uid=uid,
             continue_browser=continue_browser,
+            reopen_page=reopen_page,
             cancel_sign_in=cancel_sign_in,
             callback_path="/auth/callback",
             no_browser_texts=[
