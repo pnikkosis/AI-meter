@@ -6,20 +6,19 @@ import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceStore
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.refresh.CurrentQuotaStatePublisher
-import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class RepublishingNotificationPreferenceStoreTest {
     @Test
-    fun `updating notification preferences republishes current quota state`() = runTest {
+    fun `updating notification preferences republishes every account's state`() = runTest {
         val delegate = RecordingNotificationPreferenceStore()
-        val currentState = state()
+        val states = listOf(state(CurrentQuotaStatus.NoData), state(CurrentQuotaStatus.Fresh))
         val publisher = RecordingCurrentQuotaStatePublisher()
         val store = RepublishingNotificationPreferenceStore(
             delegate = delegate,
-            currentQuotaStateLoader = HomeCurrentQuotaStateLoader { currentState },
+            states = { states },
             currentQuotaStatePublisher = publisher,
         )
         val preferences = NotificationPreferences(statusNotificationEnabled = false)
@@ -27,12 +26,27 @@ class RepublishingNotificationPreferenceStoreTest {
         store.updateNotificationPreferences(preferences)
 
         assertEquals(listOf(preferences), delegate.updates)
-        assertEquals(listOf(currentState), publisher.publishedStates)
+        assertEquals(states, publisher.publishedStates)
     }
 
-    private fun state(): CurrentQuotaState =
+    @Test
+    fun `a failing republish keeps the stored preferences`() = runTest {
+        val delegate = RecordingNotificationPreferenceStore()
+        val store = RepublishingNotificationPreferenceStore(
+            delegate = delegate,
+            states = { error("database closed") },
+            currentQuotaStatePublisher = RecordingCurrentQuotaStatePublisher(),
+        )
+        val preferences = NotificationPreferences(quotaAlertsEnabled = false)
+
+        store.updateNotificationPreferences(preferences)
+
+        assertEquals(preferences, store.notificationPreferences())
+    }
+
+    private fun state(status: CurrentQuotaStatus): CurrentQuotaState =
         CurrentQuotaState(
-            status = CurrentQuotaStatus.NoData,
+            status = status,
             freshness = CurrentQuotaFreshness.Unknown,
             account = null,
             snapshot = null,

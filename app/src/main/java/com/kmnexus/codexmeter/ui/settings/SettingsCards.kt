@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.ui.motion.rememberCodexMeterAnimatorsEnabled
-import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
@@ -154,7 +153,6 @@ internal fun PersistentNotificationCard(
     notificationsEnabled: Boolean,
     onEnabledChanged: (Boolean) -> Unit,
     onAccountClick: () -> Unit,
-    onWindowClick: () -> Unit,
 ) {
     SettingsSurfaceCard {
         Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
@@ -179,15 +177,6 @@ internal fun PersistentNotificationCard(
                 descriptionResId = null,
                 valueText = persistentNotification.accountSelection.displayLabel(),
                 onClick = onAccountClick,
-            )
-            ChoiceSummaryTextRow(
-                titleResId = R.string.settings_notification_display_quota_title,
-                descriptionResId = null,
-                valueText = persistentNotification.windowChoices
-                    .firstOrNull { it.windowId == persistentNotification.selectedWindowId }
-                    ?.let { quotaWindowLabelText(it.labelResId, it.labelName) }
-                    ?: stringResource(R.string.settings_value_placeholder),
-                onClick = onWindowClick,
             )
         }
     }
@@ -411,8 +400,8 @@ internal fun ThresholdSlider(
 @Composable
 internal fun SettingsNotificationAccountSelection.displayLabel(): String =
     when (this) {
-        SettingsNotificationAccountSelection.FollowCurrent ->
-            stringResource(R.string.settings_notification_account_follow_current)
+        SettingsNotificationAccountSelection.AllVisible ->
+            stringResource(R.string.settings_notification_account_all_visible)
         is SettingsNotificationAccountSelection.Account -> displayName
     }
 

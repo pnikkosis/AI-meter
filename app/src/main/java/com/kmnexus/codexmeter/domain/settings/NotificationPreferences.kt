@@ -15,8 +15,8 @@ data class NotificationPreferences(
     val balanceWarningThreshold: Double = DEFAULT_BALANCE_WARNING_THRESHOLD,
     // Background refresh cadence in minutes; 0 = manual (no periodic refresh).
     val backgroundRefreshIntervalMinutes: Int = DEFAULT_REFRESH_INTERVAL_MINUTES,
+    // The one account the status notification shows; null shows every visible account.
     val persistentNotificationAccount: NotificationAccountSelection? = null,
-    val persistentNotificationWindowId: QuotaWindowId = DEFAULT_NOTIFICATION_WINDOW_ID,
     val accountQuotaAlertSettings: Map<AccountQuotaAlertKey, Boolean> = emptyMap(),
 ) {
     init {
@@ -90,7 +90,6 @@ const val DEFAULT_BALANCE_WARNING_THRESHOLD = 1.0
 const val DEFAULT_REFRESH_INTERVAL_MINUTES = 15
 val CAUTION_THRESHOLD_RANGE = 2..99
 val WARNING_THRESHOLD_RANGE = 1..98
-val DEFAULT_NOTIFICATION_WINDOW_ID = QuotaWindowId("five_hour")
 val DEFAULT_ACCOUNT_QUOTA_ALERT_WINDOW_ID = QuotaWindowId("five_hour")
 val SUPPORTED_NOTIFICATION_WINDOW_IDS = setOf(
     QuotaWindowId("five_hour"),

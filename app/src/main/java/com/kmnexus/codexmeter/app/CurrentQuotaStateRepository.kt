@@ -1,16 +1,9 @@
 package com.kmnexus.codexmeter.app
 
-import com.kmnexus.codexmeter.data.currency.ExchangeRateReader
 import com.kmnexus.codexmeter.data.local.dao.ProviderAccountDao
 import com.kmnexus.codexmeter.data.local.dao.QuotaSnapshotDao
 import com.kmnexus.codexmeter.data.local.dao.RefreshAttemptDao
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
 import com.kmnexus.codexmeter.data.repository.toDomain
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
-import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
-import com.kmnexus.codexmeter.domain.currency.ExchangeRates
-import com.kmnexus.codexmeter.domain.currency.withConvertedBalance
 import com.kmnexus.codexmeter.domain.model.AccountStatus
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
@@ -18,80 +11,28 @@ import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStateFactory
-import com.kmnexus.codexmeter.domain.quota.QuotaWindow
-import com.kmnexus.codexmeter.domain.quota.QuotaWindowAvailability
 import com.kmnexus.codexmeter.domain.settings.DefaultPrimaryQuotaWindowPreferenceReader
-import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceReader
-import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.domain.settings.PrimaryQuotaWindowPreferenceReader
-import com.kmnexus.codexmeter.notification.StatusNotificationStateLoader
-import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
 import java.time.Clock
 
 internal class CurrentQuotaStateRepository(
-    private val currentAccountReader: CurrentAccountReader,
     private val providerAccountDao: ProviderAccountDao,
     private val quotaSnapshotDao: QuotaSnapshotDao,
     private val refreshAttemptDao: RefreshAttemptDao,
     private val currentQuotaStateFactory: CurrentQuotaStateFactory = CurrentQuotaStateFactory(),
     private val primaryQuotaWindowPreferenceReader: PrimaryQuotaWindowPreferenceReader =
         DefaultPrimaryQuotaWindowPreferenceReader,
-    private val notificationPreferenceReader: NotificationPreferenceReader =
-        DefaultStatusNotificationPreferenceReader,
     private val clock: Clock,
-    private val currencyPreferenceReader: CurrencyPreferenceReader = DefaultCurrencyPreferenceReader,
-    private val exchangeRateReader: ExchangeRateReader = DefaultExchangeRateReader,
-) : HomeCurrentQuotaStateLoader, StatusNotificationStateLoader {
-    override suspend fun loadCurrentState(): CurrentQuotaState {
-        val selection = currentAccountReader.currentAccountSelection()
-            ?: return unauthenticatedState()
-        val account = loadAccount(selection)
-            ?: return unauthenticatedState()
-        return loadState(
-            account = account,
-            primaryWindowId = primaryQuotaWindowPreferenceReader.primaryQuotaWindowId(),
-        )
-    }
-
-    override suspend fun loadStatusNotificationState(refreshedState: CurrentQuotaState): CurrentQuotaState {
-        val preferences = notificationPreferenceReader.notificationPreferences()
-        val configuredAccount = preferences.persistentNotificationAccount
-            ?.let { selection ->
-                loadAccount(
-                    CurrentAccountSelection(
-                        providerId = selection.providerId,
-                        localAccountId = selection.localAccountId,
-                    ),
-                )
-            }
-        val fallbackSelection = currentAccountReader.currentAccountSelection()
-        val account = configuredAccount
-            ?: fallbackSelection?.let { loadAccount(it) }
-            ?: return unauthenticatedState()
-
-        val state = loadState(
-            account = account,
-            primaryWindowId = preferences.persistentNotificationWindowId,
-        )
-        val currency = currencyPreferenceReader.currencyPreferences()
-        val rates = exchangeRateReader.currentRates()
-        val resolvedPrimary = resolveNotificationPrimaryWindow(state)
-        return state.copy(
-            primaryWindow = resolvedPrimary?.withConvertedBalance(currency.targetCurrency, rates),
-        )
-    }
-
+) {
     suspend fun loadAccountState(
         providerId: ProviderId,
         localAccountId: LocalAccountId,
         primaryWindowId: QuotaWindowId,
     ): CurrentQuotaState {
-        val account = loadAccount(
-            CurrentAccountSelection(
-                providerId = providerId,
-                localAccountId = localAccountId,
-            ),
-        ) ?: return unauthenticatedState()
+        val account = providerAccountDao.getById(localAccountId.value)
+            ?.toDomain()
+            ?.takeIf { it.providerId == providerId }
+            ?: return unauthenticatedState()
         return loadState(
             account = account,
             primaryWindowId = primaryWindowId,
@@ -107,10 +48,12 @@ internal class CurrentQuotaStateRepository(
             .map { loadState(account = it, primaryWindowId = primaryWindowId) }
     }
 
-    private suspend fun loadAccount(selection: CurrentAccountSelection): ProviderAccount? =
-        providerAccountDao.getById(selection.localAccountId.value)
-            ?.toDomain()
-            ?.takeIf { it.providerId == selection.providerId }
+    /**
+     * What to publish after a change that did not refresh quota: every saved account's state, or the
+     * signed-out state when there is none, so widgets and the notification still catch up.
+     */
+    suspend fun loadStatesToRepublish(): List<CurrentQuotaState> =
+        loadAllAccountStates().ifEmpty { listOf(unauthenticatedState()) }
 
     private suspend fun loadState(
         account: ProviderAccount,
@@ -141,34 +84,4 @@ internal class CurrentQuotaStateRepository(
             latestAttempt = null,
             now = clock.instant(),
         )
-}
-
-/**
- * Resolves the primary window for the persistent status notification.
- *
- * When the stored persistentNotificationWindowId belongs to a previous account and is absent from
- * the current account's snapshot, [CurrentQuotaState.primaryWindow] is null. The same applies when
- * the id is present but the provider stopped sending that slot (Codex without a secondary_window).
- * Rather than showing no quota in the notification, fall back to the account's own available
- * primary-candidate window, or else the first window in the snapshot.
- */
-internal fun resolveNotificationPrimaryWindow(state: CurrentQuotaState): QuotaWindow? {
-    val chosen = state.primaryWindow?.takeUnless { it.availability == QuotaWindowAvailability.Missing }
-    if (chosen != null) return chosen
-    val windows = state.snapshot?.windows.orEmpty()
-    return windows.firstOrNull { it.isPrimaryCandidate && it.availability == QuotaWindowAvailability.Available }
-        ?: windows.firstOrNull { it.isPrimaryCandidate }
-        ?: windows.firstOrNull()
-}
-
-private object DefaultStatusNotificationPreferenceReader : NotificationPreferenceReader {
-    override suspend fun notificationPreferences(): NotificationPreferences = NotificationPreferences()
-}
-
-private object DefaultCurrencyPreferenceReader : CurrencyPreferenceReader {
-    override suspend fun currencyPreferences() = CurrencyPreferences()
-}
-
-private object DefaultExchangeRateReader : ExchangeRateReader {
-    override suspend fun currentRates(): ExchangeRates? = null
 }

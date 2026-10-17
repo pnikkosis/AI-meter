@@ -3,7 +3,6 @@ package com.kmnexus.codexmeter.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.QuotaLevelThresholds
 import com.kmnexus.codexmeter.domain.quota.quotaLevelThresholds
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceReader
@@ -19,11 +18,6 @@ import kotlinx.coroutines.launch
 /** Every saved account's stored state, in the user's order, marked hidden or not. */
 fun interface HomeAccountsLoader {
     suspend fun loadAccounts(): List<HomeAccountEntry>
-}
-
-/** One account's stored state; the notification and widget republishers still read it this way. */
-fun interface HomeCurrentQuotaStateLoader {
-    suspend fun loadCurrentState(): CurrentQuotaState
 }
 
 private object DefaultHomeNotificationPreferenceReader : NotificationPreferenceReader {

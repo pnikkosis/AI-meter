@@ -86,7 +86,6 @@ import com.kmnexus.codexmeter.ui.home.HomeAccountsLoader
 import com.kmnexus.codexmeter.ui.home.HomeRoute
 import com.kmnexus.codexmeter.ui.motion.CodexMeterPageCascade
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
-import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.ui.settings.InMemoryNotificationPreferenceStore
 import com.kmnexus.codexmeter.ui.settings.InMemoryRetentionPreferenceStore
 import com.kmnexus.codexmeter.ui.settings.SettingsRoute
@@ -125,8 +124,6 @@ fun CodexMeterNavHost(
     quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
     claudeConnect: ClaudeConnect? = null,
     codexBrowserConnect: CodexBrowserConnect? = null,
-    notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
-        NotificationWindowChoicesLoader { _, _ -> emptyList() },
     appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
 ) {
     val tabs = CodexMeterRoute.bottomTabs
@@ -362,7 +359,6 @@ fun CodexMeterNavHost(
                         backgroundRefreshScheduler = { minutes ->
                             RefreshWorkScheduler.from(settingsContext).applyIntervalMinutes(minutes)
                         },
-                        notificationWindowChoicesLoader = notificationWindowChoicesLoader,
                         appearancePreferenceStore = appearancePreferenceStore,
                     )
                 }

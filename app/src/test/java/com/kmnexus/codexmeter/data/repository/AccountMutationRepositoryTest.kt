@@ -5,7 +5,7 @@ import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
 import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
 import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
-import com.kmnexus.codexmeter.domain.account.CurrentAccountStateRepublisher
+import com.kmnexus.codexmeter.domain.account.AccountStateRepublisher
 import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
@@ -100,15 +100,12 @@ class AccountMutationRepositoryTest {
     }
 
     @Test
-    fun `renaming current account republishes current account projection`() = runTest {
-        val republisher = RecordingCurrentAccountStateRepublisher()
+    fun `renaming an account republishes it with the new name`() = runTest {
+        val republisher = RecordingAccountStateRepublisher()
         withRepository(
-            currentAccountStateRepublisher = republisher,
-        ) { db, currentAccountStore, repository ->
+            accountStateRepublisher = republisher,
+        ) { db, _, repository ->
             db.providerAccountDao().upsert(account("local-1", displayName = "Codex Main"))
-            currentAccountStore.updateCurrentAccountSelection(
-                CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1")),
-            )
 
             repository.renameAccount(
                 providerId = ProviderId("codex"),
@@ -122,10 +119,10 @@ class AccountMutationRepositoryTest {
     }
 
     @Test
-    fun `renaming non-current account does not republish current account projection`() = runTest {
-        val republisher = RecordingCurrentAccountStateRepublisher()
+    fun `renaming an account other than the stored selection still republishes it`() = runTest {
+        val republisher = RecordingAccountStateRepublisher()
         withRepository(
-            currentAccountStateRepublisher = republisher,
+            accountStateRepublisher = republisher,
         ) { db, currentAccountStore, repository ->
             db.providerAccountDao().upsert(account("local-1", displayName = "Codex Main"))
             db.providerAccountDao().upsert(account("local-2", displayName = "Backup"))
@@ -139,7 +136,7 @@ class AccountMutationRepositoryTest {
                 displayName = "Work",
             )
 
-            assertEquals(emptyList<LocalAccountId>(), republisher.republishedAccountIds)
+            assertEquals(listOf(LocalAccountId("local-1")), republisher.republishedAccountIds)
         }
     }
 
@@ -158,7 +155,7 @@ class AccountMutationRepositoryTest {
 
     private suspend fun withRepository(
         accountSwitchRefreshRequester: AccountSwitchRefreshRequester = RecordingAccountSwitchRefreshRequester(),
-        currentAccountStateRepublisher: CurrentAccountStateRepublisher = RecordingCurrentAccountStateRepublisher(),
+        accountStateRepublisher: AccountStateRepublisher = RecordingAccountStateRepublisher(),
         block: suspend (CodexMeterDatabase, InMemoryCurrentAccountStore, AccountMutationRepository) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
@@ -170,7 +167,7 @@ class AccountMutationRepositoryTest {
             providerAccountDao = db.providerAccountDao(),
             currentAccountStore = currentAccountStore,
             accountSwitchRefreshRequester = accountSwitchRefreshRequester,
-            currentAccountStateRepublisher = currentAccountStateRepublisher,
+            accountStateRepublisher = accountStateRepublisher,
             clock = Clock.fixed(UPDATED_AT, ZoneOffset.UTC),
         )
 
@@ -191,12 +188,12 @@ class AccountMutationRepositoryTest {
         }
     }
 
-    private class RecordingCurrentAccountStateRepublisher : CurrentAccountStateRepublisher {
+    private class RecordingAccountStateRepublisher : AccountStateRepublisher {
         val republishedAccounts = mutableListOf<ProviderAccount>()
         val republishedAccountIds: List<LocalAccountId>
             get() = republishedAccounts.map { it.localAccountId }
 
-        override suspend fun republishCurrentAccountState(account: ProviderAccount) {
+        override suspend fun republishAccountState(account: ProviderAccount) {
             republishedAccounts += account
         }
     }

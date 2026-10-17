@@ -5,9 +5,7 @@ import androidx.annotation.StringRes
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
-import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
 import com.kmnexus.codexmeter.providers.ProviderRegistry
-import com.kmnexus.codexmeter.ui.quota.formatProviderBalance
 
 data class NotificationRequestOptions(
     val notificationPermissionAvailable: Boolean,
@@ -71,6 +69,7 @@ data class NotificationRequest(
 )
 
 class NotificationOrchestrator {
+    /** Alert and account-error requests for [state]; the status notification comes from [statusRequest]. */
     fun buildRequests(
         state: CurrentQuotaState,
         alertEvents: List<QuotaAlertEvent> = emptyList(),
@@ -82,9 +81,6 @@ class NotificationOrchestrator {
         }
 
         return buildList {
-            if (options.statusNotificationEnabled) {
-                add(statusRequest(state))
-            }
             if (options.quotaAlertsEnabled) {
                 addAll(alertEvents.map(::quotaAlertRequest))
             }
@@ -94,19 +90,20 @@ class NotificationOrchestrator {
         }
     }
 
-    private fun statusRequest(state: CurrentQuotaState): NotificationRequest =
+    /** The persistent status notification for [states], the accounts it shows in display order. */
+    fun statusRequest(states: List<CurrentQuotaState>): NotificationRequest =
         NotificationRequest(
             notificationId = STATUS_NOTIFICATION_ID,
             channelId = NotificationChannels.STATUS_CHANNEL_ID,
-            title = identityTitle(state, fallbackResId = R.string.notification_status_title),
-            body = statusBody(state),
+            title = StatusNotificationContent.title(states),
+            body = StatusNotificationContent.body(states),
             pendingIntent = homePendingIntent(STATUS_PENDING_INTENT_REQUEST_CODE),
             ongoing = true,
         )
 
     /**
-     * "<provider>·<account>" so the persistent notification names which connected account it tracks
-     * (the quota figure now lives in the body). Falls back to a generic title when no account is set.
+     * "<provider>·<account>" so an account error names the account it is about. Falls back to a
+     * generic title when the state has no account.
      */
     private fun identityTitle(state: CurrentQuotaState, @StringRes fallbackResId: Int): NotificationText {
         val account = state.account ?: return NotificationText(resourceId = fallbackResId)
@@ -118,45 +115,6 @@ class NotificationOrchestrator {
             ),
         )
     }
-
-    /** Body pairs the remaining-quota figure (when known) with the freshness/status clause. */
-    private fun statusBody(state: CurrentQuotaState): NotificationText {
-        val statusText = NotificationText(statusBodyResource(state.status))
-        val quota = quotaText(state) ?: return statusText
-        return NotificationText(
-            resourceId = R.string.notification_status_body_with_quota_format,
-            formatArgs = listOf(quota, statusText),
-        )
-    }
-
-    private fun quotaText(state: CurrentQuotaState): NotificationText? {
-        val window = state.primaryWindow ?: return null
-        if (window.displayKind == QuotaWindowDisplayKind.Balance) {
-            val balance = formatProviderBalance(window.balanceAmount, window.balanceCurrency) ?: return null
-            return NotificationText(
-                resourceId = R.string.notification_status_title_balance_format,
-                formatArgs = listOf(balance),
-            )
-        }
-        val percent = window.displayPercent ?: return null
-        return NotificationText(
-            resourceId = R.string.notification_status_title_percent_format,
-            formatArgs = listOf(percent),
-        )
-    }
-
-    @StringRes
-    private fun statusBodyResource(status: CurrentQuotaStatus): Int =
-        when (status) {
-            CurrentQuotaStatus.Unauthenticated -> R.string.notification_status_body_unauthenticated
-            CurrentQuotaStatus.Loading -> R.string.notification_status_body_loading
-            CurrentQuotaStatus.Fresh -> R.string.notification_status_body_fresh
-            CurrentQuotaStatus.PossiblyStale -> R.string.notification_status_body_possibly_stale
-            CurrentQuotaStatus.Expired -> R.string.notification_status_body_expired
-            CurrentQuotaStatus.AuthRequired -> R.string.notification_status_body_auth_required
-            CurrentQuotaStatus.ErrorWithLastKnownGood -> R.string.notification_status_body_error
-            CurrentQuotaStatus.NoData -> R.string.notification_status_body_no_data
-        }
 
     private fun quotaAlertRequest(event: QuotaAlertEvent): NotificationRequest =
         when (event.level) {

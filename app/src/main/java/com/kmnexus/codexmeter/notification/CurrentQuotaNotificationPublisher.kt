@@ -11,6 +11,8 @@ import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceReader
 import com.kmnexus.codexmeter.refresh.CurrentQuotaStatePublisher
 import java.time.Clock
 import java.time.Instant
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class CurrentQuotaNotificationPublisher(
     private val notificationSink: NotificationSink,
@@ -21,18 +23,18 @@ class CurrentQuotaNotificationPublisher(
     private val alertPolicy: AlertPolicy = AlertPolicy(),
     private val alertWindowPreferenceReader: QuotaAlertWindowPreferenceReader =
         PrimaryQuotaAlertWindowPreferenceReader,
-    private val statusNotificationStateLoader: StatusNotificationStateLoader =
-        PassthroughStatusNotificationStateLoader,
+    private val statusNotificationStatesLoader: StatusNotificationStatesLoader,
     private val accountErrorEventReader: AccountErrorEventReader = NoopAccountErrorEventReader,
     private val clock: Clock,
     private val currencyPreferenceReader: CurrencyPreferenceReader = NoopCurrencyPreferenceReader,
     private val exchangeRateReader: ExchangeRateReader = NoopExchangeRateReader,
-) : CurrentQuotaStatePublisher {
+) : CurrentQuotaStatePublisher, StatusNotificationRefresher {
+    // Accounts refresh in parallel and each publish rebuilds the status from storage. Building one
+    // at a time means the last post always read the newest data, so an older read never wins.
+    private val statusMutex = Mutex()
+
     override suspend fun publish(state: CurrentQuotaState) {
         val options = optionsReader.currentOptions()
-        if (!options.notificationPermissionAvailable || !options.statusNotificationEnabled) {
-            notificationSink.cancel(NotificationOrchestrator.STATUS_NOTIFICATION_ID)
-        }
         val thresholds = alertThresholdsReader.currentThresholds()
         val convertedState = run {
             val currency = currencyPreferenceReader.currencyPreferences()
@@ -60,18 +62,6 @@ class CurrentQuotaNotificationPublisher(
         } else {
             emptyList()
         }
-        val statusState = if (options.notificationPermissionAvailable && options.statusNotificationEnabled) {
-            statusNotificationStateLoader.loadStatusNotificationState(refreshedState = state)
-        } else {
-            state
-        }
-        val statusRequests = orchestrator.buildRequests(
-            state = statusState,
-            options = options.copy(
-                quotaAlertsEnabled = false,
-                accountErrorsEnabled = false,
-            ),
-        )
         val alertRequests = alertEvents.mapNotNull { event ->
             val request = orchestrator.buildRequests(
                 state = state,
@@ -97,7 +87,7 @@ class CurrentQuotaNotificationPublisher(
             accountErrorEvent = accountErrorEvent,
         )
 
-        statusRequests.forEach(notificationSink::post)
+        postOrCancelStatus(options)
 
         if (options.notificationPermissionAvailable && options.quotaAlertsEnabled) {
             val notifiedAt = clock.instant()
@@ -107,6 +97,18 @@ class CurrentQuotaNotificationPublisher(
             }
         }
         accountErrorRequests.forEach(notificationSink::post)
+    }
+
+    override suspend fun refreshStatusNotification() {
+        postOrCancelStatus(optionsReader.currentOptions())
+    }
+
+    private suspend fun postOrCancelStatus(options: NotificationRequestOptions) = statusMutex.withLock {
+        if (!options.notificationPermissionAvailable || !options.statusNotificationEnabled) {
+            notificationSink.cancel(NotificationOrchestrator.STATUS_NOTIFICATION_ID)
+        } else {
+            notificationSink.post(orchestrator.statusRequest(statusNotificationStatesLoader.loadStatusNotificationStates()))
+        }
     }
 }
 
@@ -170,13 +172,14 @@ class NotificationPreferenceQuotaAlertWindowReader(
     }
 }
 
-fun interface StatusNotificationStateLoader {
-    suspend fun loadStatusNotificationState(refreshedState: CurrentQuotaState): CurrentQuotaState
+fun interface StatusNotificationRefresher {
+    /** Rebuilds only the status notification, for changes that alter what it shows but not quota. */
+    suspend fun refreshStatusNotification()
 }
 
-object PassthroughStatusNotificationStateLoader : StatusNotificationStateLoader {
-    override suspend fun loadStatusNotificationState(refreshedState: CurrentQuotaState): CurrentQuotaState =
-        refreshedState
+fun interface StatusNotificationStatesLoader {
+    /** The accounts the status notification shows, in display order; empty when none is saved. */
+    suspend fun loadStatusNotificationStates(): List<CurrentQuotaState>
 }
 
 fun interface AccountErrorEventReader {

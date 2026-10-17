@@ -6,9 +6,9 @@ import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
-import com.kmnexus.codexmeter.domain.account.CurrentAccountStateRepublisher
+import com.kmnexus.codexmeter.domain.account.AccountStateRepublisher
 import com.kmnexus.codexmeter.domain.account.NoopAccountSwitchRefreshRequester
-import com.kmnexus.codexmeter.domain.account.NoopCurrentAccountStateRepublisher
+import com.kmnexus.codexmeter.domain.account.NoopAccountStateRepublisher
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
 import com.kmnexus.codexmeter.domain.model.ProviderId
@@ -19,7 +19,7 @@ class AccountMutationRepository(
     private val providerAccountDao: ProviderAccountDao,
     private val currentAccountStore: CurrentAccountStore,
     private val accountSwitchRefreshRequester: AccountSwitchRefreshRequester = NoopAccountSwitchRefreshRequester,
-    private val currentAccountStateRepublisher: CurrentAccountStateRepublisher = NoopCurrentAccountStateRepublisher,
+    private val accountStateRepublisher: AccountStateRepublisher = NoopAccountStateRepublisher,
     private val clock: Clock,
 ) : AccountSwitchUseCase, AccountRenameUseCase {
     override suspend fun switchCurrentAccount(
@@ -63,11 +63,9 @@ class AccountMutationRepository(
 
         val renamedAccount = providerAccountDao.getById(localAccountId.value)?.toDomain()
             ?: return null
-        val currentSelection = currentAccountStore.currentAccountSelection()
-        if (currentSelection?.providerId == providerId && currentSelection.localAccountId == localAccountId) {
-            runPostMutationEffect {
-                currentAccountStateRepublisher.republishCurrentAccountState(renamedAccount)
-            }
+        // Every account can appear in the notification and in widgets, so any rename is republished.
+        runPostMutationEffect {
+            accountStateRepublisher.republishAccountState(renamedAccount)
         }
 
         return renamedAccount

@@ -12,7 +12,6 @@ import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceStore
 import com.kmnexus.codexmeter.domain.settings.NotificationAccountSelection
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
-import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearResult
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import kotlinx.coroutines.CompletableDeferred
@@ -40,11 +39,14 @@ class SettingsViewModelTest {
     private val viewModel = SettingsViewModel()
 
     @Test
-    fun `primary window default is five hour`() {
+    fun `the notification shows every visible account by default`() {
         val uiState = viewModel.uiState.value
 
-        assertEquals(com.kmnexus.codexmeter.domain.settings.DEFAULT_NOTIFICATION_WINDOW_ID, uiState.persistentNotification.selectedWindowId)
-        assertEquals("five_hour", uiState.persistentNotification.selectedWindowId.value)
+        assertEquals(
+            SettingsNotificationAccountSelection.AllVisible,
+            uiState.persistentNotification.accountSelection,
+        )
+        assertEquals(listOf("all_visible"), uiState.persistentNotification.accountChoices.map { it.stableId })
     }
 
     @Test
@@ -116,7 +118,6 @@ class SettingsViewModelTest {
                         providerId = ProviderId("codex"),
                         localAccountId = LocalAccountId("local-2"),
                     ),
-                    persistentNotificationWindowId = QuotaWindowId("weekly"),
                 ),
             ),
         )
@@ -126,7 +127,7 @@ class SettingsViewModelTest {
 
         val persistentNotification = viewModel.uiState.value.persistentNotification
         assertEquals(
-            listOf("follow_current", "local-1", "local-2"),
+            listOf("all_visible", "local-1", "local-2"),
             persistentNotification.accountChoices.map { it.stableId },
         )
         assertEquals(
@@ -137,7 +138,6 @@ class SettingsViewModelTest {
             ),
             persistentNotification.accountSelection,
         )
-        assertEquals(com.kmnexus.codexmeter.domain.model.QuotaWindowId("weekly"), persistentNotification.selectedWindowId)
     }
 
     @Test
@@ -217,8 +217,6 @@ class SettingsViewModelTest {
             ),
         )
         runCurrent()
-        viewModel.updatePersistentNotificationWindow(com.kmnexus.codexmeter.domain.model.QuotaWindowId("weekly"))
-        runCurrent()
 
         assertEquals(
             NotificationAccountSelection(
@@ -227,7 +225,6 @@ class SettingsViewModelTest {
             ),
             store.updates.last().persistentNotificationAccount,
         )
-        assertEquals(QuotaWindowId("weekly"), store.updates.last().persistentNotificationWindowId)
         assertFalse(store.updates.last().accountErrorsEnabled)
         assertEquals(25, store.updates.last().cautionThreshold)
         assertEquals(8, store.updates.last().warningThreshold)
@@ -247,8 +244,8 @@ class SettingsViewModelTest {
 
     @Test
     fun `requesting visible choice dialogs records which settings popup is open`() {
-        viewModel.requestChoiceDialog(SettingsChoiceDialog.NotificationWindow)
-        assertEquals(SettingsChoiceDialog.NotificationWindow, viewModel.uiState.value.pendingChoiceDialog)
+        viewModel.requestChoiceDialog(SettingsChoiceDialog.NotificationAccount)
+        assertEquals(SettingsChoiceDialog.NotificationAccount, viewModel.uiState.value.pendingChoiceDialog)
 
         viewModel.requestChoiceDialog(SettingsChoiceDialog.Retention)
         assertEquals(SettingsChoiceDialog.Retention, viewModel.uiState.value.pendingChoiceDialog)
@@ -462,64 +459,6 @@ class SettingsViewModelTest {
         assertEquals(
             R.string.settings_refresh_last_result_failed,
             viewModel.uiState.value.refresh.lastResultLabelResId,
-        )
-    }
-
-    @Test
-    fun `stale persisted window id falls back to first loaded choice`() = runTest {
-        val viewModel = SettingsViewModel(
-            notificationPreferenceStore = RecordingNotificationPreferenceStore(
-                NotificationPreferences(persistentNotificationWindowId = QuotaWindowId("nonexistent")),
-            ),
-            notificationWindowChoicesLoader = com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader { _, _ ->
-                listOf(com.kmnexus.codexmeter.app.NotificationWindowChoice(QuotaWindowId("balance")))
-            },
-        )
-
-        viewModel.loadSettings()
-        runCurrent()
-
-        assertEquals(QuotaWindowId("balance"), viewModel.uiState.value.persistentNotification.selectedWindowId)
-    }
-
-    @Test
-    fun `stale persisted window id is auto-persisted to the first loaded choice`() = runTest {
-        val store = RecordingNotificationPreferenceStore(
-            NotificationPreferences(persistentNotificationWindowId = QuotaWindowId("nonexistent")),
-        )
-        val viewModel = SettingsViewModel(
-            notificationPreferenceStore = store,
-            notificationWindowChoicesLoader = com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader { _, _ ->
-                listOf(com.kmnexus.codexmeter.app.NotificationWindowChoice(QuotaWindowId("balance")))
-            },
-        )
-
-        viewModel.loadSettings()
-        runCurrent()
-
-        assertEquals(QuotaWindowId("balance"), viewModel.uiState.value.persistentNotification.selectedWindowId)
-        assertEquals(QuotaWindowId("balance"), store.updates.last().persistentNotificationWindowId)
-    }
-
-    @Test
-    fun `window choice label follows reported duration for positional window ids`() = runTest {
-        val viewModel = SettingsViewModel(
-            notificationWindowChoicesLoader = com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader { _, _ ->
-                listOf(
-                    com.kmnexus.codexmeter.app.NotificationWindowChoice(
-                        QuotaWindowId("five_hour"),
-                        limitWindowSeconds = 604_800,
-                    ),
-                )
-            },
-        )
-
-        viewModel.loadSettings()
-        runCurrent()
-
-        assertEquals(
-            R.string.account_quota_weekly_label,
-            viewModel.uiState.value.persistentNotification.windowChoices.single().labelResId,
         )
     }
 

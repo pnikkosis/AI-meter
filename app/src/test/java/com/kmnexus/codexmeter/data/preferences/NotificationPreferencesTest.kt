@@ -30,13 +30,12 @@ class NotificationPreferencesTest {
     }
 
     @Test
-    fun `persistent notification account defaults to follow current and five hour window`() = runTest {
+    fun `persistent notification defaults to every visible account`() = runTest {
         val preferences = preferences("notification-persistent-default-test.preferences_pb")
 
         val stored = preferences.notificationPreferences()
 
         assertNull(stored.persistentNotificationAccount)
-        assertEquals(QuotaWindowId("five_hour"), stored.persistentNotificationWindowId)
     }
 
     @Test
@@ -74,7 +73,6 @@ class NotificationPreferencesTest {
                     providerId = ProviderId("codex"),
                     localAccountId = LocalAccountId("local-2"),
                 ),
-                persistentNotificationWindowId = QuotaWindowId("weekly"),
             ).withAccountQuotaAlertEnabled(
                 providerId = ProviderId("codex"),
                 localAccountId = LocalAccountId("local-1"),
@@ -97,7 +95,6 @@ class NotificationPreferencesTest {
             ),
             stored.persistentNotificationAccount,
         )
-        assertEquals(QuotaWindowId("weekly"), stored.persistentNotificationWindowId)
         assertTrue(
             stored.isQuotaAlertEnabled(
                 providerId = ProviderId("codex"),

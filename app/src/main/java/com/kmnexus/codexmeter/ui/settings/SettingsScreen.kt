@@ -58,17 +58,14 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kmnexus.codexmeter.R
-import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountListUseCase
-import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceStore
 import com.kmnexus.codexmeter.domain.theme.AppearancePreferenceStore
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.domain.settings.NoopQuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
-import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
@@ -85,8 +82,6 @@ fun SettingsRoute(
     diagnosticsReader: SettingsDiagnosticsReader = DefaultSettingsDiagnosticsReader,
     quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
     backgroundRefreshScheduler: BackgroundRefreshScheduler = NoopBackgroundRefreshScheduler,
-    notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
-        NotificationWindowChoicesLoader { _, _ -> emptyList() },
     appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.factory(
@@ -97,7 +92,6 @@ fun SettingsRoute(
             diagnosticsReader = diagnosticsReader,
             quotaHistoryClearUseCase = quotaHistoryClearUseCase,
             backgroundRefreshScheduler = backgroundRefreshScheduler,
-            notificationWindowChoicesLoader = notificationWindowChoicesLoader,
             appearancePreferenceStore = appearancePreferenceStore,
         ),
     ),
@@ -210,7 +204,6 @@ fun SettingsRoute(
         onChoiceDialogRequested = viewModel::requestChoiceDialog,
         onChoiceDialogDismiss = viewModel::dismissChoiceDialog,
         onPersistentNotificationAccountSelected = viewModel::updatePersistentNotificationAccount,
-        onPersistentNotificationWindowSelected = viewModel::updatePersistentNotificationWindow,
         notificationsEnabled = notificationsEnabled,
         onStatusNotificationChanged = { enabled ->
             requestPermissionOrEnable(SettingsNotificationPermissionTarget.StatusNotification, enabled)
@@ -278,7 +271,6 @@ fun SettingsScreen(
     onChoiceDialogRequested: (SettingsChoiceDialog) -> Unit = {},
     onChoiceDialogDismiss: () -> Unit = {},
     onPersistentNotificationAccountSelected: (SettingsNotificationAccountSelection) -> Unit = {},
-    onPersistentNotificationWindowSelected: (QuotaWindowId) -> Unit = {},
     notificationsEnabled: Boolean = true,
     onStatusNotificationChanged: (Boolean) -> Unit = {},
     onAccountErrorsChanged: (Boolean) -> Unit = {},
@@ -318,7 +310,6 @@ fun SettingsScreen(
             notificationsEnabled = notificationsEnabled,
             onEnabledChanged = onStatusNotificationChanged,
             onAccountClick = { onChoiceDialogRequested(SettingsChoiceDialog.NotificationAccount) },
-            onWindowClick = { onChoiceDialogRequested(SettingsChoiceDialog.NotificationWindow) },
         )
         SettingsSectionLabel(R.string.settings_group_alerts)
         AlertsCard(
@@ -358,7 +349,6 @@ fun SettingsScreen(
             dialog = dialog,
             uiState = uiState,
             onPersistentNotificationAccountSelected = onPersistentNotificationAccountSelected,
-            onPersistentNotificationWindowSelected = onPersistentNotificationWindowSelected,
             onRetentionSelected = onRetentionSelected,
             onRefreshIntervalSelected = onRefreshIntervalSelected,
             onDismiss = onChoiceDialogDismiss,
@@ -512,7 +502,6 @@ private fun SettingsChoiceDialogContent(
     dialog: SettingsChoiceDialog,
     uiState: SettingsUiState,
     onPersistentNotificationAccountSelected: (SettingsNotificationAccountSelection) -> Unit,
-    onPersistentNotificationWindowSelected: (QuotaWindowId) -> Unit,
     onRetentionSelected: (SettingsRetentionOption) -> Unit,
     onRefreshIntervalSelected: (SettingsRefreshInterval) -> Unit,
     onDismiss: () -> Unit,
@@ -524,7 +513,6 @@ private fun SettingsChoiceDialogContent(
                 text = stringResource(
                     when (dialog) {
                         SettingsChoiceDialog.NotificationAccount -> R.string.settings_notification_account_title
-                        SettingsChoiceDialog.NotificationWindow -> R.string.settings_notification_display_quota_title
                         SettingsChoiceDialog.Retention -> R.string.settings_retention_title
                         SettingsChoiceDialog.RefreshInterval -> R.string.settings_refresh_interval_title
                     },
@@ -541,15 +529,6 @@ private fun SettingsChoiceDialogContent(
                                 selected = uiState.persistentNotification.accountSelection == choice.selection,
                             ) {
                                 onPersistentNotificationAccountSelected(choice.selection)
-                            }
-                        }
-                    SettingsChoiceDialog.NotificationWindow ->
-                        uiState.persistentNotification.windowChoices.forEach { choice ->
-                            OptionTextButton(
-                                label = quotaWindowLabelText(choice.labelResId, choice.labelName),
-                                selected = uiState.persistentNotification.selectedWindowId == choice.windowId,
-                            ) {
-                                onPersistentNotificationWindowSelected(choice.windowId)
                             }
                         }
                     SettingsChoiceDialog.Retention -> SettingsRetentionOption.entries.forEach { option ->

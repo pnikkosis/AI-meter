@@ -46,7 +46,7 @@ class SettingsNotificationAccountDialogTest {
 
         // Perform the selection — this should close the dialog.
         viewModel.updatePersistentNotificationAccount(
-            SettingsNotificationAccountSelection.FollowCurrent,
+            SettingsNotificationAccountSelection.AllVisible,
         )
 
         // The dialog must be dismissed.

@@ -52,14 +52,18 @@ fun QuotaWindow.quotaLevel(thresholds: QuotaLevelThresholds): QuotaLevel {
 /** Claude's extra usage is a spend meter, not a limit that stops you; it never headlines. */
 const val EXTRA_USAGE_WINDOW_ID = "claude_extra_usage"
 
-/**
- * The window that limits the account right now: the percent window with the least left (the first
- * one on a tie). Null when no window has a figure. Used where an account gets a single number.
- */
-fun List<QuotaWindow>.headlineWindow(): QuotaWindow? =
+/** The percent windows that can stop the account and have a figure, in the provider's order. */
+fun List<QuotaWindow>.limitWindows(): List<QuotaWindow> =
     filter {
         it.displayKind != QuotaWindowDisplayKind.Balance &&
             it.windowId.value != EXTRA_USAGE_WINDOW_ID &&
             (it.availability == QuotaWindowAvailability.Available || it.availability == QuotaWindowAvailability.Depleted) &&
             it.remainingPercent != null
-    }.minByOrNull { it.remainingPercent ?: Int.MAX_VALUE }
+    }
+
+/**
+ * The window that limits the account right now: the percent window with the least left (the first
+ * one on a tie). Null when no window has a figure. Used where an account gets a single number.
+ */
+fun List<QuotaWindow>.headlineWindow(): QuotaWindow? =
+    limitWindows().minByOrNull { it.remainingPercent ?: Int.MAX_VALUE }

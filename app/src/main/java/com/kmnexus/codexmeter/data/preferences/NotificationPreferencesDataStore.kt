@@ -18,7 +18,6 @@ import com.kmnexus.codexmeter.domain.settings.CAUTION_THRESHOLD_RANGE
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_BALANCE_CAUTION_THRESHOLD
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_BALANCE_WARNING_THRESHOLD
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_CAUTION_THRESHOLD
-import com.kmnexus.codexmeter.domain.settings.DEFAULT_NOTIFICATION_WINDOW_ID
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_REFRESH_INTERVAL_MINUTES
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_WARNING_THRESHOLD
 import com.kmnexus.codexmeter.domain.settings.LIMIT_THRESHOLD
@@ -59,10 +58,6 @@ class NotificationPreferencesDataStore(
             backgroundRefreshIntervalMinutes = preferences[Keys.BACKGROUND_REFRESH_INTERVAL_MINUTES]
                 ?: DEFAULT_REFRESH_INTERVAL_MINUTES,
             persistentNotificationAccount = preferences.toPersistentNotificationAccount(),
-            persistentNotificationWindowId = preferences[Keys.PERSISTENT_NOTIFICATION_WINDOW_ID]
-                ?.takeIf { it.isNotBlank() }
-                ?.let(::QuotaWindowId)
-                ?: DEFAULT_NOTIFICATION_WINDOW_ID,
             accountQuotaAlertSettings = preferences[Keys.ACCOUNT_QUOTA_ALERT_SETTINGS]
                 .orEmpty()
                 .mapNotNull(::decodeAccountQuotaAlertSetting)
@@ -89,7 +84,8 @@ class NotificationPreferencesDataStore(
                 stored[Keys.PERSISTENT_NOTIFICATION_PROVIDER_ID] = notificationAccount.providerId.value
                 stored[Keys.PERSISTENT_NOTIFICATION_LOCAL_ACCOUNT_ID] = notificationAccount.localAccountId.value
             }
-            stored[Keys.PERSISTENT_NOTIFICATION_WINDOW_ID] = preferences.persistentNotificationWindowId.value
+            // The notification now shows every window, so the old window choice is dropped.
+            stored.remove(Keys.LEGACY_PERSISTENT_NOTIFICATION_WINDOW_ID)
             val encodedAlertSettings = preferences.accountQuotaAlertSettings.map(::encodeAccountQuotaAlertSetting).toSet()
             if (encodedAlertSettings.isEmpty()) {
                 stored.remove(Keys.ACCOUNT_QUOTA_ALERT_SETTINGS)
@@ -197,7 +193,7 @@ class NotificationPreferencesDataStore(
         val THRESHOLD_SEMANTICS_VERSION = intPreferencesKey("notification_threshold_semantics_version")
         val PERSISTENT_NOTIFICATION_PROVIDER_ID = stringPreferencesKey("persistent_notification_provider_id")
         val PERSISTENT_NOTIFICATION_LOCAL_ACCOUNT_ID = stringPreferencesKey("persistent_notification_local_account_id")
-        val PERSISTENT_NOTIFICATION_WINDOW_ID = stringPreferencesKey("persistent_notification_window_id")
+        val LEGACY_PERSISTENT_NOTIFICATION_WINDOW_ID = stringPreferencesKey("persistent_notification_window_id")
         val ACCOUNT_QUOTA_ALERT_SETTINGS = stringSetPreferencesKey("account_quota_alert_settings")
     }
 }

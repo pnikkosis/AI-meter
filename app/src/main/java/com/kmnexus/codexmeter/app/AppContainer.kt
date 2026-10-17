@@ -31,6 +31,7 @@ import com.kmnexus.codexmeter.data.secure.ProviderSessionEnvelope
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
+import com.kmnexus.codexmeter.domain.account.AccountStateRepublisher
 import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginDiagnosticsReader
@@ -51,6 +52,7 @@ import com.kmnexus.codexmeter.notification.AndroidNotificationSink
 import com.kmnexus.codexmeter.notification.AccountErrorEventReader
 import com.kmnexus.codexmeter.notification.AccountErrorPolicy
 import com.kmnexus.codexmeter.notification.CurrentQuotaNotificationPublisher
+import com.kmnexus.codexmeter.notification.StatusNotificationRefresher
 import com.kmnexus.codexmeter.notification.NotificationPreferenceAlertThresholdsReader
 import com.kmnexus.codexmeter.notification.NotificationPreferenceQuotaAlertWindowReader
 import com.kmnexus.codexmeter.providers.codex.CodexRefreshProvider
@@ -139,7 +141,6 @@ class AppContainer private constructor(
     val exchangeRateRepository: ExchangeRateRepository,
     private val currentAccountStore: CurrentQuotaRefreshAccountStore,
     val exchangeRateRefresher: ExchangeRateRefresher,
-    val notificationWindowChoicesLoader: NotificationWindowChoicesLoader,
 ) {
     suspend fun activeQuotaRefreshAccounts(): List<ProviderAccount> =
         currentAccountStore.activeAccounts()
@@ -180,7 +181,7 @@ class AppContainer private constructor(
             val retentionPreferences = RetentionPreferences(currentAccountPreferences.dataStore)
             val notificationPreferences = NotificationPreferencesDataStore(currentAccountPreferences.dataStore)
             val primaryQuotaWindowPreferences = PrimaryQuotaWindowPreferences(currentAccountPreferences.dataStore)
-            val accountDisplayPreferences = AccountDisplayPreferencesDataStore(currentAccountPreferences.dataStore)
+            val storedDisplayPreferences = AccountDisplayPreferencesDataStore(currentAccountPreferences.dataStore)
             // Every provider request goes over HTTPS, without following redirects, and each provider's
             // clients can only reach that provider's own hosts: a Codex token can never be sent to
             // Anthropic or the other way round. Token grants use a client that never replays a
@@ -226,16 +227,12 @@ class AppContainer private constructor(
                 clock = clock,
             )
             val currentQuotaStateRepository = CurrentQuotaStateRepository(
-                currentAccountReader = currentAccountPreferences,
                 providerAccountDao = database.providerAccountDao(),
                 quotaSnapshotDao = database.quotaSnapshotDao(),
                 refreshAttemptDao = database.refreshAttemptDao(),
                 currentQuotaStateFactory = currentQuotaStateFactory,
                 primaryQuotaWindowPreferenceReader = primaryQuotaWindowPreferences,
-                notificationPreferenceReader = notificationPreferences,
                 clock = clock,
-                currencyPreferenceReader = currencyPreferences,
-                exchangeRateReader = exchangeRateRepository,
             )
             val accountErrorPolicy = AccountErrorPolicy()
 
@@ -260,6 +257,43 @@ class AppContainer private constructor(
                     ProviderId("codex") to codexRefreshProvider,
                     ProviderId("claude") to claudeRefreshProvider,
                 ),
+            )
+            val notificationPublisher = CurrentQuotaNotificationPublisher(
+                notificationSink = AndroidNotificationSink(appContext),
+                alertStateStore = RoomNotificationAlertStateStore(database.alertStateDao()),
+                optionsReader = AndroidNotificationRequestOptionsReader(
+                    context = appContext,
+                    notificationPreferenceReader = notificationPreferences,
+                ),
+                alertThresholdsReader = NotificationPreferenceAlertThresholdsReader(
+                    notificationPreferenceReader = notificationPreferences,
+                ),
+                alertWindowPreferenceReader = NotificationPreferenceQuotaAlertWindowReader(
+                    notificationPreferenceReader = notificationPreferences,
+                ),
+                statusNotificationStatesLoader = StatusNotificationAccountsRepository(
+                    states = currentQuotaStateRepository::loadAllAccountStates,
+                    displayPreferences = storedDisplayPreferences,
+                    notificationPreferences = notificationPreferences,
+                ),
+                accountErrorEventReader = AccountErrorEventReader { state ->
+                    val account = state.account
+                    val consecutiveFailureCount = if (account == null) {
+                        0
+                    } else {
+                        database.refreshAttemptDao().countConsecutiveFailuresSinceLatestSuccess(
+                            providerId = account.providerId.value,
+                            localAccountId = account.localAccountId.value,
+                        )
+                    }
+                    accountErrorPolicy.evaluate(
+                        state = state,
+                        consecutiveFailureCount = consecutiveFailureCount,
+                    )
+                },
+                clock = clock,
+                currencyPreferenceReader = currencyPreferences,
+                exchangeRateReader = exchangeRateRepository,
             )
             return fromDatabase(
                 appContext = appContext,
@@ -286,39 +320,7 @@ class AppContainer private constructor(
                             notificationPreferenceReader = notificationPreferences,
                             widgetQuotaStateLoader = widgetQuotaStateRepository,
                         ),
-                        CurrentQuotaNotificationPublisher(
-                            notificationSink = AndroidNotificationSink(appContext),
-                            alertStateStore = RoomNotificationAlertStateStore(database.alertStateDao()),
-                            optionsReader = AndroidNotificationRequestOptionsReader(
-                                context = appContext,
-                                notificationPreferenceReader = notificationPreferences,
-                            ),
-                            alertThresholdsReader = NotificationPreferenceAlertThresholdsReader(
-                                notificationPreferenceReader = notificationPreferences,
-                            ),
-                            alertWindowPreferenceReader = NotificationPreferenceQuotaAlertWindowReader(
-                                notificationPreferenceReader = notificationPreferences,
-                            ),
-                            statusNotificationStateLoader = currentQuotaStateRepository,
-                            accountErrorEventReader = AccountErrorEventReader { state ->
-                                val account = state.account
-                                val consecutiveFailureCount = if (account == null) {
-                                    0
-                                } else {
-                                    database.refreshAttemptDao().countConsecutiveFailuresSinceLatestSuccess(
-                                        providerId = account.providerId.value,
-                                        localAccountId = account.localAccountId.value,
-                                    )
-                                }
-                                accountErrorPolicy.evaluate(
-                                    state = state,
-                                    consecutiveFailureCount = consecutiveFailureCount,
-                                )
-                            },
-                            clock = clock,
-                            currencyPreferenceReader = currencyPreferences,
-                            exchangeRateReader = exchangeRateRepository,
-                        ),
+                        notificationPublisher,
                     ),
                 ),
                 currentQuotaStateRepository = currentQuotaStateRepository,
@@ -334,7 +336,7 @@ class AppContainer private constructor(
                     deletedAccountStateCleaner = CompositeDeletedAccountStateCleaner(
                         listOf(
                             widgetDeletedAccountStateCleaner,
-                            DisplayPreferencesDeletedAccountCleaner(accountDisplayPreferences),
+                            DisplayPreferencesDeletedAccountCleaner(storedDisplayPreferences),
                         ),
                     ),
                     sessionRevoker = ProviderSessionRevoker(
@@ -356,7 +358,11 @@ class AppContainer private constructor(
                 currencyPreferences = currencyPreferences,
                 exchangeRateRepository = exchangeRateRepository,
                 exchangeRateRefresher = ExchangeRateRefresher { },
-                accountDisplayPreferences = accountDisplayPreferences,
+                accountDisplayPreferences = RepublishingAccountDisplayPreferenceStore(
+                    delegate = storedDisplayPreferences,
+                    statusNotificationRefresher = notificationPublisher,
+                ),
+                statusNotificationRefresher = notificationPublisher,
             )
         }
 
@@ -393,6 +399,7 @@ class AppContainer private constructor(
             exchangeRateRepository: ExchangeRateRepository,
             exchangeRateRefresher: ExchangeRateRefresher,
             accountDisplayPreferences: AccountDisplayPreferenceStore,
+            statusNotificationRefresher: StatusNotificationRefresher,
         ): AppContainer {
             // Shared by both providers: commits account, first snapshot and encrypted session together
             // and rolls back the session file and current-account choice if the database write fails.
@@ -469,16 +476,6 @@ class AppContainer private constructor(
                 primaryQuotaWindowPreferenceReader = primaryQuotaWindowPreferences,
                 clock = clock,
             )
-            val currentAccountStateRepublisher = CurrentAccountQuotaStateRepublisher(
-                currentAccountReader = currentAccountPreferences,
-                providerAccountDao = database.providerAccountDao(),
-                quotaSnapshotDao = database.quotaSnapshotDao(),
-                refreshAttemptDao = database.refreshAttemptDao(),
-                currentQuotaStatePublisher = currentQuotaStatePublisher,
-                currentQuotaStateFactory = currentQuotaStateFactory,
-                primaryQuotaWindowPreferenceReader = primaryQuotaWindowPreferences,
-                clock = clock,
-            )
             val accountMutationRepository = AccountMutationRepository(
                 providerAccountDao = database.providerAccountDao(),
                 currentAccountStore = currentAccountPreferences,
@@ -494,7 +491,15 @@ class AppContainer private constructor(
                         // Account selection is already durable; a later refresh/app open can recover state.
                     }
                 },
-                currentAccountStateRepublisher = currentAccountStateRepublisher,
+                accountStateRepublisher = AccountStateRepublisher { account ->
+                    currentQuotaStatePublisher.publish(
+                        currentQuotaStateRepository.loadAccountState(
+                            providerId = account.providerId,
+                            localAccountId = account.localAccountId,
+                            primaryWindowId = primaryQuotaWindowPreferences.primaryQuotaWindowId(),
+                        ),
+                    )
+                },
                 clock = clock,
             )
             val homeAccountsRepository = HomeAccountsRepository(
@@ -540,7 +545,15 @@ class AppContainer private constructor(
                     accountDeletionRepository.deleteAccount(
                         providerId = providerId,
                         localAccountId = localAccountId,
-                    )
+                    ).also {
+                        try {
+                            statusNotificationRefresher.refreshStatusNotification()
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (_: Exception) {
+                            // The account is gone either way; the notification catches up on the next refresh.
+                        }
+                    }
                 },
                 accountRenameUseCase = accountMutationRepository,
                 accountQuotaAlertEvaluationRequester = AccountQuotaAlertEvaluationRequester { providerId, localAccountId, windowId ->
@@ -562,13 +575,13 @@ class AppContainer private constructor(
                 retentionPreferences = retentionPreferences,
                 notificationPreferences = RepublishingNotificationPreferenceStore(
                     delegate = notificationPreferences,
-                    currentQuotaStateLoader = currentQuotaStateRepository,
+                    states = currentQuotaStateRepository::loadStatesToRepublish,
                     currentQuotaStatePublisher = currentQuotaStatePublisher,
                 ),
                 primaryQuotaWindowPreferences = primaryQuotaWindowPreferences,
                 quotaHistoryClearUseCase = RepublishingQuotaHistoryClearUseCase(
                     delegate = quotaHistoryClearRepository,
-                    currentQuotaStateLoader = currentQuotaStateRepository,
+                    states = currentQuotaStateRepository::loadStatesToRepublish,
                     currentQuotaStatePublisher = currentQuotaStatePublisher,
                 ),
                 backgroundRefreshStatusReader = backgroundRefreshStatusRepository,
@@ -588,10 +601,6 @@ class AppContainer private constructor(
                 exchangeRateRepository = exchangeRateRepository,
                 currentAccountStore = currentQuotaRefreshAccountStore,
                 exchangeRateRefresher = exchangeRateRefresher,
-                notificationWindowChoicesLoader = DefaultNotificationWindowChoicesLoader(
-                    currentAccountReader = currentAccountReader,
-                    quotaSnapshotDao = database.quotaSnapshotDao(),
-                ),
             )
         }
 

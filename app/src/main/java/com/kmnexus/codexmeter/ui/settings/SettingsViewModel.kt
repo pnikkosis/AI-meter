@@ -13,13 +13,9 @@ import com.kmnexus.codexmeter.domain.diagnostics.DiagnosticsTimeFormatter
 import com.kmnexus.codexmeter.domain.model.AccountStatus
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderId
-import com.kmnexus.codexmeter.domain.model.QuotaWindowId
-import com.kmnexus.codexmeter.app.NotificationWindowChoice
-import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.domain.theme.AppearancePreferenceStore
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_CAUTION_THRESHOLD
-import com.kmnexus.codexmeter.domain.settings.DEFAULT_NOTIFICATION_WINDOW_ID
 import com.kmnexus.codexmeter.domain.settings.DEFAULT_WARNING_THRESHOLD
 import com.kmnexus.codexmeter.domain.settings.LIMIT_THRESHOLD
 import com.kmnexus.codexmeter.domain.settings.NoopQuotaHistoryClearUseCase
@@ -29,8 +25,6 @@ import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.RetentionPreference
 import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
-import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelName
-import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,12 +34,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-
-data class SettingsNotificationWindowChoice(
-    val windowId: QuotaWindowId,
-    @get:StringRes val labelResId: Int,
-    val labelName: String? = null,
-)
 
 enum class SettingsRetentionOption(val days: Int?, @get:StringRes val labelResId: Int) {
     SevenDays(7, R.string.settings_retention_7_days),
@@ -78,7 +66,6 @@ enum class SettingsRefreshInterval(val minutes: Int, @get:StringRes val labelRes
 
 enum class SettingsChoiceDialog {
     NotificationAccount,
-    NotificationWindow,
     Retention,
     RefreshInterval,
 }
@@ -97,7 +84,8 @@ data class SettingsAlertsUi(
 )
 
 sealed interface SettingsNotificationAccountSelection {
-    data object FollowCurrent : SettingsNotificationAccountSelection
+    /** Every account shown on Home, in the user's order. */
+    data object AllVisible : SettingsNotificationAccountSelection
 
     data class Account(
         val providerId: ProviderId,
@@ -111,19 +99,17 @@ data class SettingsNotificationAccountChoice(
 ) {
     val stableId: String =
         when (selection) {
-            SettingsNotificationAccountSelection.FollowCurrent -> "follow_current"
+            SettingsNotificationAccountSelection.AllVisible -> "all_visible"
             is SettingsNotificationAccountSelection.Account -> selection.localAccountId.value
         }
 }
 
 data class SettingsPersistentNotificationUi(
     val enabled: Boolean = true,
-    val accountSelection: SettingsNotificationAccountSelection = SettingsNotificationAccountSelection.FollowCurrent,
+    val accountSelection: SettingsNotificationAccountSelection = SettingsNotificationAccountSelection.AllVisible,
     val accountChoices: List<SettingsNotificationAccountChoice> = listOf(
-        SettingsNotificationAccountChoice(SettingsNotificationAccountSelection.FollowCurrent),
+        SettingsNotificationAccountChoice(SettingsNotificationAccountSelection.AllVisible),
     ),
-    val selectedWindowId: QuotaWindowId = DEFAULT_NOTIFICATION_WINDOW_ID,
-    val windowChoices: List<SettingsNotificationWindowChoice> = emptyList(),
 )
 
 data class SettingsRefreshUi(
@@ -306,8 +292,6 @@ class SettingsViewModel(
     private val quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
     private val backgroundRefreshScheduler: BackgroundRefreshScheduler = NoopBackgroundRefreshScheduler,
     private val currentVersionName: String = BuildConfig.VERSION_NAME,
-    private val notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
-        NotificationWindowChoicesLoader { _, _ -> emptyList() },
     private val appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
@@ -378,54 +362,6 @@ class SettingsViewModel(
             persistNotificationPreferences {
                 it.copy(persistentNotificationAccount = selection.toNotificationAccountSelection())
             }
-            loadAndApplyWindowChoices(selection)
-        }
-    }
-
-    fun updatePersistentNotificationWindow(windowId: QuotaWindowId) {
-        notificationPreferencesEditedLocally = true
-        update { state ->
-            state.copy(
-                persistentNotification = state.persistentNotification.copy(selectedWindowId = windowId),
-                pendingChoiceDialog = null,
-            )
-        }
-        viewModelScope.launch {
-            persistNotificationPreferences { it.copy(persistentNotificationWindowId = windowId) }
-        }
-    }
-
-    private suspend fun loadAndApplyWindowChoices(selection: SettingsNotificationAccountSelection) {
-        val (providerId, localAccountId) = when (selection) {
-            SettingsNotificationAccountSelection.FollowCurrent -> null to null
-            is SettingsNotificationAccountSelection.Account ->
-                selection.providerId to selection.localAccountId
-        }
-        val choices = notificationWindowChoicesLoader.windowChoices(providerId, localAccountId)
-            .map { it.toSettingsNotificationWindowChoice() }
-        var needsPersist = false
-        var resolvedWindowId: QuotaWindowId? = null
-        update { state ->
-            val currentId = state.persistentNotification.selectedWindowId
-            val resolvedId = if (choices.isNotEmpty() && choices.none { it.windowId == currentId }) {
-                choices.first().windowId
-            } else {
-                currentId
-            }
-            if (choices.isNotEmpty() && resolvedId != currentId) {
-                needsPersist = true
-                resolvedWindowId = resolvedId
-            }
-            state.copy(
-                persistentNotification = state.persistentNotification.copy(
-                    windowChoices = choices,
-                    selectedWindowId = resolvedId,
-                ),
-            )
-        }
-        val finalWindowId = resolvedWindowId
-        if (needsPersist && finalWindowId != null) {
-            persistNotificationPreferences { it.copy(persistentNotificationWindowId = finalWindowId) }
         }
     }
 
@@ -485,7 +421,7 @@ class SettingsViewModel(
                             )
                         }
                     val allChoices = listOf(
-                        SettingsNotificationAccountChoice(SettingsNotificationAccountSelection.FollowCurrent),
+                        SettingsNotificationAccountChoice(SettingsNotificationAccountSelection.AllVisible),
                     ) + accountChoices
                     state.copy(
                         persistentNotification = state.persistentNotification.copy(
@@ -526,7 +462,6 @@ class SettingsViewModel(
                             persistentNotification = state.persistentNotification.copy(
                                 enabled = preferences.statusNotificationEnabled,
                                 accountSelection = resolvedAccountSelection,
-                                selectedWindowId = preferences.persistentNotificationWindowId,
                             ),
                             alerts = preferences.toSettingsAlertsUi(),
                             refresh = state.refresh.copy(
@@ -536,9 +471,6 @@ class SettingsViewModel(
                             ),
                         )
                     }
-                    // Load window choices for the resolved account selection.
-                    val resolvedAccountSelection = _uiState.value.persistentNotification.accountSelection
-                    loadAndApplyWindowChoices(resolvedAccountSelection)
                 }
             }
         }
@@ -751,8 +683,6 @@ class SettingsViewModel(
             quotaHistoryClearUseCase: QuotaHistoryClearUseCase = NoopQuotaHistoryClearUseCase,
             backgroundRefreshScheduler: BackgroundRefreshScheduler = NoopBackgroundRefreshScheduler,
             currentVersionName: String = BuildConfig.VERSION_NAME,
-            notificationWindowChoicesLoader: NotificationWindowChoicesLoader =
-                NotificationWindowChoicesLoader { _, _ -> emptyList() },
             appearancePreferenceStore: AppearancePreferenceStore = NoopAppearancePreferenceStore,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
@@ -767,7 +697,6 @@ class SettingsViewModel(
                         quotaHistoryClearUseCase = quotaHistoryClearUseCase,
                         backgroundRefreshScheduler = backgroundRefreshScheduler,
                         currentVersionName = currentVersionName,
-                        notificationWindowChoicesLoader = notificationWindowChoicesLoader,
                         appearancePreferenceStore = appearancePreferenceStore,
                     ) as T
             }
@@ -813,16 +742,9 @@ private fun SettingsRetentionOption.toRetentionPreference(): RetentionPreference
         SettingsRetentionOption.Forever -> RetentionPreference.Forever
     }
 
-private fun NotificationWindowChoice.toSettingsNotificationWindowChoice(): SettingsNotificationWindowChoice =
-    SettingsNotificationWindowChoice(
-        windowId = windowId,
-        labelResId = quotaWindowLabelRes(windowId.value, limitWindowSeconds),
-        labelName = quotaWindowLabelName(windowId.value, subLabel),
-    )
-
 private fun SettingsNotificationAccountSelection.toNotificationAccountSelection(): NotificationAccountSelection? =
     when (this) {
-        SettingsNotificationAccountSelection.FollowCurrent -> null
+        SettingsNotificationAccountSelection.AllVisible -> null
         is SettingsNotificationAccountSelection.Account -> NotificationAccountSelection(
             providerId = providerId,
             localAccountId = localAccountId,
@@ -832,23 +754,23 @@ private fun SettingsNotificationAccountSelection.toNotificationAccountSelection(
 private fun NotificationAccountSelection?.toSettingsNotificationAccountSelection(
     choices: List<SettingsNotificationAccountChoice>,
 ): SettingsNotificationAccountSelection {
-    this ?: return SettingsNotificationAccountSelection.FollowCurrent
+    this ?: return SettingsNotificationAccountSelection.AllVisible
     return choices.map { it.selection }
         .filterIsInstance<SettingsNotificationAccountSelection.Account>()
         .firstOrNull { it.providerId == providerId && it.localAccountId == localAccountId }
-        ?: SettingsNotificationAccountSelection.FollowCurrent
+        ?: SettingsNotificationAccountSelection.AllVisible
 }
 
 private fun SettingsNotificationAccountSelection.withDisplayNameFrom(
     choices: List<SettingsNotificationAccountChoice>,
 ): SettingsNotificationAccountSelection =
     when (this) {
-        SettingsNotificationAccountSelection.FollowCurrent -> this
+        SettingsNotificationAccountSelection.AllVisible -> this
         is SettingsNotificationAccountSelection.Account ->
             choices.map { it.selection }
                 .filterIsInstance<SettingsNotificationAccountSelection.Account>()
                 .firstOrNull { it.providerId == providerId && it.localAccountId == localAccountId }
-                ?: SettingsNotificationAccountSelection.FollowCurrent
+                ?: SettingsNotificationAccountSelection.AllVisible
     }
 
 private fun NotificationPreferences.toSettingsAlertsUi(): SettingsAlertsUi =

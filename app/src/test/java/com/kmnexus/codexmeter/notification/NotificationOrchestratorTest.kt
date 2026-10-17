@@ -88,12 +88,12 @@ class NotificationOrchestratorTest {
     }
 
     @Test
-    fun `disabled status notification produces no status request`() {
+    fun `built requests leave the status notification to statusRequest`() {
         val requests = orchestrator.buildRequests(
             state = state(),
             options = NotificationRequestOptions(
                 notificationPermissionAvailable = true,
-                statusNotificationEnabled = false,
+                statusNotificationEnabled = true,
                 quotaAlertsEnabled = true,
                 accountErrorsEnabled = true,
             ),
@@ -216,16 +216,17 @@ class NotificationOrchestratorTest {
         val forbiddenTerms = forbiddenDiagnosticTerms()
         // The account display name is intentionally user-facing now (it titles the notification), so
         // secrets are injected only through the digest fields, which must never reach rendered text.
-        val requests = orchestrator.buildRequests(
-            state = state(
-                status = CurrentQuotaStatus.AuthRequired,
-                accountDisplayName = "Codex Main",
-                responseDigest = forbiddenTerms.take(4).joinToString(separator = " "),
-                error = QuotaError.AuthRequired(
-                    httpStatus = 401,
-                    diagnosticsDigest = forbiddenTerms.joinToString(separator = " "),
-                ),
+        val leakyState = state(
+            status = CurrentQuotaStatus.AuthRequired,
+            accountDisplayName = "Codex Main",
+            responseDigest = forbiddenTerms.take(4).joinToString(separator = " "),
+            error = QuotaError.AuthRequired(
+                httpStatus = 401,
+                diagnosticsDigest = forbiddenTerms.joinToString(separator = " "),
             ),
+        )
+        val requests = orchestrator.buildRequests(
+            state = leakyState,
             alertEvents = listOf(alertEvent()),
             options = NotificationRequestOptions(
                 notificationPermissionAvailable = true,
@@ -233,7 +234,7 @@ class NotificationOrchestratorTest {
                 quotaAlertsEnabled = true,
                 accountErrorsEnabled = true,
             ),
-        )
+        ) + orchestrator.statusRequest(listOf(leakyState))
 
         val exposedContent = requests.joinToString(separator = "\n") { it.renderedContentForTest() }
         forbiddenTerms.forEach { forbidden ->
@@ -242,21 +243,17 @@ class NotificationOrchestratorTest {
     }
 
     @Test
-    fun `status notification title names provider and account with quota in body`() {
-        val statusRequest = orchestrator.buildRequests(
-            state = state(accountDisplayName = "Work account"),
-            options = NotificationRequestOptions(
-                notificationPermissionAvailable = true,
-                statusNotificationEnabled = true,
-            ),
-        ).single { it.channelId == NotificationChannels.STATUS_CHANNEL_ID }
+    fun `status notification gives the provider's figure and names the account in the body`() {
+        val statusRequest = orchestrator.statusRequest(listOf(state(accountDisplayName = "Work account")))
 
         val title = statusRequest.title.renderedTextForTest()
         val body = statusRequest.body.renderedTextForTest()
-        assertTrue("title should name the provider: $title", title.contains("Codex"))
-        assertTrue("title should name the account: $title", title.contains("Work account"))
+        assertEquals(NotificationChannels.STATUS_CHANNEL_ID, statusRequest.channelId)
+        assertTrue(statusRequest.ongoing)
         // 62% used → 38% remaining is the figure shown.
-        assertTrue("body should carry the quota figure: $body", body.contains("38"))
+        assertTrue("title should give the provider and its figure: $title", title.contains("Codex 38%"))
+        assertTrue("body should name the account: $body", body.contains("Work account"))
+        assertTrue("body should carry the window figure: $body", body.contains("38%"))
     }
 
     @Test
@@ -271,14 +268,15 @@ class NotificationOrchestratorTest {
     @Test
     fun `notification requests expose immutable pending intent metadata`() {
         val requests = orchestrator.buildRequests(
-            state = state(),
+            state = state(status = CurrentQuotaStatus.AuthRequired),
+            alertEvents = listOf(alertEvent()),
             options = NotificationRequestOptions(
                 notificationPermissionAvailable = true,
                 statusNotificationEnabled = true,
             ),
-        )
+        ) + orchestrator.statusRequest(listOf(state()))
 
-        assertTrue(requests.isNotEmpty())
+        assertEquals(3, requests.size)
         requests.forEach { request ->
             assertTrue(request.pendingIntent.flags and PendingIntent.FLAG_IMMUTABLE != 0)
         }

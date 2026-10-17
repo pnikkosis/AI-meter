@@ -80,12 +80,13 @@ object NoopAccountSwitchRefreshRequester : AccountSwitchRefreshRequester {
     override suspend fun requestAccountSwitchRefresh(account: ProviderAccount) = Unit
 }
 
-fun interface CurrentAccountStateRepublisher {
-    suspend fun republishCurrentAccountState(account: ProviderAccount)
+/** Republishes one account's stored state after a change that did not refresh it (a rename). */
+fun interface AccountStateRepublisher {
+    suspend fun republishAccountState(account: ProviderAccount)
 }
 
-object NoopCurrentAccountStateRepublisher : CurrentAccountStateRepublisher {
-    override suspend fun republishCurrentAccountState(account: ProviderAccount) = Unit
+object NoopAccountStateRepublisher : AccountStateRepublisher {
+    override suspend fun republishAccountState(account: ProviderAccount) = Unit
 }
 
 interface DeletedAccountStateCleaner {

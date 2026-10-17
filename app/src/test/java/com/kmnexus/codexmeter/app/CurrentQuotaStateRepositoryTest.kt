@@ -4,15 +4,10 @@ import androidx.room.Room
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
 import com.kmnexus.codexmeter.data.local.entity.QuotaSnapshotEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
-import com.kmnexus.codexmeter.domain.settings.NotificationAccountSelection
-import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceReader
-import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.domain.settings.PrimaryQuotaWindowPreferenceReader
 import java.time.Clock
 import java.time.Instant
@@ -30,37 +25,40 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class CurrentQuotaStateRepositoryTest {
     @Test
-    fun `no current account loads unauthenticated state`() = runTest {
-        withRepository { _, _, repository ->
-            val state = repository.loadCurrentState()
-
-            assertEquals(CurrentQuotaStatus.Unauthenticated, state.status)
+    fun `without saved accounts the states to republish are the signed-out state`() = runTest {
+        withRepository { _, repository ->
+            assertEquals(emptyList<CurrentQuotaStatus>(), repository.loadAllAccountStates().map { it.status })
+            assertEquals(
+                listOf(CurrentQuotaStatus.Unauthenticated),
+                repository.loadStatesToRepublish().map { it.status },
+            )
         }
     }
 
     @Test
-    fun `current account loads latest successful snapshot`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
-            db.providerAccountDao().upsert(account(status = "active"))
-            db.quotaSnapshotDao().insert(snapshot(fetchedAt = Instant.parse("2026-05-23T11:50:00Z")))
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
+    fun `every saved account loads its latest snapshot`() = runTest {
+        withRepository { db, repository ->
+            db.providerAccountDao().upsert(account(localAccountId = "local-1", displayName = "Work"))
+            db.providerAccountDao().upsert(account(localAccountId = "local-2", displayName = "Personal"))
+            db.quotaSnapshotDao().insert(snapshot(snapshotId = "snapshot-1", localAccountId = "local-1"))
 
-            val state = repository.loadCurrentState()
+            val states = repository.loadAllAccountStates().associateBy { it.account?.displayName }
 
-            assertEquals(CurrentQuotaStatus.Fresh, state.status)
-            assertEquals("Work", state.account?.displayName)
-            assertEquals(62, state.primaryWindow?.usedPercent)
+            assertEquals(setOf("Work", "Personal"), states.keys)
+            assertEquals(CurrentQuotaStatus.Fresh, states.getValue("Work").status)
+            assertEquals(62, states.getValue("Work").primaryWindow?.usedPercent)
+            assertEquals(CurrentQuotaStatus.NoData, states.getValue("Personal").status)
+            assertEquals(states.values.toSet(), repository.loadStatesToRepublish().toSet())
         }
     }
 
     @Test
-    fun `current account uses persisted primary quota window`() = runTest {
-        withRepository(primaryWindowId = QuotaWindowId("weekly")) { db, currentAccountReader, repository ->
+    fun `account states use the persisted primary quota window`() = runTest {
+        withRepository(primaryWindowId = QuotaWindowId("weekly")) { db, repository ->
             db.providerAccountDao().upsert(account(status = "active"))
             db.quotaSnapshotDao().insert(snapshot(fetchedAt = Instant.parse("2026-05-23T11:50:00Z")))
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
 
-            val state = repository.loadCurrentState()
+            val state = repository.loadAllAccountStates().single()
 
             assertEquals(QuotaWindowId("weekly"), state.primaryWindow?.windowId)
             assertEquals(41, state.primaryWindow?.usedPercent)
@@ -69,50 +67,31 @@ class CurrentQuotaStateRepositoryTest {
     }
 
     @Test
-    fun `needs reauth current account loads auth required state`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
+    fun `an account that needs a new sign-in loads the auth required state`() = runTest {
+        withRepository { db, repository ->
             db.providerAccountDao().upsert(account(status = "needs_reauth"))
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
 
-            val state = repository.loadCurrentState()
-
-            assertEquals(CurrentQuotaStatus.AuthRequired, state.status)
+            assertEquals(CurrentQuotaStatus.AuthRequired, repository.loadAllAccountStates().single().status)
         }
     }
 
     @Test
-    fun `status notification state uses configured account and window`() = runTest {
-        withRepository(
-            notificationPreferences = NotificationPreferences(
-                persistentNotificationAccount = NotificationAccountSelection(
-                    providerId = ProviderId("codex"),
-                    localAccountId = LocalAccountId("local-2"),
-                ),
-                persistentNotificationWindowId = QuotaWindowId("weekly"),
-            ),
-        ) { db, currentAccountReader, repository ->
-            db.providerAccountDao().upsert(account(localAccountId = "local-1", displayName = "Current"))
-            db.providerAccountDao().upsert(account(localAccountId = "local-2", displayName = "Configured"))
-            db.quotaSnapshotDao().insert(snapshot(snapshotId = "snapshot-1", localAccountId = "local-1"))
-            db.quotaSnapshotDao().insert(snapshot(snapshotId = "snapshot-2", localAccountId = "local-2"))
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
+    fun `deleted accounts are left out`() = runTest {
+        withRepository { db, repository ->
+            db.providerAccountDao().upsert(account(localAccountId = "local-1", status = "deleted"))
+            db.providerAccountDao().upsert(account(localAccountId = "local-2", displayName = "Kept"))
 
-            val state = repository.loadStatusNotificationState(refreshedState = repository.loadCurrentState())
-
-            assertEquals("Configured", state.account?.displayName)
-            assertEquals(QuotaWindowId("weekly"), state.primaryWindow?.windowId)
-            assertEquals(41, state.primaryWindow?.usedPercent)
+            assertEquals(listOf("Kept"), repository.loadAllAccountStates().map { it.account?.displayName })
         }
     }
 
     @Test
     fun `requested account state uses supplied account and window`() = runTest {
-        withRepository { db, currentAccountReader, repository ->
-            db.providerAccountDao().upsert(account(localAccountId = "local-1", displayName = "Current"))
+        withRepository { db, repository ->
+            db.providerAccountDao().upsert(account(localAccountId = "local-1", displayName = "Other"))
             db.providerAccountDao().upsert(account(localAccountId = "local-2", displayName = "Requested"))
             db.quotaSnapshotDao().insert(snapshot(snapshotId = "snapshot-1", localAccountId = "local-1"))
             db.quotaSnapshotDao().insert(snapshot(snapshotId = "snapshot-2", localAccountId = "local-2"))
-            currentAccountReader.selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1"))
 
             val state = repository.loadAccountState(
                 providerId = ProviderId("codex"),
@@ -128,47 +107,31 @@ class CurrentQuotaStateRepositoryTest {
 
     private suspend fun withRepository(
         primaryWindowId: QuotaWindowId = QuotaWindowId("five_hour"),
-        notificationPreferences: NotificationPreferences = NotificationPreferences(),
-        block: suspend (CodexMeterDatabase, InMemoryCurrentAccountReader, CurrentQuotaStateRepository) -> Unit,
+        block: suspend (CodexMeterDatabase, CurrentQuotaStateRepository) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
             CodexMeterDatabase::class.java,
         ).build()
-        val currentAccountReader = InMemoryCurrentAccountReader()
         val repository = CurrentQuotaStateRepository(
-            currentAccountReader = currentAccountReader,
             providerAccountDao = db.providerAccountDao(),
             quotaSnapshotDao = db.quotaSnapshotDao(),
             refreshAttemptDao = db.refreshAttemptDao(),
             primaryQuotaWindowPreferenceReader = StaticPrimaryQuotaWindowPreferenceReader(primaryWindowId),
-            notificationPreferenceReader = StaticNotificationPreferenceReader(notificationPreferences),
             clock = Clock.fixed(Instant.parse("2026-05-23T12:00:00Z"), ZoneOffset.UTC),
         )
 
         try {
-            block(db, currentAccountReader, repository)
+            block(db, repository)
         } finally {
             db.close()
         }
-    }
-
-    private class InMemoryCurrentAccountReader : CurrentAccountReader {
-        var selection: CurrentAccountSelection? = null
-
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
     }
 
     private class StaticPrimaryQuotaWindowPreferenceReader(
         private val windowId: QuotaWindowId,
     ) : PrimaryQuotaWindowPreferenceReader {
         override suspend fun primaryQuotaWindowId(): QuotaWindowId = windowId
-    }
-
-    private class StaticNotificationPreferenceReader(
-        private val notificationPreferences: NotificationPreferences,
-    ) : NotificationPreferenceReader {
-        override suspend fun notificationPreferences(): NotificationPreferences = notificationPreferences
     }
 
     private fun account(

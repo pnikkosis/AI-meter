@@ -14,9 +14,13 @@ import com.kmnexus.codexmeter.domain.quota.QuotaSnapshot
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshotSource
 import com.kmnexus.codexmeter.domain.quota.QuotaWindow
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowAvailability
+import com.kmnexus.codexmeter.testing.TestStrings
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -132,7 +136,7 @@ class CurrentQuotaNotificationPublisherTest {
     }
 
     @Test
-    fun `status notification loads configured state instead of refreshed account state`() = runTest {
+    fun `status notification shows the loaded accounts, not only the refreshed one`() = runTest {
         val sink = RecordingNotificationSink()
         val publisher = publisher(
             sink = sink,
@@ -142,29 +146,90 @@ class CurrentQuotaNotificationPublisherTest {
                 quotaAlertsEnabled = false,
                 accountErrorsEnabled = false,
             ),
-            statusNotificationStateLoader = StaticStatusNotificationStateLoader(
-                state(
-                    usedPercent = 25,
-                    localAccountId = "local-configured",
-                    displayName = "Configured",
-                ),
-            ),
+            statusNotificationStatesLoader = StatusNotificationStatesLoader {
+                listOf(
+                    state(usedPercent = 25, localAccountId = "local-a", displayName = "Personal"),
+                    state(usedPercent = 60, localAccountId = "local-b", displayName = "Work"),
+                )
+            },
         )
 
-        publisher.publish(
-            state(
-                usedPercent = 92,
-                localAccountId = "local-refreshed",
-                displayName = "Refreshed",
-            ),
-        )
+        publisher.publish(state(usedPercent = 92, localAccountId = "local-refreshed", displayName = "Refreshed"))
 
         val statusRequest = sink.requests.single()
         assertEquals(NotificationChannels.STATUS_CHANNEL_ID, statusRequest.channelId)
-        // Title names the configured account; the configured quota (25 used → 75 remaining) is in the body.
-        assertEquals(listOf("Codex", "Configured"), statusRequest.title.formatArgs)
-        val quota = statusRequest.body.formatArgs[0] as NotificationText
-        assertEquals(listOf(75), quota.formatArgs)
+        assertEquals("Left: Codex Personal 75% · Codex Work 40%", TestStrings.render(statusRequest.title))
+    }
+
+    @Test
+    fun `refreshing the status notification posts it without evaluating alerts`() = runTest {
+        val sink = RecordingNotificationSink()
+        val alertStateStore = RecordingNotificationAlertStateStore()
+        val publisher = publisher(
+            sink = sink,
+            alertStateStore = alertStateStore,
+            options = NotificationRequestOptions(
+                notificationPermissionAvailable = true,
+                statusNotificationEnabled = true,
+                quotaAlertsEnabled = true,
+                accountErrorsEnabled = true,
+            ),
+            statusNotificationStatesLoader = StatusNotificationStatesLoader {
+                listOf(state(usedPercent = 95, status = CurrentQuotaStatus.AuthRequired))
+            },
+        )
+
+        publisher.refreshStatusNotification()
+
+        assertEquals(listOf(NotificationChannels.STATUS_CHANNEL_ID), sink.requests.map { it.channelId })
+        assertTrue(alertStateStore.markedKeys.isEmpty())
+    }
+
+    @Test
+    fun `concurrent rebuilds post in read order so the newest read is shown last`() = runTest {
+        val sink = RecordingNotificationSink()
+        val firstReadGate = CompletableDeferred<Unit>()
+        var reads = 0
+        val publisher = publisher(
+            sink = sink,
+            options = NotificationRequestOptions(
+                notificationPermissionAvailable = true,
+                statusNotificationEnabled = true,
+            ),
+            statusNotificationStatesLoader = StatusNotificationStatesLoader {
+                val read = ++reads
+                // The first read is slow and sees the account before its refresh landed.
+                if (read == 1) firstReadGate.await()
+                listOf(state(usedPercent = if (read == 1) 10 else 70))
+            },
+        )
+
+        val first = launch { publisher.refreshStatusNotification() }
+        runCurrent()
+        val second = launch { publisher.refreshStatusNotification() }
+        runCurrent()
+        firstReadGate.complete(Unit)
+        first.join()
+        second.join()
+
+        assertEquals("Left: Codex 30%", TestStrings.render(sink.requests.last().title))
+    }
+
+    @Test
+    fun `refreshing a disabled status notification cancels it`() = runTest {
+        val sink = RecordingNotificationSink()
+        val publisher = publisher(
+            sink = sink,
+            options = NotificationRequestOptions(
+                notificationPermissionAvailable = true,
+                statusNotificationEnabled = false,
+            ),
+        )
+
+        publisher.refreshStatusNotification()
+
+        assertTrue(sink.requests.isEmpty())
+        assertEquals(listOf(1001), sink.cancelledNotificationIds)
     }
 
     @Test
@@ -263,7 +328,7 @@ class CurrentQuotaNotificationPublisherTest {
         options: NotificationRequestOptions,
         thresholds: AlertThresholds = AlertThresholds(),
         alertWindowPreferenceReader: QuotaAlertWindowPreferenceReader = PrimaryQuotaAlertWindowPreferenceReader,
-        statusNotificationStateLoader: StatusNotificationStateLoader = PassthroughStatusNotificationStateLoader,
+        statusNotificationStatesLoader: StatusNotificationStatesLoader = StatusNotificationStatesLoader { emptyList() },
         accountErrorEventReader: AccountErrorEventReader = NoopAccountErrorEventReader,
     ): CurrentQuotaNotificationPublisher =
         CurrentQuotaNotificationPublisher(
@@ -272,7 +337,7 @@ class CurrentQuotaNotificationPublisherTest {
             optionsReader = StaticNotificationRequestOptionsReader(options),
             alertThresholdsReader = StaticAlertThresholdsReader(thresholds),
             alertWindowPreferenceReader = alertWindowPreferenceReader,
-            statusNotificationStateLoader = statusNotificationStateLoader,
+            statusNotificationStatesLoader = statusNotificationStatesLoader,
             accountErrorEventReader = accountErrorEventReader,
             clock = clock,
         )
@@ -378,13 +443,6 @@ class CurrentQuotaNotificationPublisherTest {
     ) : QuotaAlertWindowPreferenceReader {
         override suspend fun enabledWindowIds(state: CurrentQuotaState): Set<QuotaWindowId> =
             enabledWindowIds
-    }
-
-    private class StaticStatusNotificationStateLoader(
-        private val state: CurrentQuotaState,
-    ) : StatusNotificationStateLoader {
-        override suspend fun loadStatusNotificationState(refreshedState: CurrentQuotaState): CurrentQuotaState =
-            state
     }
 
     private class StaticAccountErrorEventReader(

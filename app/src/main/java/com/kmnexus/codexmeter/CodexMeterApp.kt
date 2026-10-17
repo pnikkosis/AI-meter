@@ -26,7 +26,6 @@ import com.kmnexus.codexmeter.refresh.RefreshCoordinator
 import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore
 import com.kmnexus.codexmeter.ui.home.HomeAccountsLoader
 import com.kmnexus.codexmeter.refresh.RefreshWorkScheduler
-import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.ui.account.AccountQuotaAlertEvaluationRequester
 import com.kmnexus.codexmeter.ui.settings.SettingsBackgroundRefreshStatusReader
 import com.kmnexus.codexmeter.ui.settings.SettingsDiagnosticsReader
@@ -119,9 +118,6 @@ class CodexMeterApp :
 
     val exchangeRateReader: ExchangeRateReader
         get() = appContainer.exchangeRateRepository
-
-    val notificationWindowChoicesLoader: NotificationWindowChoicesLoader
-        get() = appContainer.notificationWindowChoicesLoader
 
     val appearancePreferenceStore: AppearancePreferenceStore
         get() = appContainer.appearancePreferences

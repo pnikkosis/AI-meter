@@ -1,14 +1,14 @@
 package com.kmnexus.codexmeter.app
 
+import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearResult
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.refresh.CurrentQuotaStatePublisher
-import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
 import kotlinx.coroutines.CancellationException
 
 internal class RepublishingQuotaHistoryClearUseCase(
     private val delegate: QuotaHistoryClearUseCase,
-    private val currentQuotaStateLoader: HomeCurrentQuotaStateLoader,
+    private val states: suspend () -> List<CurrentQuotaState>,
     private val currentQuotaStatePublisher: CurrentQuotaStatePublisher,
 ) : QuotaHistoryClearUseCase {
     override suspend fun clearCurrentAccountHistory(): QuotaHistoryClearResult =
@@ -22,7 +22,7 @@ internal class RepublishingQuotaHistoryClearUseCase(
     ): QuotaHistoryClearResult {
         val result = clear()
         try {
-            currentQuotaStatePublisher.publish(currentQuotaStateLoader.loadCurrentState())
+            states().forEach { currentQuotaStatePublisher.publish(it) }
         } catch (exception: CancellationException) {
             throw exception
         } catch (_: Exception) {
