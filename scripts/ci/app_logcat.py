@@ -18,8 +18,10 @@ SENSITIVE = [
     re.compile(r"\beyJ[A-Za-z0-9_-]{10,}"),  # JWTs
 ]
 
-pids = set(subprocess.run(["adb", "shell", "pidof", PKG], capture_output=True, text=True).stdout.split())
-log = subprocess.run(["adb", "logcat", "-d", "-b", "main,system,crash", "-v", "threadtime"], capture_output=True, text=True).stdout
+pids = set(subprocess.run(["adb", "shell", "pidof", PKG], capture_output=True, text=True, timeout=30).stdout.split())
+log = subprocess.run(
+    ["adb", "logcat", "-d", "-b", "main,system,crash", "-v", "threadtime"], capture_output=True, text=True, timeout=60,
+).stdout
 masked = 0
 lines = []
 for line in log.splitlines():

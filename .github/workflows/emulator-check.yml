@@ -29,6 +29,7 @@ jobs:
             locale: en-US
     env:
       PKG: io.github.pnikkosis.aiusagewidget
+      ANDROID_AVD_HOME: ${{ github.workspace }}/.avd
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,13 +70,18 @@ jobs:
           sha256sum app/build/outputs/apk/release/app-release-unsigned.apk
 
       - name: Start emulator
+        timeout-minutes: 20
         run: |
+          set -x
+          mkdir -p "$ANDROID_AVD_HOME"
+          ls "$ANDROID_HOME/system-images/android-${{ matrix.api }}/google_apis/x86_64" | head
           AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
-          echo no | "$AVDMANAGER" create avd -n check -k "system-images;android-${{ matrix.api }};google_apis;x86_64" -d pixel_5 --force
-          printf 'hw.lcd.width=720\nhw.lcd.height=1520\nhw.lcd.density=320\nhw.keyboard=yes\n' >> "$HOME/.android/avd/check.avd/config.ini"
+          echo no | "$AVDMANAGER" create avd -n check -k "system-images;android-${{ matrix.api }};google_apis;x86_64" --force
+          "$AVDMANAGER" list avd
+          printf 'hw.lcd.width=720\nhw.lcd.height=1520\nhw.lcd.density=320\nhw.keyboard=yes\nhw.ramSize=3072\n' >> "$ANDROID_AVD_HOME/check.avd/config.ini"
           nohup emulator -avd check -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect \
             -camera-back none -camera-front none -change-locale "${{ matrix.locale }}" > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          adb wait-for-device
+          timeout 300 adb wait-for-device || { tail -n 80 "$RUNNER_TEMP/emulator.log"; exit 1; }
           timeout 900 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 5; done'
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
@@ -86,6 +92,7 @@ jobs:
           adb shell pm list packages | grep -iE "chrome|browser|webview" || true
 
       - name: Render widget states (instrumented test, debug build)
+        timeout-minutes: 10
         run: |
           adb install -r app/build/outputs/apk/debug/app-debug.apk
           adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
@@ -99,12 +106,19 @@ jobs:
           ls -l shots/widget
 
       - name: Drive the release build
+        timeout-minutes: 15
         run: python3 scripts/ci/emulator_smoke.py "$RUNNER_TEMP/release-throwaway.apk" "$PKG" "${{ matrix.locale }}" shots/app
 
       - name: App log lines (credential-like values masked)
         if: ${{ !cancelled() }}
+        timeout-minutes: 3
         run: |
-          python3 scripts/ci/app_logcat.py "$PKG"
+          if [ "$(adb get-state 2>/dev/null)" = "device" ]; then
+            python3 scripts/ci/app_logcat.py "$PKG"
+          else
+            echo "no emulator connected"
+            tail -n 80 "$RUNNER_TEMP/emulator.log" || true
+          fi
 
       - name: Print screenshots
         if: ${{ !cancelled() }}
