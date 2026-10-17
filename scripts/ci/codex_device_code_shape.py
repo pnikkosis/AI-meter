@@ -23,7 +23,7 @@ BODY = {
 HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json; charset=utf-8",
-    "User-Agent": "AIUsageWidget/1.0.1 (Android)",
+    "User-Agent": "AIUsageWidget/1.0.2 (Android)",
 }
 
 

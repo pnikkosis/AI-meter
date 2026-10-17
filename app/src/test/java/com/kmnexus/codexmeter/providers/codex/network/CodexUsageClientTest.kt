@@ -46,7 +46,7 @@ class CodexUsageClientTest {
         assertEquals("/backend-api/wham/usage", request.url.encodedPath)
         assertEquals("Bearer fake-access-token", request.headers["Authorization"])
         assertEquals("application/json", request.headers["Accept"])
-        assertEquals("AIUsageWidget/1.0.1 (Android)", request.headers["User-Agent"])
+        assertEquals("AIUsageWidget/1.0.2 (Android)", request.headers["User-Agent"])
         assertEquals("fake-account-id", request.headers["ChatGPT-Account-Id"])
     }
 

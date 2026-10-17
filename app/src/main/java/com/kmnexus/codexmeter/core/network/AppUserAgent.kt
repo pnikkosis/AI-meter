@@ -10,7 +10,7 @@ object AppUserAgent {
     const val PRODUCT = "AIUsageWidget"
 
     /** Used by clients built without an explicit version (unit tests, previews). */
-    const val DEFAULT = "$PRODUCT/1.0.1 (Android)"
+    const val DEFAULT = "$PRODUCT/1.0.2 (Android)"
 
     fun forVersion(versionName: String): String = "$PRODUCT/${versionName.ifBlank { "unknown" }} (Android)"
 }

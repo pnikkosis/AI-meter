@@ -11,8 +11,8 @@ plugins {
 // declared here instead of being derived from git tags: the upstream repository's tags must never
 // leak into this app's versionCode, and the same commit must always produce the same version.
 // Bump both values for every APK you install over a previous one (versionCode must increase).
-val appVersionName = "1.0.1"
-val appVersionCode = 2
+val appVersionName = "1.0.2"
+val appVersionCode = 3
 
 // Release signing material is read from outside the repository: either the AIUW_RELEASE_* environment
 // variables or a properties file (default ~/.android/aiusagewidget-release.properties, overridable via
