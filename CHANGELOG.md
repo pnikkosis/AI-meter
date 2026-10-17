@@ -15,6 +15,7 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
 - Se desactivó la conversión de monedas: se borró el cliente de open.er-api.com y el selector de
   moneda/umbrales de saldo de Ajustes.
 - Pantalla "Acerca de" con la licencia MIT de CodexMeter y las licencias de terceros.
+- Interfaz traducida al español (`values-es`); el inglés y el chino del original se conservan.
 
 ### Claude
 - Inicio de sesión en el navegador (Custom Tab) con OAuth 2.0 + PKCE S256 y retorno a
@@ -27,24 +28,25 @@ Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:
   respaldo). User-Agent propio.
 - Renovación del token antes de expirar o tras un 401, guardando los tokens rotados antes de usarlos.
 - La cuenta se identifica por el uuid de Anthropic; re-iniciar sesión con otra cuenta no cambia nada.
-- Aviso previo sobre el cliente "Claude Code", el permiso, el almacenamiento, la política de
-  Anthropic y la ausencia de revocación remota.
+- Aviso previo sobre el cliente "Claude Code", el permiso (sin presentarlo como de solo lectura), el
+  almacenamiento, la política de Anthropic y la ausencia de revocación remota.
 
 ### Estados, errores y widgets
 - Nuevos tipos de error: límite de peticiones (429), proveedor no disponible (5xx u otro estado) y
   respuesta ilegible, además de sin conexión y sesión vencida. Cada uno tiene su texto.
 - Una respuesta sin ventanas no se guarda como "consumo vacío": es un error.
-- Widget: nombre del proveedor, "· left" en cada campo, hora de los datos, estado con el tipo de
-  error, valores atenuados cuando no son actuales, ventanas agotadas visibles como 0 %, mensaje en
+- Widget: nombre del proveedor, "· disponible" ("· left") en cada campo, hora de los datos, estado
+  con el tipo de error, valores atenuados cuando no son actuales, ventanas agotadas visibles como 0 %, mensaje en
   lugar de celdas vacías, botón de actualización manual.
 - Home y Cuenta indican que el porcentaje es lo disponible.
 - El refresco periódico también corre sin red para registrar "sin conexión"; ni la falta de red ni
-  un 429 provocan reintentos con backoff.
+  un 429 provocan reintentos con backoff, y estar sin conexión no genera alertas de fallos repetidos.
 
 ### Desconexión
 - Codex: revocación RFC 7009 en `auth.openai.com/oauth/revoke` (como `codex logout`) antes del
   borrado local, que ocurre siempre. Claude: solo borrado local (Anthropic no ofrece revocación).
-- El diálogo explica qué se borra y qué se revoca; luego se informa el resultado real.
+- El diálogo explica qué se borra y qué se revoca; luego se informa el resultado real (pedido de
+  revocación aceptado, no confirmado o no disponible).
 
 ### Red y almacenamiento
 - Sin redirecciones automáticas; solo HTTPS; hosts permitidos por proveedor (Codex:

@@ -62,6 +62,8 @@ object AppLocaleController {
     private fun supportedLocaleFor(locale: Locale): Locale? =
         when (locale.language.lowercase(Locale.ROOT)) {
             "en" -> Locale.ENGLISH
+            // One Spanish translation for every region; the region is kept for date and number formats.
+            "es" -> Locale.Builder().setLanguage("es").setRegion(locale.country).build()
             "zh" -> {
                 if (
                     locale.country.equals("CN", ignoreCase = true) ||

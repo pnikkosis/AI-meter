@@ -1,6 +1,7 @@
 package com.kmnexus.codexmeter.core.i18n
 
 import android.app.LocaleManager
+import android.content.res.Configuration
 import android.os.LocaleList
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.settings.LanguagePreference
@@ -65,6 +66,33 @@ class AppLocaleControllerTest {
             AppLocaleController.supportedSystemLocaleList(LocaleList.forLanguageTags("ja-JP"))
                 .toLanguageTags(),
         )
+    }
+
+    @Test
+    fun `system language resolution keeps spanish with its region`() {
+        assertEquals(
+            "es-AR",
+            AppLocaleController.supportedSystemLocaleList(LocaleList.forLanguageTags("es-AR,en"))
+                .toLanguageTags(),
+        )
+        assertEquals(
+            "es",
+            AppLocaleController.supportedSystemLocaleList(LocaleList.forLanguageTags("es"))
+                .toLanguageTags(),
+        )
+    }
+
+    @Test
+    fun `spanish system locales resolve the spanish resources`() {
+        val application = RuntimeEnvironment.getApplication()
+        val context = application.createConfigurationContext(
+            Configuration(application.resources.configuration).apply {
+                setLocales(AppLocaleController.supportedSystemLocaleList(LocaleList.forLanguageTags("es-MX")))
+            },
+        )
+
+        assertEquals("Ajustes", context.getString(R.string.settings_title))
+        assertEquals("Límite 5 h · disponible", context.getString(R.string.quota_window_remaining_format, "Límite 5 h"))
     }
 
     @Test

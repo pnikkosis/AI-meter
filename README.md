@@ -16,7 +16,8 @@ servidor propio, sin servicios de pago.
 - Indica la hora de los datos y distingue datos actuales, desactualizados, sin conexión, límite de
   peticiones, error del proveedor y sesión vencida. Un error nunca se muestra como 0 %.
 - Actualización manual (botón del widget, deslizar en la app) y periódica con WorkManager.
-- Desconectar borra los datos locales de la cuenta; en Codex además revoca el acceso en OpenAI.
+- Desconectar borra los datos locales de la cuenta; en Codex además pide a OpenAI revocar el acceso.
+- Interfaz en español (y en inglés o chino según el idioma del teléfono).
 
 ## Diferencias con CodexMeter
 

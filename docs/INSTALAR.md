@@ -15,33 +15,38 @@ CodexMeter si estuviera instalado.
 
 ## 2. Conectar Codex
 
-La interfaz de la app está en inglés (o en chino si el teléfono está en chino); abajo se citan los
-textos tal como aparecen.
+La interfaz está en español cuando el teléfono está en español (en otros idiomas, en inglés o
+chino). Abajo se citan los textos en español y, entre paréntesis, en inglés.
 
-1. Abrir la app → **Add account** (o el botón **+** de la barra inferior) → **Codex**.
-2. Tocar el botón para empezar: la app muestra un código.
-3. Abrir la página de verificación (botón de la app) e iniciar sesión en OpenAI en el navegador.
+1. Abrir la app → **Agregar cuenta** (*Add account*, o el botón **+** de la barra inferior) →
+   **Codex**.
+2. **Iniciar sesión en Codex**: la app muestra un código (**Copiar** lo copia).
+3. **Abrir la página de verificación de Codex** e iniciar sesión en OpenAI en el navegador.
    Introducir el código y aprobar el acceso.
 4. Volver a la app: valida la sesión leyendo el consumo y guarda la cuenta.
 
 ## 3. Conectar Claude
 
-1. **Add account** → **Claude**. Leer el aviso (permiso pedido, cliente “Claude Code”, política de Anthropic,
-   sin revocación remota). Ver `docs/SEGURIDAD.md`.
-2. **Continuar en el navegador**: se abre claude.ai en una pestaña del navegador. Iniciar sesión si
-   hace falta y autorizar.
-3. Cuando la página diga “Signed in to AI Usage Widget”, cerrar esa pestaña (la **X** arriba) para
-   volver a la app. La app termina el intercambio, valida leyendo el consumo y guarda la cuenta.
+1. **Agregar cuenta** → **Claude**. Leer el aviso **Antes de continuar** (permiso pedido, cliente
+   “Claude Code”, política de Anthropic, sin revocación remota). Ver `docs/SEGURIDAD.md`.
+2. **Continuar en el navegador** (*Continue in browser*): se abre claude.ai en una pestaña del
+   navegador. Iniciar sesión si hace falta y autorizar.
+3. Cuando la página diga “Sesión iniciada en AI Usage Widget” (*Signed in to AI Usage Widget*),
+   cerrar esa pestaña (la **X** arriba) para volver a la app. La app termina el intercambio, valida
+   leyendo el consumo y guarda la cuenta.
 4. Si algo falla, la pantalla dice el motivo (cancelado, permiso rechazado, sin conexión, límite de
-   peticiones, etc.) y permite reintentar. No se guarda nada si falla.
+   peticiones, etc.) y permite **Reintentar**. No se guarda nada si falla. En particular, si aparece
+   “Claude aceptó el inicio de sesión pero se negó a informar el consumo”, Anthropic no acepta el
+   permiso mínimo `user:profile` para leer el uso (ver `docs/INFORME-PRUEBAS.md`).
 
 ## 4. Agregar los widgets
 
 1. Mantener presionado el fondo de la pantalla de inicio → **Widgets** → **AI Usage Widget**.
 2. Arrastrarlo. Según el launcher se abre la configuración enseguida o el widget aparece como
-   “Not configured”; en ese caso mantenerlo presionado → configurar (ícono de lápiz o “Settings”).
-3. En la configuración elegir la **cuenta** (Codex o Claude) y los **campos** (ventanas de límite) a
-   mostrar, y guardar.
+   “Sin configurar” (*Not configured*); en ese caso mantenerlo presionado → configurar (ícono de
+   lápiz o “Ajustes”, según el launcher).
+3. En **Configurar AI Usage Widget** elegir la **Cuenta** (Codex o Claude) y los **Campos visibles**
+   (ventanas de límite), y **Guardar**.
 4. Repetir para tener un widget por cuenta. Cada widget guarda su propia cuenta; se puede cambiar
    después de la misma forma.
 5. Tamaños: 3×1 muestra 1 campo, 4×1 dos, 3×2 tres y 4×2 cuatro (redimensionar desde el launcher).
@@ -49,30 +54,34 @@ textos tal como aparecen.
 Cómo leer un widget:
 
 - Encabezado: proveedor (y cuenta en los tamaños anchos).
-- Línea de estado: estado y hora de los datos, por ejemplo `Normal · Updated 14:05`.
-- Cada campo: ventana y la palabra **left** (`5h quota · left`), el porcentaje **disponible** y la hora
-  de reinicio informada por el proveedor.
-- Si el último intento falló, el estado dice por qué (`No connection`, `Rate limited`,
-  `Provider error`, `Unreadable data`, `Sign in again`) y los números se muestran atenuados porque
-  son los últimos conocidos, no los actuales. Sin datos, el widget lo dice en lugar de mostrar 0 %.
+- Línea de estado: estado y hora de los datos, por ejemplo `Normal · Actualizado 14:05`
+  (*Normal · Updated 14:05*). Si los datos no son de hoy, incluye la fecha.
+- Cada campo: ventana y la palabra **disponible** (`Límite 5 h · disponible`, en inglés
+  `5h quota · left`), el porcentaje **disponible** (no el consumido) y la hora de reinicio informada
+  por el proveedor. Una ventana agotada se ve como `0%` en rojo.
+- Si el último intento falló, el estado dice por qué (`Sin conexión`, `Límite de peticiones`,
+  `Error del proveedor`, `Datos ilegibles`, `Sesión vencida`) y los números se muestran atenuados
+  porque son los últimos conocidos, no los actuales. Sin datos, el widget lo dice en lugar de
+  mostrar 0 %.
 - Botón ↻: pide una actualización inmediata en segundo plano.
 - Tocar el resto del widget abre la app.
 
 ## 5. Actualización en segundo plano
 
-- La app actualiza con WorkManager cada 15 minutos como mínimo (**Settings → Refresh → Refresh
-  interval** permite cambiar el intervalo o dejarlo manual).
+- La app actualiza con WorkManager cada 15 minutos como mínimo (**Ajustes → Actualización →
+  Intervalo de actualización** permite elegir 15 o 30 minutos o **Solo manual**).
 - Con la pantalla apagada, Android agrupa el trabajo (Doze) y el intervalo real puede ser mayor.
-  **Settings → Refresh → Improve background reliability → Allow** pide la exención de optimización
-  de batería; es opcional.
-- En la app se puede actualizar a mano deslizando hacia abajo en Inicio o Cuenta.
+  **Ajustes → Actualización → Mejorar la actualización en segundo plano → Permitir** pide la
+  exención de optimización de batería; es opcional.
+- En la app se puede actualizar a mano deslizando hacia abajo en Inicio o Cuentas.
 
 ## 6. Desconectar una cuenta
 
-Pestaña de cuentas → desplegar la cuenta (**Expand**) → **Disconnect**. El diálogo explica qué pasa:
+Pestaña **Cuentas** → desplegar la cuenta (**Desplegar**) → **Desconectar**. El diálogo explica qué
+pasa:
 
 - **Codex:** se borran del teléfono los tokens, el historial y los datos de widgets de la cuenta, y se
-  pide a OpenAI que revoque el acceso. Si OpenAI no responde, los datos locales se borran igual.
+  pide a OpenAI que revoque el acceso. Si la revocación falla, los datos locales se borran igual.
 - **Claude:** se borran del teléfono los tokens, el historial y los datos de widgets. Anthropic no
   ofrece revocación remota para apps; la sesión de claude.ai del navegador no se toca.
 
