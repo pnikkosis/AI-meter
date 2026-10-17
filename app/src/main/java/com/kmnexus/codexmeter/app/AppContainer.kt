@@ -31,7 +31,6 @@ import com.kmnexus.codexmeter.data.secure.ProviderSessionEnvelope
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginDiagnosticsReader
@@ -90,14 +89,16 @@ import com.kmnexus.codexmeter.refresh.RefreshCoordinator
 import com.kmnexus.codexmeter.ui.account.AccountRefreshAllUseCase
 import com.kmnexus.codexmeter.refresh.RefreshProvider
 import com.kmnexus.codexmeter.ui.account.AccountQuotaAlertEvaluationRequester
-import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
-import com.kmnexus.codexmeter.ui.home.HomeRefreshUseCase
+import com.kmnexus.codexmeter.ui.home.HomeAccountsLoader
+import com.kmnexus.codexmeter.data.preferences.AccountDisplayPreferencesDataStore
+import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore
+import com.kmnexus.codexmeter.domain.account.CompositeDeletedAccountStateCleaner
+import com.kmnexus.codexmeter.domain.account.DisplayPreferencesDeletedAccountCleaner
 import com.kmnexus.codexmeter.ui.settings.SettingsBackgroundRefreshStatusReader
 import com.kmnexus.codexmeter.ui.settings.SettingsDiagnosticsReader
 import com.kmnexus.codexmeter.widget.WidgetDeletedAccountStateCleaner
 import com.kmnexus.codexmeter.widget.WidgetQuotaStateUpdater
 import com.kmnexus.codexmeter.widget.WidgetQuotaStateLoader
-import com.kmnexus.codexmeter.ui.home.HomeTrendHistoryLoader
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
@@ -114,11 +115,10 @@ class AppContainer private constructor(
     val refreshCoordinator: RefreshCoordinator,
     val accountListUseCase: AccountListUseCase,
     val accountDeleteUseCase: AccountDeleteUseCase,
-    val accountSwitchUseCase: AccountSwitchUseCase,
     val accountRenameUseCase: AccountRenameUseCase,
     val accountQuotaAlertEvaluationRequester: AccountQuotaAlertEvaluationRequester,
-    val homeCurrentQuotaStateLoader: HomeCurrentQuotaStateLoader,
-    val homeRefreshUseCase: HomeRefreshUseCase,
+    val homeAccountsLoader: HomeAccountsLoader,
+    val accountDisplayPreferences: AccountDisplayPreferenceStore,
     val deviceCodeLoginController: DeviceCodeLoginController,
     /** Per-provider device-code login controllers; the legacy single property is the codex entry. */
     val deviceCodeLoginControllers: Map<ProviderId, DeviceCodeLoginController>,
@@ -127,7 +127,6 @@ class AppContainer private constructor(
     val notificationPreferences: NotificationPreferenceStore,
     val primaryQuotaWindowPreferences: PrimaryQuotaWindowPreferenceStore,
     val quotaHistoryClearUseCase: QuotaHistoryClearUseCase,
-    val homeTrendHistoryLoader: HomeTrendHistoryLoader,
     val backgroundRefreshStatusReader: SettingsBackgroundRefreshStatusReader,
     val settingsDiagnosticsReader: SettingsDiagnosticsReader,
     val widgetQuotaStateLoader: WidgetQuotaStateLoader,
@@ -181,6 +180,7 @@ class AppContainer private constructor(
             val retentionPreferences = RetentionPreferences(currentAccountPreferences.dataStore)
             val notificationPreferences = NotificationPreferencesDataStore(currentAccountPreferences.dataStore)
             val primaryQuotaWindowPreferences = PrimaryQuotaWindowPreferences(currentAccountPreferences.dataStore)
+            val accountDisplayPreferences = AccountDisplayPreferencesDataStore(currentAccountPreferences.dataStore)
             // Every provider request goes over HTTPS, without following redirects, and each provider's
             // clients can only reach that provider's own hosts: a Codex token can never be sent to
             // Anthropic or the other way round. Token grants use a client that never replays a
@@ -331,7 +331,12 @@ class AppContainer private constructor(
                     database = database,
                     secureSessionStore = sessionStore,
                     currentAccountStore = currentAccountPreferences,
-                    deletedAccountStateCleaner = widgetDeletedAccountStateCleaner,
+                    deletedAccountStateCleaner = CompositeDeletedAccountStateCleaner(
+                        listOf(
+                            widgetDeletedAccountStateCleaner,
+                            DisplayPreferencesDeletedAccountCleaner(accountDisplayPreferences),
+                        ),
+                    ),
                     sessionRevoker = ProviderSessionRevoker(
                         mapOf(ProviderId("codex") to CodexTokenRevoker(revokeHttpClient, sessionCipher)),
                     ),
@@ -351,6 +356,7 @@ class AppContainer private constructor(
                 currencyPreferences = currencyPreferences,
                 exchangeRateRepository = exchangeRateRepository,
                 exchangeRateRefresher = ExchangeRateRefresher { },
+                accountDisplayPreferences = accountDisplayPreferences,
             )
         }
 
@@ -386,6 +392,7 @@ class AppContainer private constructor(
             currencyPreferences: CurrencyPreferencesDataStore,
             exchangeRateRepository: ExchangeRateRepository,
             exchangeRateRefresher: ExchangeRateRefresher,
+            accountDisplayPreferences: AccountDisplayPreferenceStore,
         ): AppContainer {
             // Shared by both providers: commits account, first snapshot and encrypted session together
             // and rolls back the session file and current-account choice if the database write fails.
@@ -490,16 +497,9 @@ class AppContainer private constructor(
                 currentAccountStateRepublisher = currentAccountStateRepublisher,
                 clock = clock,
             )
-            val homeRefreshUseCase = HomeRefreshCoordinatorUseCase(
-                currentAccountStore = currentQuotaRefreshAccountStore,
-                refreshCoordinator = refreshCoordinator,
-                currentQuotaStateLoader = currentQuotaStateRepository,
-            )
-            val homeTrendHistoryRepository = HomeTrendHistoryRepository(
-                currentAccountReader = currentAccountReader,
-                providerAccountDao = database.providerAccountDao(),
-                quotaSnapshotDao = database.quotaSnapshotDao(),
-                clock = clock,
+            val homeAccountsRepository = HomeAccountsRepository(
+                states = currentQuotaStateRepository::loadAllAccountStates,
+                displayPreferences = accountDisplayPreferences,
             )
             val backgroundRefreshStatusRepository = SettingsBackgroundRefreshStatusRepository(
                 currentAccountReader = currentAccountReader,
@@ -542,7 +542,6 @@ class AppContainer private constructor(
                         localAccountId = localAccountId,
                     )
                 },
-                accountSwitchUseCase = accountMutationRepository,
                 accountRenameUseCase = accountMutationRepository,
                 accountQuotaAlertEvaluationRequester = AccountQuotaAlertEvaluationRequester { providerId, localAccountId, windowId ->
                     currentQuotaStatePublisher.publish(
@@ -553,8 +552,8 @@ class AppContainer private constructor(
                         ),
                     )
                 },
-                homeCurrentQuotaStateLoader = currentQuotaStateRepository,
-                homeRefreshUseCase = homeRefreshUseCase,
+                homeAccountsLoader = homeAccountsRepository,
+                accountDisplayPreferences = accountDisplayPreferences,
                 deviceCodeLoginController = deviceCodeLoginController,
                 deviceCodeLoginControllers = mapOf(
                     ProviderId("codex") to deviceCodeLoginController,
@@ -572,7 +571,6 @@ class AppContainer private constructor(
                     currentQuotaStateLoader = currentQuotaStateRepository,
                     currentQuotaStatePublisher = currentQuotaStatePublisher,
                 ),
-                homeTrendHistoryLoader = homeTrendHistoryRepository,
                 backgroundRefreshStatusReader = backgroundRefreshStatusRepository,
                 settingsDiagnosticsReader = settingsDiagnosticsReader,
                 widgetQuotaStateLoader = widgetQuotaStateRepository,

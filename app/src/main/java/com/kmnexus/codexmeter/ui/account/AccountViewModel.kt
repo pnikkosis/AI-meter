@@ -9,11 +9,12 @@ import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListResult
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
+import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore
+import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferences
+import com.kmnexus.codexmeter.domain.account.InMemoryAccountDisplayPreferenceStore
 import com.kmnexus.codexmeter.domain.account.NoopAccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountListUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.NoopAccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.account.RemoteRevocation
 import com.kmnexus.codexmeter.domain.model.AccountStatus
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
@@ -22,6 +23,7 @@ import com.kmnexus.codexmeter.providers.ProviderRegistry
 import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.domain.quota.Credits
+import com.kmnexus.codexmeter.domain.quota.EXTRA_USAGE_WINDOW_ID
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshot
 import com.kmnexus.codexmeter.domain.quota.QuotaWindow
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowAvailability
@@ -111,19 +113,22 @@ sealed class AccountCreditsUi {
 
 data class AccountItemUi(
     val id: LocalAccountId,
+    val providerName: String,
     val displayName: String,
-    val avatarInitial: String,
-    val avatarColorKey: String,
-    val isCurrent: Boolean,
     val status: AccountStatus,
     val tone: AccountStatusTone,
-    @get:StringRes val badgeLabelResId: Int,
+    /** Only for an account that needs attention; a working account shows no badge. */
+    @get:StringRes val badgeLabelResId: Int?,
     @get:StringRes val statusLabelResId: Int,
     @get:StringRes val refreshSummaryResId: Int,
     val lastSuccessfulRefreshAt: Instant?,
     val planType: String?,
     val credits: AccountCreditsUi,
     val isExpanded: Boolean,
+    /** Shown on Home and in the notification; hidden accounts keep refreshing and stay here. */
+    val isVisible: Boolean,
+    val canMoveUp: Boolean,
+    val canMoveDown: Boolean,
     val alertToggles: List<AccountAlertToggleUi>,
     val quotaSummaries: List<AccountQuotaSummaryUi>,
     val modelFamilies: List<AccountModelFamilyUi> = emptyList(),
@@ -149,8 +154,7 @@ data class AccountRenameUi(
 
 data class AccountUiState(
     val contentStatus: AccountContentStatus,
-    val currentAccountId: LocalAccountId?,
-    val currentAccount: AccountItemUi?,
+    /** Every saved account, in the user's order. */
     val accounts: List<AccountItemUi>,
     val showAddAccountSheet: Boolean,
     val selectedAddAccountIntent: AccountAddAccountIntent?,
@@ -163,8 +167,6 @@ data class AccountUiState(
     companion object {
         val Empty = AccountUiState(
             contentStatus = AccountContentStatus.Unauthenticated,
-            currentAccountId = null,
-            currentAccount = null,
             accounts = emptyList(),
             showAddAccountSheet = false,
             selectedAddAccountIntent = null,
@@ -178,8 +180,8 @@ data class AccountUiState(
 class AccountViewModel(
     private val deleteUseCase: AccountDeleteUseCase,
     private val accountListUseCase: AccountListUseCase,
-    private val switchUseCase: AccountSwitchUseCase,
     private val renameUseCase: AccountRenameUseCase,
+    private val displayPreferenceStore: AccountDisplayPreferenceStore = InMemoryAccountDisplayPreferenceStore(),
     private val notificationPreferenceStore: NotificationPreferenceStore = AccountInMemoryNotificationPreferenceStore(),
     private val quotaAlertEvaluationRequester: AccountQuotaAlertEvaluationRequester =
         NoopAccountQuotaAlertEvaluationRequester,
@@ -192,7 +194,7 @@ class AccountViewModel(
     private var accounts: List<ProviderAccount> = emptyList()
     private var latestQuotaSnapshots: Map<LocalAccountId, QuotaSnapshot> = emptyMap()
     private var notificationPreferences = NotificationPreferences()
-    private var currentAccountId: LocalAccountId? = null
+    private var displayPreferences = AccountDisplayPreferences()
     private var showAddAccountSheet = false
     private var selectedAddAccountIntent: AccountAddAccountIntent? = null
     private var pendingReloginRequest: AccountReloginRequest? = null
@@ -245,13 +247,10 @@ class AccountViewModel(
 
     fun setAccounts(
         accounts: List<ProviderAccount>,
-        currentAccountId: LocalAccountId?,
         latestQuotaSnapshots: Map<LocalAccountId, QuotaSnapshot> = emptyMap(),
     ) {
         this.accounts = accounts
         this.latestQuotaSnapshots = latestQuotaSnapshots
-        this.currentAccountId = currentAccountId.takeIf { id -> accounts.any { it.localAccountId == id } }
-            ?: accounts.firstOrNull()?.localAccountId
         pendingDeleteAccountId = pendingDeleteAccountId.takeIf { id -> accounts.any { it.localAccountId == id } }
         pendingRenameAccountId = pendingRenameAccountId.takeIf { id -> accounts.any { it.localAccountId == id } }
         expandedAccountIds = expandedAccountIds.filterTo(mutableSetOf()) { id ->
@@ -266,9 +265,15 @@ class AccountViewModel(
         targetCurrency = runCatching { currencyPreferenceReader.currencyPreferences().targetCurrency }
             .getOrDefault(CurrencyPreferences.DEFAULT_TARGET_CURRENCY)
         exchangeRates = runCatching { exchangeRateReader.currentRates() }.getOrNull()
+        displayPreferences = try {
+            displayPreferenceStore.accountDisplayPreferences()
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (_: Exception) {
+            displayPreferences
+        }
         setAccounts(
             accounts = result.accounts,
-            currentAccountId = result.currentAccountId,
             latestQuotaSnapshots = result.latestQuotaSnapshots,
         )
     }
@@ -289,24 +294,32 @@ class AccountViewModel(
         }
     }
 
-    suspend fun switchCurrentAccount(id: LocalAccountId) {
-        val account = accounts.firstOrNull { it.localAccountId == id } ?: return
+    /** Shows or hides the account on Home and in the notification. It keeps refreshing either way. */
+    suspend fun setAccountVisible(id: LocalAccountId, visible: Boolean) {
+        if (accounts.none { it.localAccountId == id }) return
+        updateDisplayPreferences { it.withHidden(id, hidden = !visible) }
+    }
 
-        val switched = try {
-            switchUseCase.switchCurrentAccount(
-                providerId = account.providerId,
-                localAccountId = account.localAccountId,
-            )
+    /** Moves the account [offset] places within the list (-1 up, +1 down). */
+    suspend fun moveAccount(id: LocalAccountId, offset: Int) {
+        val currentOrder = arrangedAccounts().map { it.localAccountId }
+        updateDisplayPreferences { it.moved(id, offset, currentOrder) }
+    }
+
+    private suspend fun updateDisplayPreferences(transform: (AccountDisplayPreferences) -> AccountDisplayPreferences) {
+        displayPreferences = try {
+            displayPreferenceStore.updateAccountDisplayPreferences(transform)
         } catch (exception: CancellationException) {
             throw exception
         } catch (_: Exception) {
-            false
+            // Nothing was stored, so the list stays as it is shown.
+            return
         }
-        if (!switched) return
-
-        currentAccountId = id
         publishState()
     }
+
+    private fun arrangedAccounts(): List<ProviderAccount> =
+        displayPreferences.arrange(accounts) { it.localAccountId }
 
     suspend fun renameAccount(id: LocalAccountId, newName: String) {
         val safeName = newName.trim()
@@ -459,9 +472,8 @@ class AccountViewModel(
             pendingRenameAccountId = null
         }
         expandedAccountIds = expandedAccountIds - accountId
-        if (currentAccountId == accountId || accounts.none { it.localAccountId == currentAccountId }) {
-            currentAccountId = accounts.firstOrNull()?.localAccountId
-        }
+        // The repository drops the account from the stored order and hidden set; mirror that here.
+        displayPreferences = displayPreferences.without(accountId)
         publishState()
     }
 
@@ -473,8 +485,8 @@ class AccountViewModel(
         fun factory(
             deleteUseCase: AccountDeleteUseCase,
             accountListUseCase: AccountListUseCase,
-            switchUseCase: AccountSwitchUseCase = NoopAccountSwitchUseCase,
             renameUseCase: AccountRenameUseCase = NoopAccountRenameUseCase,
+            displayPreferenceStore: AccountDisplayPreferenceStore = InMemoryAccountDisplayPreferenceStore(),
             notificationPreferenceStore: NotificationPreferenceStore = AccountInMemoryNotificationPreferenceStore(),
             quotaAlertEvaluationRequester: AccountQuotaAlertEvaluationRequester =
                 NoopAccountQuotaAlertEvaluationRequester,
@@ -488,8 +500,8 @@ class AccountViewModel(
                     AccountViewModel(
                         deleteUseCase = deleteUseCase,
                         accountListUseCase = accountListUseCase,
-                        switchUseCase = switchUseCase,
                         renameUseCase = renameUseCase,
+                        displayPreferenceStore = displayPreferenceStore,
                         notificationPreferenceStore = notificationPreferenceStore,
                         quotaAlertEvaluationRequester = quotaAlertEvaluationRequester,
                         refreshAllUseCase = refreshAllUseCase,
@@ -500,12 +512,15 @@ class AccountViewModel(
     }
 
     private fun publishState() {
-        val accountItems = accounts.map {
-            it.toUiItem(
-                isCurrent = it.localAccountId == currentAccountId,
-                latestQuotaSnapshot = latestQuotaSnapshots[it.localAccountId],
+        val arranged = arrangedAccounts()
+        val accountItems = arranged.mapIndexed { index, account ->
+            account.toUiItem(
+                latestQuotaSnapshot = latestQuotaSnapshots[account.localAccountId],
                 notificationPreferences = notificationPreferences,
-                isExpanded = it.localAccountId in expandedAccountIds,
+                isExpanded = account.localAccountId in expandedAccountIds,
+                isVisible = !displayPreferences.isHidden(account.localAccountId),
+                canMoveUp = index > 0,
+                canMoveDown = index < arranged.lastIndex,
             )
         }
         _uiState.value = AccountUiState(
@@ -514,8 +529,6 @@ class AccountViewModel(
             } else {
                 AccountContentStatus.HasAccounts
             },
-            currentAccountId = currentAccountId,
-            currentAccount = accountItems.firstOrNull { it.id == currentAccountId },
             accounts = accountItems,
             showAddAccountSheet = showAddAccountSheet,
             selectedAddAccountIntent = selectedAddAccountIntent,
@@ -547,21 +560,21 @@ class AccountViewModel(
     }
 
     private fun ProviderAccount.toUiItem(
-        isCurrent: Boolean,
         latestQuotaSnapshot: QuotaSnapshot?,
         notificationPreferences: NotificationPreferences,
         isExpanded: Boolean,
+        isVisible: Boolean,
+        canMoveUp: Boolean,
+        canMoveDown: Boolean,
     ): AccountItemUi {
         val tone = status.toTone()
         return AccountItemUi(
             id = localAccountId,
+            providerName = ProviderRegistry.displayNameFor(providerId),
             displayName = displayName,
-            avatarInitial = avatarInitial,
-            avatarColorKey = avatarColorKey,
-            isCurrent = isCurrent,
             status = status,
             tone = tone,
-            badgeLabelResId = badgeLabelResId(isCurrent = isCurrent),
+            badgeLabelResId = badgeLabelResId(),
             statusLabelResId = status.labelResId(),
             refreshSummaryResId = if (lastSuccessfulRefreshAt == null) {
                 R.string.account_last_refresh_unavailable
@@ -572,6 +585,9 @@ class AccountViewModel(
             planType = providerPlanDisplayName(providerId, latestQuotaSnapshot?.planType),
             credits = latestQuotaSnapshot?.credits.toUiCredits(),
             isExpanded = isExpanded,
+            isVisible = isVisible,
+            canMoveUp = canMoveUp,
+            canMoveDown = canMoveDown,
             alertToggles = buildAlertToggles(latestQuotaSnapshot, notificationPreferences),
             quotaSummaries = buildQuotaSummaries(latestQuotaSnapshot),
             modelFamilies = buildModelFamilies(latestQuotaSnapshot),
@@ -663,7 +679,7 @@ class AccountViewModel(
         when {
             // Claude extra-usage is a spend meter: show the "$used / $limit" figure (carried in
             // subLabel) instead of a remaining-percent, which would read as ambiguous here.
-            windowId.value == "claude_extra_usage" -> subLabel
+            windowId.value == EXTRA_USAGE_WINDOW_ID -> subLabel
             displayKind == QuotaWindowDisplayKind.Balance -> formatProviderBalance(balanceAmount, balanceCurrency)
             displayKind == QuotaWindowDisplayKind.UsageCount ->
                 if (usedCount != null && limitCount != null) "$usedCount / $limitCount" else null
@@ -671,12 +687,11 @@ class AccountViewModel(
         }
 
     @StringRes
-    private fun ProviderAccount.badgeLabelResId(isCurrent: Boolean): Int =
-        when {
-            isCurrent -> R.string.account_badge_current
-            status == AccountStatus.NeedsReauth -> R.string.account_badge_needs_reauth
-            status == AccountStatus.Disabled -> R.string.account_badge_disabled
-            else -> R.string.account_badge_available
+    private fun ProviderAccount.badgeLabelResId(): Int? =
+        when (status) {
+            AccountStatus.NeedsReauth -> R.string.account_badge_needs_reauth
+            AccountStatus.Disabled -> R.string.account_badge_disabled
+            else -> null
         }
 
     @StringRes

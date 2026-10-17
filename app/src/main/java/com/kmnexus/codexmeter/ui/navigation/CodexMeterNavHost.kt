@@ -57,9 +57,7 @@ import com.kmnexus.codexmeter.providers.codex.auth.CodexBrowserConnect
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.NoopAccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceStore
 import com.kmnexus.codexmeter.domain.settings.NoopQuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
@@ -82,9 +80,9 @@ import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
 import com.kmnexus.codexmeter.domain.theme.AppearancePreferenceStore
 import com.kmnexus.codexmeter.ui.settings.NoopAppearancePreferenceStore
-import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
-import com.kmnexus.codexmeter.ui.home.HomeRefreshUseCase
-import com.kmnexus.codexmeter.ui.home.HomeTrendHistoryLoader
+import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore
+import com.kmnexus.codexmeter.domain.account.InMemoryAccountDisplayPreferenceStore
+import com.kmnexus.codexmeter.ui.home.HomeAccountsLoader
 import com.kmnexus.codexmeter.ui.home.HomeRoute
 import com.kmnexus.codexmeter.ui.motion.CodexMeterPageCascade
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
@@ -106,14 +104,12 @@ fun CodexMeterNavHost(
     deviceCodeLoginNotifier: DeviceCodeLoginNotifier = NoopDeviceCodeLoginNotifier,
     accountListUseCase: AccountListUseCase,
     accountDeleteUseCase: AccountDeleteUseCase,
-    accountSwitchUseCase: AccountSwitchUseCase = NoopAccountSwitchUseCase,
     accountRenameUseCase: AccountRenameUseCase = NoopAccountRenameUseCase,
     accountQuotaAlertEvaluationRequester: AccountQuotaAlertEvaluationRequester =
         NoopAccountQuotaAlertEvaluationRequester,
     accountRefreshAllUseCase: AccountRefreshAllUseCase = NoopAccountRefreshAllUseCase,
-    homeCurrentQuotaStateLoader: HomeCurrentQuotaStateLoader,
-    homeRefreshUseCase: HomeRefreshUseCase,
-    homeTrendHistoryLoader: HomeTrendHistoryLoader = HomeTrendHistoryLoader { _, _ -> emptyList() },
+    homeAccountsLoader: HomeAccountsLoader,
+    accountDisplayPreferenceStore: AccountDisplayPreferenceStore = InMemoryAccountDisplayPreferenceStore(),
     currencyPreferenceReader: CurrencyPreferenceReader = object : CurrencyPreferenceReader {
         override suspend fun currencyPreferences() = CurrencyPreferences()
     },
@@ -147,6 +143,18 @@ fun CodexMeterNavHost(
 
     fun navigateToProviderSelection() {
         providerSheetVisible = true
+    }
+
+    fun navigateToTab(tab: CodexMeterRoute) {
+        // Don't leave the picker hovering over a freshly switched tab.
+        providerSheetVisible = false
+        navController.navigate(tab.route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
 
     // After a successful add, land on the Account tab and clear the add-account flow off the stack.
@@ -196,17 +204,7 @@ fun CodexMeterNavHost(
                     CodexMeterBottomBar(
                         tabs = tabs,
                         currentRoute = currentRoute,
-                        onTabSelected = { tab ->
-                            // Don't leave the picker hovering over a freshly switched tab.
-                            providerSheetVisible = false
-                            navController.navigate(tab.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        onTabSelected = { tab -> navigateToTab(tab) },
                     )
                 }
             },
@@ -310,13 +308,18 @@ fun CodexMeterNavHost(
                     contentPadding = innerPadding,
                 ) {
                     HomeRoute(
-                        currentQuotaStateLoader = homeCurrentQuotaStateLoader,
-                        refreshUseCase = homeRefreshUseCase,
-                        trendHistoryLoader = homeTrendHistoryLoader,
+                        accountsLoader = homeAccountsLoader,
+                        refreshAllUseCase = accountRefreshAllUseCase,
                         notificationPreferenceReader = notificationPreferenceStore,
-                        currencyPreferenceReader = currencyPreferenceReader,
-                        exchangeRateReader = exchangeRateReader,
-                        onLoginClick = { navigateToProviderSelection() },
+                        onAddAccountClick = { navigateToProviderSelection() },
+                        onOpenAccountsClick = { navigateToTab(CodexMeterRoute.Account) },
+                        onReconnectClick = { card ->
+                            navigateToRelogin(
+                                ProviderId(card.providerId),
+                                com.kmnexus.codexmeter.domain.model.LocalAccountId(card.localAccountId),
+                                card.providerAccountId,
+                            )
+                        },
                     )
                 }
             }
@@ -328,8 +331,8 @@ fun CodexMeterNavHost(
                     AccountRoute(
                         accountListUseCase = accountListUseCase,
                         accountDeleteUseCase = accountDeleteUseCase,
-                        accountSwitchUseCase = accountSwitchUseCase,
                         accountRenameUseCase = accountRenameUseCase,
+                        displayPreferenceStore = accountDisplayPreferenceStore,
                         notificationPreferenceStore = notificationPreferenceStore,
                         quotaAlertEvaluationRequester = accountQuotaAlertEvaluationRequester,
                         refreshAllUseCase = accountRefreshAllUseCase,

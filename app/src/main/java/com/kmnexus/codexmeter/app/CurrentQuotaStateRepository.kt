@@ -11,6 +11,7 @@ import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
 import com.kmnexus.codexmeter.domain.currency.ExchangeRates
 import com.kmnexus.codexmeter.domain.currency.withConvertedBalance
+import com.kmnexus.codexmeter.domain.model.AccountStatus
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
 import com.kmnexus.codexmeter.domain.model.ProviderId
@@ -95,6 +96,15 @@ internal class CurrentQuotaStateRepository(
             account = account,
             primaryWindowId = primaryWindowId,
         )
+    }
+
+    /** Every saved account's stored state, in saved order; deleted accounts are left out. */
+    suspend fun loadAllAccountStates(): List<CurrentQuotaState> {
+        val primaryWindowId = primaryQuotaWindowPreferenceReader.primaryQuotaWindowId()
+        return providerAccountDao.listAll()
+            .map { it.toDomain() }
+            .filter { it.status != AccountStatus.Deleted }
+            .map { loadState(account = it, primaryWindowId = primaryWindowId) }
     }
 
     private suspend fun loadAccount(selection: CurrentAccountSelection): ProviderAccount? =

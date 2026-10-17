@@ -2,19 +2,24 @@ package com.kmnexus.codexmeter.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -23,13 +28,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
@@ -108,6 +120,48 @@ fun UsageBar(
                     .background(color),
             )
         }
+    }
+}
+
+/** Low-key "add" action drawn as a dashed outline, so it never competes with the cards above it. */
+@Composable
+fun DashedAddButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val outline = CodexMeterTheme.colors.borderStrong
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .clip(CodexMeterShapes.md)
+            .drawBehind {
+                drawRoundRect(
+                    color = outline,
+                    cornerRadius = CornerRadius(16.dp.toPx()),
+                    style = Stroke(
+                        width = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
+                    ),
+                )
+            }
+            .clickable(role = Role.Button, onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_add),
+            contentDescription = null,
+            tint = CodexMeterTheme.colors.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(CodexMeterSpacing.sm))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = CodexMeterTheme.colors.primary,
+        )
     }
 }
 

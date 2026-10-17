@@ -5,12 +5,12 @@ import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListResult
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
+import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferences
 import com.kmnexus.codexmeter.domain.account.NoopAccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.RemoteRevocation
 import com.kmnexus.codexmeter.domain.account.NoopAccountListUseCase
 import com.kmnexus.codexmeter.domain.account.NoopAccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.NoopAccountSwitchUseCase
+import com.kmnexus.codexmeter.domain.account.InMemoryAccountDisplayPreferenceStore
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
 import com.kmnexus.codexmeter.domain.model.ProviderAccountId
@@ -27,46 +27,18 @@ import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AccountViewModelTest {
     @Test
-    fun `switch current account persists selection before marking selected account current`() = runTest {
-        val switchUseCase = RecordingAccountSwitchUseCase()
-        val viewModel = viewModel(switchUseCase = switchUseCase)
-        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")), currentAccountId = localId("local-1"))
-
-        viewModel.switchCurrentAccount(localId("local-2"))
-
-        assertEquals(
-            listOf(AccountSwitchRequest(providerId = ProviderId("codex"), localAccountId = localId("local-2"))),
-            switchUseCase.requests,
-        )
-        val uiState = viewModel.uiState.value
-        assertEquals(localId("local-2"), uiState.currentAccountId)
-        assertEquals(AccountContentStatus.HasAccounts, uiState.contentStatus)
-        assertTrue(uiState.accounts.first { it.id == localId("local-2") }.isCurrent)
-        assertEquals(false, uiState.accounts.first { it.id == localId("local-1") }.isCurrent)
-    }
-
-    @Test
-    fun `switch failure keeps previous current account`() = runTest {
-        val viewModel = viewModel(switchUseCase = RecordingAccountSwitchUseCase(succeed = false))
-        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")), currentAccountId = localId("local-1"))
-
-        viewModel.switchCurrentAccount(localId("local-2"))
-
-        assertEquals(localId("local-1"), viewModel.uiState.value.currentAccountId)
-    }
-
-    @Test
     fun `rename account persists change and uses returned account`() = runTest {
         val renamedAccount = account("local-1", displayName = "Work")
         val renameUseCase = RecordingAccountRenameUseCase(renamedAccount)
         val viewModel = viewModel(renameUseCase = renameUseCase)
-        viewModel.setAccounts(accounts = listOf(account("local-1", displayName = "Codex Main")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1", displayName = "Codex Main")))
 
         viewModel.renameAccount(localId("local-1"), "Work")
 
@@ -76,14 +48,12 @@ class AccountViewModelTest {
         )
         val account = viewModel.uiState.value.accounts.single()
         assertEquals("Work", account.displayName)
-        assertEquals("W", account.avatarInitial)
-        assertEquals(localId("local-1"), viewModel.uiState.value.currentAccountId)
     }
 
     @Test
     fun `rename failure keeps pending dialog open`() = runTest {
         val viewModel = viewModel(renameUseCase = RecordingAccountRenameUseCase(result = null))
-        viewModel.setAccounts(accounts = listOf(account("local-1", displayName = "Codex Main")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1", displayName = "Codex Main")))
         viewModel.requestRenameAccount(localId("local-1"))
 
         viewModel.renameAccount(localId("local-1"), "Work")
@@ -94,23 +64,72 @@ class AccountViewModelTest {
     }
 
     @Test
-    fun `loading accounts uses persisted account list and current selection`() = runTest {
+    fun `loading accounts lists every saved account in the chosen order with its visibility`() = runTest {
         val accountListUseCase = RecordingAccountListUseCase(
             AccountListResult(
-                accounts = listOf(account("local-1"), account("local-2")),
-                currentAccountId = localId("local-2"),
+                accounts = listOf(account("local-1"), account("local-2"), account("local-3")),
+                currentAccountId = null,
             ),
         )
-        val viewModel = viewModel(accountListUseCase = accountListUseCase)
+        val viewModel = viewModel(
+            accountListUseCase = accountListUseCase,
+            displayPreferenceStore = InMemoryAccountDisplayPreferenceStore(
+                AccountDisplayPreferences(order = listOf(localId("local-3")), hidden = setOf(localId("local-1"))),
+            ),
+        )
 
         viewModel.loadAccounts()
 
         val uiState = viewModel.uiState.value
         assertEquals(1, accountListUseCase.loadCount)
         assertEquals(AccountContentStatus.HasAccounts, uiState.contentStatus)
-        assertEquals(localId("local-2"), uiState.currentAccountId)
-        assertEquals(listOf(localId("local-1"), localId("local-2")), uiState.accounts.map { it.id })
-        assertTrue(uiState.accounts.first { it.id == localId("local-2") }.isCurrent)
+        assertEquals(listOf(localId("local-3"), localId("local-1"), localId("local-2")), uiState.accounts.map { it.id })
+        assertEquals(listOf(true, false, true), uiState.accounts.map { it.isVisible })
+        assertEquals(listOf(false, true, true), uiState.accounts.map { it.canMoveUp })
+        assertEquals(listOf(true, true, false), uiState.accounts.map { it.canMoveDown })
+    }
+
+    @Test
+    fun `hiding an account stores it and the card shows it as hidden`() = runTest {
+        val store = InMemoryAccountDisplayPreferenceStore()
+        val viewModel = viewModel(displayPreferenceStore = store)
+        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")))
+
+        viewModel.setAccountVisible(localId("local-2"), visible = false)
+
+        assertEquals(setOf(localId("local-2")), store.accountDisplayPreferences().hidden)
+        assertFalse(viewModel.uiState.value.accounts.first { it.id == localId("local-2") }.isVisible)
+
+        viewModel.setAccountVisible(localId("local-2"), visible = true)
+
+        assertTrue(store.accountDisplayPreferences().hidden.isEmpty())
+        assertTrue(viewModel.uiState.value.accounts.all { it.isVisible })
+    }
+
+    @Test
+    fun `moving an account stores the new order and reorders the list`() = runTest {
+        val store = InMemoryAccountDisplayPreferenceStore()
+        val viewModel = viewModel(displayPreferenceStore = store)
+        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2"), account("local-3")))
+
+        viewModel.moveAccount(localId("local-3"), offset = -1)
+
+        val expected = listOf(localId("local-1"), localId("local-3"), localId("local-2"))
+        assertEquals(expected, store.accountDisplayPreferences().order)
+        assertEquals(expected, viewModel.uiState.value.accounts.map { it.id })
+    }
+
+    @Test
+    fun `a failed preference write leaves the list as it was`() = runTest {
+        val viewModel = viewModel(displayPreferenceStore = FailingDisplayPreferenceStore())
+        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")))
+
+        viewModel.moveAccount(localId("local-2"), offset = -1)
+        viewModel.setAccountVisible(localId("local-1"), visible = false)
+
+        val accounts = viewModel.uiState.value.accounts
+        assertEquals(listOf(localId("local-1"), localId("local-2")), accounts.map { it.id })
+        assertTrue(accounts.all { it.isVisible })
     }
 
     @Test
@@ -171,7 +190,7 @@ class AccountViewModelTest {
     @Test
     fun `account cards are collapsed by default and can be toggled open`() {
         val viewModel = viewModel()
-        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")))
 
         assertEquals(false, viewModel.uiState.value.accounts.first { it.id == localId("local-1") }.isExpanded)
         assertEquals(false, viewModel.uiState.value.accounts.first { it.id == localId("local-2") }.isExpanded)
@@ -269,7 +288,6 @@ class AccountViewModelTest {
         val viewModel = viewModel(notificationPreferenceStore = store)
         viewModel.setAccounts(
             accounts = listOf(account("local-1")),
-            currentAccountId = localId("local-1"),
             latestQuotaSnapshots = mapOf(
                 localId("local-1") to quotaSnapshot(
                     localAccountId = "local-1",
@@ -310,7 +328,7 @@ class AccountViewModelTest {
             notificationPreferenceStore = RecordingNotificationPreferenceStore(NotificationPreferences()),
             quotaAlertEvaluationRequester = requester,
         )
-        viewModel.setAccounts(accounts = listOf(account("local-1")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1")))
 
         viewModel.setQuotaAlertEnabled(localId("local-1"), QuotaWindowId("weekly"), true)
 
@@ -321,10 +339,10 @@ class AccountViewModelTest {
     }
 
     @Test
-    fun `deleting current account invokes delete use case and selects another account when available`() = runTest {
+    fun `deleting an account invokes the delete use case and keeps the others`() = runTest {
         val deleteUseCase = RecordingAccountDeleteUseCase()
         val viewModel = viewModel(deleteUseCase)
-        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1"), account("local-2")))
 
         viewModel.requestDeleteAccount(localId("local-1"))
         viewModel.confirmDelete()
@@ -335,9 +353,7 @@ class AccountViewModelTest {
         )
         val uiState = viewModel.uiState.value
         assertEquals(AccountContentStatus.HasAccounts, uiState.contentStatus)
-        assertEquals(localId("local-2"), uiState.currentAccountId)
         assertEquals(listOf(localId("local-2")), uiState.accounts.map { it.id })
-        assertTrue(uiState.accounts.single().isCurrent)
         assertNull(uiState.pendingDeleteAccount)
     }
 
@@ -351,7 +367,7 @@ class AccountViewModelTest {
         cases.forEach { (revocation, provider, expectedNotice) ->
             val viewModel = viewModel(RecordingAccountDeleteUseCase(revocation))
             val target = account("local-1").copy(providerId = ProviderId(provider))
-            viewModel.setAccounts(accounts = listOf(target), currentAccountId = localId("local-1"))
+            viewModel.setAccounts(accounts = listOf(target))
 
             viewModel.requestDeleteAccount(localId("local-1"))
             val expectedDialog = if (provider == "codex") {
@@ -374,14 +390,13 @@ class AccountViewModelTest {
     @Test
     fun `deleting last account returns unauthenticated state`() = runTest {
         val viewModel = viewModel()
-        viewModel.setAccounts(accounts = listOf(account("local-1")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1")))
 
         viewModel.requestDeleteAccount(localId("local-1"))
         viewModel.confirmDelete()
 
         val uiState = viewModel.uiState.value
         assertEquals(AccountContentStatus.Unauthenticated, uiState.contentStatus)
-        assertNull(uiState.currentAccountId)
         assertTrue(uiState.accounts.isEmpty())
         assertNull(uiState.pendingDeleteAccount)
     }
@@ -389,7 +404,7 @@ class AccountViewModelTest {
     @Test
     fun `delete use case failure keeps account and pending confirmation`() = runTest {
         val viewModel = viewModel(ThrowingAccountDeleteUseCase(IllegalStateException("delete failed")))
-        viewModel.setAccounts(accounts = listOf(account("local-1")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1")))
 
         viewModel.requestDeleteAccount(localId("local-1"))
         viewModel.confirmDelete()
@@ -397,7 +412,6 @@ class AccountViewModelTest {
         val uiState = viewModel.uiState.value
         assertEquals(AccountContentStatus.HasAccounts, uiState.contentStatus)
         assertEquals(listOf(localId("local-1")), uiState.accounts.map { it.id })
-        assertEquals(localId("local-1"), uiState.currentAccountId)
         assertEquals(localId("local-1"), uiState.pendingDeleteAccount?.accountId)
     }
 
@@ -422,7 +436,7 @@ class AccountViewModelTest {
     @Test
     fun `selecting relogin emits a request targeting that account and closes the sheet`() {
         val viewModel = viewModel()
-        viewModel.setAccounts(accounts = listOf(account("local-1")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1")))
         viewModel.requestAddAccount()
 
         viewModel.selectRelogin(localId("local-1"))
@@ -437,7 +451,7 @@ class AccountViewModelTest {
     @Test
     fun `consuming the relogin request clears it`() {
         val viewModel = viewModel()
-        viewModel.setAccounts(accounts = listOf(account("local-1")), currentAccountId = localId("local-1"))
+        viewModel.setAccounts(accounts = listOf(account("local-1")))
         viewModel.selectRelogin(localId("local-1"))
 
         viewModel.consumeReloginRequest()
@@ -480,15 +494,12 @@ class AccountViewModelTest {
         }
     }
 
-    private class RecordingAccountSwitchUseCase(
-        private val succeed: Boolean = true,
-    ) : AccountSwitchUseCase {
-        val requests = mutableListOf<AccountSwitchRequest>()
+    private class FailingDisplayPreferenceStore : com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore {
+        override suspend fun accountDisplayPreferences() = AccountDisplayPreferences()
 
-        override suspend fun switchCurrentAccount(providerId: ProviderId, localAccountId: LocalAccountId): Boolean {
-            requests += AccountSwitchRequest(providerId = providerId, localAccountId = localAccountId)
-            return succeed
-        }
+        override suspend fun updateAccountDisplayPreferences(
+            transform: (AccountDisplayPreferences) -> AccountDisplayPreferences,
+        ): AccountDisplayPreferences = error("disk full")
     }
 
     private class RecordingAccountRenameUseCase(
@@ -505,11 +516,6 @@ class AccountViewModelTest {
             return result
         }
     }
-
-    private data class AccountSwitchRequest(
-        val providerId: ProviderId,
-        val localAccountId: LocalAccountId,
-    )
 
     private data class AccountRenameRequest(
         val providerId: ProviderId,
@@ -548,16 +554,17 @@ class AccountViewModelTest {
     private fun viewModel(
         deleteUseCase: AccountDeleteUseCase = NoopAccountDeleteUseCase,
         accountListUseCase: AccountListUseCase = NoopAccountListUseCase,
-        switchUseCase: AccountSwitchUseCase = NoopAccountSwitchUseCase,
         renameUseCase: AccountRenameUseCase = NoopAccountRenameUseCase,
+        displayPreferenceStore: com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore =
+            InMemoryAccountDisplayPreferenceStore(),
         notificationPreferenceStore: NotificationPreferenceStore = AccountInMemoryNotificationPreferenceStore(),
         quotaAlertEvaluationRequester: AccountQuotaAlertEvaluationRequester = NoopAccountQuotaAlertEvaluationRequester,
     ): AccountViewModel =
         AccountViewModel(
             deleteUseCase = deleteUseCase,
             accountListUseCase = accountListUseCase,
-            switchUseCase = switchUseCase,
             renameUseCase = renameUseCase,
+            displayPreferenceStore = displayPreferenceStore,
             notificationPreferenceStore = notificationPreferenceStore,
             quotaAlertEvaluationRequester = quotaAlertEvaluationRequester,
         )

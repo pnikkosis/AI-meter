@@ -1,184 +1,65 @@
 package com.kmnexus.codexmeter.ui.home
 
 import androidx.annotation.StringRes
-import com.kmnexus.codexmeter.R
-import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
+import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import java.time.Instant
 
-enum class HomeContentStatus {
-    Unauthenticated,
-    Loading,
+/** One saved account's state for Home, and whether the user hid it there. */
+data class HomeAccountEntry(
+    val state: CurrentQuotaState,
+    val hidden: Boolean,
+)
+
+/** How far the figures on a card can be trusted. Values stay visible in every case but [NoData]. */
+enum class HomeAccountStatus {
     Fresh,
-    PossiblyStale,
+    /** Last update over 30 minutes ago. */
+    Stale,
+    /** Last update over 2 hours ago. */
     Expired,
-    AuthRequired,
-    ErrorWithLastKnownGood,
+    /** The latest refresh failed; the card keeps the last good figures. */
+    RefreshFailed,
+    /** The provider no longer accepts the session; the account has to sign in again. */
+    NeedsSignIn,
+    /** No figures yet (never refreshed): shown as missing, never as zero. */
     NoData,
 }
 
-enum class HomeQuotaStatus {
-    Normal,
-    Caution,
-    Warning,
-    Exhausted,
-    Unavailable,
-}
-
-enum class HomeStatusTone {
-    Neutral,
-    Success,
-    Warning,
-    Danger,
-}
-
-enum class HomeActionKind {
-    LoginToCodex,
-}
-
-data class HomeAccountUi(
-    val displayName: String,
-    val avatarInitial: String,
-    val avatarColorKey: String,
-    val planType: String?,
-    val credits: HomeCreditsUi,
-)
-
-sealed class HomeCreditsUi {
-    data class Balance(val amount: Double) : HomeCreditsUi()
-    object Unlimited : HomeCreditsUi()
-    object Unavailable : HomeCreditsUi()
-}
-
-data class HomeActionUi(
-    val kind: HomeActionKind,
-    @get:StringRes val labelResId: Int,
-)
-
-data class HomeQuotaCardUi(
+data class HomeWindowUi(
     val windowId: String,
-    @get:StringRes val titleResId: Int,
-    val displayKind: QuotaWindowDisplayKind,
-    val usedPercent: Int?,
-    val balanceAmount: String?,
-    val balanceCurrency: String?,
-    val usedCount: Int?,
-    val limitCount: Int?,
-    val subLabel: String?,
-    val isPrimary: Boolean,
-    val resetAt: Instant?,
-    val status: HomeQuotaStatus,
-    val tone: HomeStatusTone,
-    @get:StringRes val statusLabelResId: Int,
-    val originalBalanceAmount: String? = null,
-    val originalBalanceCurrency: String? = null,
-    val grantedBalance: String? = null,
-    val toppedUpBalance: String? = null,
+    @get:StringRes val labelResId: Int,
     /** The provider's own name for a meter with no label of its own here; see quotaWindowLabelName. */
-    val titleName: String? = null,
-) {
-    /** Remaining percent for PercentQuotaCard rendering (100 - usedPercent). */
-    val percent: Int? get() = usedPercent?.let { 100 - it.coerceIn(0, 100) }
-}
-
-data class HomeTrendUi(
-    @get:StringRes val titleResId: Int = R.string.home_trend_placeholder_title,
-    @get:StringRes val descriptionResId: Int = R.string.home_trend_placeholder_description,
-    @get:StringRes val metricLabelResId: Int = R.string.home_trend_metric_usage,
-    val points: List<HomeTrendPointUi> = emptyList(),
+    val labelName: String?,
+    /** Share still available, 0..100; null when the provider sent no figure. */
+    val percentLeft: Int?,
+    /** A figure that is not a percent: Claude's extra-usage spend, a balance or a count. */
+    val valueText: String?,
+    val level: QuotaLevel,
+    val resetAt: Instant?,
 )
 
-data class HomeTrendPointUi(
-    val capturedAt: Instant,
-    val usageValue: Double,
-    val xPositionInWindow: Float? = null,
-)
-
-data class HomeLoadingUi(
-    @get:StringRes val titleResId: Int,
-    @get:StringRes val descriptionResId: Int,
-)
-
-data class HomeRefreshUi(
-    @get:StringRes val titleResId: Int,
-    @get:StringRes val descriptionResId: Int,
-    @get:StringRes val buttonTextResId: Int,
-    val lastSuccessfulRefreshAt: Instant?,
-    val lastAttemptFinishedAt: Instant?,
+data class HomeAccountCardUi(
+    val localAccountId: String,
+    val providerId: String,
+    val providerAccountId: String?,
+    val providerName: String,
+    val displayName: String,
+    val planName: String?,
+    val windows: List<HomeWindowUi>,
+    val status: HomeAccountStatus,
+    val lastUpdatedAt: Instant?,
+    @get:StringRes val errorMessageResId: Int?,
 )
 
 data class HomeUiState(
-    val contentStatus: HomeContentStatus,
-    @get:StringRes val titleResId: Int = R.string.app_name,
-    @get:StringRes val statusTitleResId: Int,
-    @get:StringRes val statusDescriptionResId: Int,
-    @get:StringRes val errorMessageResId: Int?,
-    val account: HomeAccountUi?,
-    val quotaCards: List<HomeQuotaCardUi> = emptyList(),
-    val trend: HomeTrendUi,
-    val loading: HomeLoadingUi?,
-    val refresh: HomeRefreshUi,
-    val primaryAction: HomeActionUi?,
-    val secondaryAction: HomeActionUi?,
-    val isRefreshing: Boolean,
-    val manualRefreshSuccessCount: Int = 0,
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    /** Visible accounts, in the user's order. */
+    val accounts: List<HomeAccountCardUi> = emptyList(),
+    val hiddenAccountCount: Int = 0,
+    /** Newest update among the visible accounts. */
+    val lastUpdatedAt: Instant? = null,
 ) {
-    /** Backward-compat computed property for the five-hour window card. */
-    val fiveHourCard: HomeQuotaCardUi? get() = quotaCards.firstOrNull { it.windowId == "five_hour" }
-
-    /** Backward-compat computed property for the weekly window card. */
-    val weeklyCard: HomeQuotaCardUi? get() = quotaCards.firstOrNull { it.windowId == "weekly" }
-
-    companion object {
-        fun loading(): HomeUiState =
-            HomeUiState(
-                contentStatus = HomeContentStatus.Loading,
-                statusTitleResId = R.string.home_state_loading_title,
-                statusDescriptionResId = R.string.home_state_loading_description,
-                errorMessageResId = null,
-                account = null,
-                quotaCards = emptyList(),
-                trend = HomeTrendUi(),
-                loading = HomeLoadingUi(
-                    titleResId = R.string.home_loading_card_title,
-                    descriptionResId = R.string.home_loading_card_description,
-                ),
-                refresh = HomeRefreshUi(
-                    titleResId = R.string.home_state_loading_title,
-                    descriptionResId = R.string.home_state_loading_description,
-                    buttonTextResId = R.string.home_refreshing,
-                    lastSuccessfulRefreshAt = null,
-                    lastAttemptFinishedAt = null,
-                ),
-                primaryAction = null,
-                secondaryAction = null,
-                isRefreshing = true,
-                manualRefreshSuccessCount = 0,
-            )
-
-        fun unauthenticated(isRefreshing: Boolean = false): HomeUiState =
-            HomeUiState(
-                contentStatus = HomeContentStatus.Unauthenticated,
-                statusTitleResId = R.string.home_state_unauthenticated_title,
-                statusDescriptionResId = R.string.home_state_unauthenticated_description,
-                errorMessageResId = null,
-                account = null,
-                quotaCards = emptyList(),
-                trend = HomeTrendUi(),
-                loading = null,
-                refresh = HomeRefreshUi(
-                    titleResId = R.string.home_state_unauthenticated_title,
-                    descriptionResId = R.string.home_state_unauthenticated_description,
-                    buttonTextResId = if (isRefreshing) R.string.home_refreshing else R.string.home_refresh,
-                    lastSuccessfulRefreshAt = null,
-                    lastAttemptFinishedAt = null,
-                ),
-                primaryAction = HomeActionUi(
-                    kind = HomeActionKind.LoginToCodex,
-                    labelResId = R.string.home_login_to_codex,
-                ),
-                secondaryAction = null,
-                isRefreshing = isRefreshing,
-                manualRefreshSuccessCount = 0,
-            )
-    }
+    val accountCount: Int get() = accounts.size + hiddenAccountCount
 }

@@ -2,23 +2,15 @@ package com.kmnexus.codexmeter.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -35,6 +27,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import com.kmnexus.codexmeter.ui.components.AppPullToRefreshIndicator
+import com.kmnexus.codexmeter.ui.components.DashedAddButton
+import com.kmnexus.codexmeter.ui.quota.shortMomentFormatter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,7 +36,8 @@ import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
+import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore
+import com.kmnexus.codexmeter.domain.account.InMemoryAccountDisplayPreferenceStore
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceStore
@@ -58,8 +53,8 @@ import kotlinx.coroutines.launch
 fun AccountRoute(
     accountListUseCase: AccountListUseCase,
     accountDeleteUseCase: AccountDeleteUseCase,
-    accountSwitchUseCase: AccountSwitchUseCase,
     accountRenameUseCase: AccountRenameUseCase,
+    displayPreferenceStore: AccountDisplayPreferenceStore = InMemoryAccountDisplayPreferenceStore(),
     notificationPreferenceStore: NotificationPreferenceStore = AccountInMemoryNotificationPreferenceStore(),
     quotaAlertEvaluationRequester: AccountQuotaAlertEvaluationRequester =
         NoopAccountQuotaAlertEvaluationRequester,
@@ -71,8 +66,8 @@ fun AccountRoute(
         factory = AccountViewModel.factory(
             deleteUseCase = accountDeleteUseCase,
             accountListUseCase = accountListUseCase,
-            switchUseCase = accountSwitchUseCase,
             renameUseCase = accountRenameUseCase,
+            displayPreferenceStore = displayPreferenceStore,
             notificationPreferenceStore = notificationPreferenceStore,
             quotaAlertEvaluationRequester = quotaAlertEvaluationRequester,
             refreshAllUseCase = refreshAllUseCase,
@@ -104,9 +99,19 @@ fun AccountRoute(
             onLoginToCodexClick()
         },
         onAddAccountDismiss = viewModel::dismissAddAccount,
-        onSetCurrentClick = { id ->
+        onVisibilityChange = { id, visible ->
             coroutineScope.launch {
-                viewModel.switchCurrentAccount(id)
+                viewModel.setAccountVisible(id, visible)
+            }
+        },
+        onMoveUpClick = { id ->
+            coroutineScope.launch {
+                viewModel.moveAccount(id, offset = -1)
+            }
+        },
+        onMoveDownClick = { id ->
+            coroutineScope.launch {
+                viewModel.moveAccount(id, offset = 1)
             }
         },
         onRenameClick = viewModel::requestRenameAccount,
@@ -143,7 +148,9 @@ fun AccountScreen(
     onAddAccountClick: () -> Unit = {},
     onLoginToCodexClick: () -> Unit = {},
     onAddAccountDismiss: () -> Unit = {},
-    onSetCurrentClick: (LocalAccountId) -> Unit = {},
+    onVisibilityChange: (LocalAccountId, Boolean) -> Unit = { _, _ -> },
+    onMoveUpClick: (LocalAccountId) -> Unit = {},
+    onMoveDownClick: (LocalAccountId) -> Unit = {},
     onRenameClick: (LocalAccountId) -> Unit = {},
     onRenameConfirm: (LocalAccountId, String) -> Unit = { _, _ -> },
     onRenameDismiss: () -> Unit = {},
@@ -156,6 +163,7 @@ fun AccountScreen(
     onDisconnectNoticeDismiss: () -> Unit = {},
 ) {
     val pullState = rememberPullToRefreshState()
+    val moment = shortMomentFormatter()
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
         onRefresh = onRefresh,
@@ -176,28 +184,26 @@ fun AccountScreen(
             .padding(horizontal = CodexMeterSpacing.xl, vertical = CodexMeterSpacing.xxl),
         verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.lg),
     ) {
-        AccountHeader(onAddAccountClick = onAddAccountClick)
+        AccountHeader()
 
-        uiState.currentAccount?.let {
-            SectionLabel(R.string.account_current_section)
-            CurrentAccountCard(account = it)
-        }
-
-        SectionLabel(R.string.account_saved_section)
         if (uiState.contentStatus == AccountContentStatus.Unauthenticated) {
             EmptyAccountsCard(onAddAccountClick = onAddAccountClick)
         } else {
             uiState.accounts.forEach { account ->
                 AccountCard(
                     account = account,
-                    onSetCurrentClick = onSetCurrentClick,
+                    moment = moment,
+                    onToggleExpanded = onToggleExpanded,
+                    onVisibilityChange = onVisibilityChange,
+                    onMoveUpClick = onMoveUpClick,
+                    onMoveDownClick = onMoveDownClick,
                     onRenameClick = onRenameClick,
                     onReloginClick = onReloginClick,
                     onQuotaAlertToggle = onQuotaAlertToggle,
                     onDeleteClick = onDeleteClick,
-                    onToggleExpanded = onToggleExpanded,
                 )
             }
+            DashedAddButton(text = stringResource(R.string.account_add_account), onClick = onAddAccountClick)
         }
 
         Spacer(modifier = Modifier.height(CodexMeterSpacing.bottomNavigationClearance))
@@ -274,41 +280,18 @@ private fun AddAccountDialog(
 }
 
 @Composable
-private fun AccountHeader(onAddAccountClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm),
-        ) {
-            Text(
-                text = stringResource(R.string.account_title),
-                style = CodexMeterTypography.current.display,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = stringResource(R.string.account_global_current_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(modifier = Modifier.width(CodexMeterSpacing.md))
-        FilledIconButton(
-            onClick = onAddAccountClick,
-            shape = CircleShape,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = CodexMeterTheme.colors.accent,
-                contentColor = CodexMeterTheme.colors.surface,
-            ),
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_add),
-                contentDescription = stringResource(R.string.account_add_account),
-            )
-        }
+private fun AccountHeader() {
+    Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.xs)) {
+        Text(
+            text = stringResource(R.string.account_title),
+            style = CodexMeterTypography.display,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            text = stringResource(R.string.account_screen_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

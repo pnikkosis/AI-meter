@@ -5,21 +5,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.kmnexus.codexmeter.R
-import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.ui.components.CodexMeterBackdrop
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import java.time.Instant
 
 /**
- * Debug-only preview of the Home account-summary card / hero over the app backdrop so the
- * theme-aware glass surface, brand icon, avatar and refresh icon can be visually accepted in both
- * light and dark. It follows the system uiMode (ThemeMode.SYSTEM), so launching with the device in
- * dark mode renders the dark palette. Launch per spec:
- *   adb shell am start -n com.kmnexus.codexmeter.debug/com.kmnexus.codexmeter.ui.home.HomePreviewActivity
+ * Debug-only preview of Home with two accounts (one used up, one with two windows), so the cards can
+ * be checked in light and dark. It follows the system uiMode (ThemeMode.SYSTEM). Launch:
+ *   adb shell am start -n <debug package>/com.kmnexus.codexmeter.ui.home.HomePreviewActivity
  * then `adb exec-out screencap -p`.
  *
  * Fake data only: no real account, no network, no credentials.
@@ -38,74 +35,67 @@ class HomePreviewActivity : ComponentActivity() {
     }
 }
 
-@Composable
 private fun previewHomeUiState(): HomeUiState {
-    val now = Instant.parse("2026-06-02T09:00:00Z")
+    val now = Instant.now()
     return HomeUiState(
-        contentStatus = HomeContentStatus.Fresh,
-        titleResId = R.string.app_name,
-        statusTitleResId = R.string.home_state_fresh_title,
-        statusDescriptionResId = R.string.home_state_fresh_description,
-        errorMessageResId = null,
-        account = HomeAccountUi(
-            displayName = "个人开发号",
-            avatarInitial = "K",
-            avatarColorKey = "preview-account",
-            planType = "Pro 5x",
-            credits = HomeCreditsUi.Balance(amount = 8.5),
-        ),
-        quotaCards = listOf(
-            previewQuotaCard(
-                windowId = "five_hour",
-                titleResId = R.string.home_quota_window_five_hour,
-                usedPercent = 13,
-                resetAt = now.plusSeconds(5 * 3600),
-                isPrimary = true,
-            ),
-            previewQuotaCard(
-                windowId = "weekly",
-                titleResId = R.string.home_quota_window_weekly,
-                usedPercent = 58,
-                resetAt = now.plusSeconds(3 * 24 * 3600),
-                isPrimary = false,
-            ),
-        ),
-        trend = HomeTrendUi(),
-        loading = null,
-        refresh = HomeRefreshUi(
-            titleResId = R.string.home_state_fresh_title,
-            descriptionResId = R.string.home_state_fresh_description,
-            buttonTextResId = R.string.home_refresh,
-            lastSuccessfulRefreshAt = now,
-            lastAttemptFinishedAt = now,
-        ),
-        primaryAction = null,
-        secondaryAction = null,
+        isLoading = false,
         isRefreshing = false,
-        manualRefreshSuccessCount = 0,
+        accounts = listOf(
+            HomeAccountCardUi(
+                localAccountId = "preview-codex",
+                providerId = "codex",
+                providerAccountId = null,
+                providerName = "Codex",
+                displayName = "Personal",
+                planName = "Pro 20x",
+                windows = listOf(
+                    HomeWindowUi(
+                        windowId = "weekly",
+                        labelResId = R.string.account_quota_weekly_label,
+                        labelName = null,
+                        percentLeft = 0,
+                        valueText = null,
+                        level = QuotaLevel.Depleted,
+                        resetAt = now.plusSeconds(4 * 24 * 3600L),
+                    ),
+                ),
+                status = HomeAccountStatus.Fresh,
+                lastUpdatedAt = now,
+                errorMessageResId = null,
+            ),
+            HomeAccountCardUi(
+                localAccountId = "preview-claude",
+                providerId = "claude",
+                providerAccountId = null,
+                providerName = "Claude",
+                displayName = "Trabajo",
+                planName = null,
+                windows = listOf(
+                    HomeWindowUi(
+                        windowId = "claude_5h_window",
+                        labelResId = R.string.account_quota_five_hour_label,
+                        labelName = null,
+                        percentLeft = 67,
+                        valueText = null,
+                        level = QuotaLevel.Normal,
+                        resetAt = now.plusSeconds(3 * 3600L),
+                    ),
+                    HomeWindowUi(
+                        windowId = "claude_7d_window",
+                        labelResId = R.string.window_label_7d,
+                        labelName = null,
+                        percentLeft = 8,
+                        valueText = null,
+                        level = QuotaLevel.Warning,
+                        resetAt = now.plusSeconds(6 * 24 * 3600L),
+                    ),
+                ),
+                status = HomeAccountStatus.Stale,
+                lastUpdatedAt = now.minusSeconds(50 * 60L),
+                errorMessageResId = null,
+            ),
+        ),
+        hiddenAccountCount = 1,
+        lastUpdatedAt = now,
     )
 }
-
-private fun previewQuotaCard(
-    windowId: String,
-    titleResId: Int,
-    usedPercent: Int,
-    resetAt: Instant,
-    isPrimary: Boolean,
-): HomeQuotaCardUi =
-    HomeQuotaCardUi(
-        windowId = windowId,
-        titleResId = titleResId,
-        displayKind = QuotaWindowDisplayKind.Percent,
-        usedPercent = usedPercent,
-        balanceAmount = null,
-        balanceCurrency = null,
-        usedCount = null,
-        limitCount = null,
-        subLabel = null,
-        isPrimary = isPrimary,
-        resetAt = resetAt,
-        status = HomeQuotaStatus.Normal,
-        tone = HomeStatusTone.Success,
-        statusLabelResId = R.string.home_quota_status_normal,
-    )

@@ -7,7 +7,6 @@ import com.kmnexus.codexmeter.core.i18n.AppLocaleController
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.data.currency.ExchangeRateReader
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
@@ -24,9 +23,8 @@ import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.refresh.ExchangeRateRefresher
 import com.kmnexus.codexmeter.refresh.QuotaRefreshDependenciesProvider
 import com.kmnexus.codexmeter.refresh.RefreshCoordinator
-import com.kmnexus.codexmeter.ui.home.HomeCurrentQuotaStateLoader
-import com.kmnexus.codexmeter.ui.home.HomeRefreshUseCase
-import com.kmnexus.codexmeter.ui.home.HomeTrendHistoryLoader
+import com.kmnexus.codexmeter.domain.account.AccountDisplayPreferenceStore
+import com.kmnexus.codexmeter.ui.home.HomeAccountsLoader
 import com.kmnexus.codexmeter.refresh.RefreshWorkScheduler
 import com.kmnexus.codexmeter.app.NotificationWindowChoicesLoader
 import com.kmnexus.codexmeter.ui.account.AccountQuotaAlertEvaluationRequester
@@ -65,9 +63,6 @@ class CodexMeterApp :
     val accountDeleteUseCase: AccountDeleteUseCase
         get() = appContainer.accountDeleteUseCase
 
-    val accountSwitchUseCase: AccountSwitchUseCase
-        get() = appContainer.accountSwitchUseCase
-
     val accountRenameUseCase: AccountRenameUseCase
         get() = appContainer.accountRenameUseCase
 
@@ -77,11 +72,11 @@ class CodexMeterApp :
     val accountQuotaAlertEvaluationRequester: AccountQuotaAlertEvaluationRequester
         get() = appContainer.accountQuotaAlertEvaluationRequester
 
-    val homeCurrentQuotaStateLoader: HomeCurrentQuotaStateLoader
-        get() = appContainer.homeCurrentQuotaStateLoader
+    val homeAccountsLoader: HomeAccountsLoader
+        get() = appContainer.homeAccountsLoader
 
-    val homeRefreshUseCase: HomeRefreshUseCase
-        get() = appContainer.homeRefreshUseCase
+    val accountDisplayPreferenceStore: AccountDisplayPreferenceStore
+        get() = appContainer.accountDisplayPreferences
 
     val deviceCodeLoginController: DeviceCodeLoginController
         get() = appContainer.deviceCodeLoginController
@@ -103,9 +98,6 @@ class CodexMeterApp :
 
     val quotaHistoryClearUseCase: QuotaHistoryClearUseCase
         get() = appContainer.quotaHistoryClearUseCase
-
-    val homeTrendHistoryLoader: HomeTrendHistoryLoader
-        get() = appContainer.homeTrendHistoryLoader
 
     val backgroundRefreshStatusReader: SettingsBackgroundRefreshStatusReader
         get() = appContainer.backgroundRefreshStatusReader

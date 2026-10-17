@@ -21,11 +21,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -38,47 +36,77 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
+import com.kmnexus.codexmeter.ui.components.AppCard
+import com.kmnexus.codexmeter.ui.components.ProviderChip
 import com.kmnexus.codexmeter.ui.motion.CodexMeterMotion
 import com.kmnexus.codexmeter.ui.motion.rememberCodexMeterAnimatorsEnabled
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
-import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
-import com.kmnexus.codexmeter.ui.theme.avatarColor
-import com.kmnexus.codexmeter.ui.theme.avatarInitialColor
+import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import java.text.NumberFormat
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Locale
 
 @Composable
-internal fun CurrentAccountCard(account: AccountItemUi) {
-    AccountSurfaceCard {
+internal fun EmptyAccountsCard(onAddAccountClick: () -> Unit) {
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.account_no_accounts_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.account_no_accounts_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedButton(onClick = onAddAccountClick, shape = CodexMeterShapes.md) {
+            Text(text = stringResource(R.string.account_add_account))
+        }
+    }
+}
+
+@Composable
+internal fun AccountCard(
+    account: AccountItemUi,
+    moment: (Instant) -> String,
+    onToggleExpanded: (LocalAccountId) -> Unit,
+    onVisibilityChange: (LocalAccountId, Boolean) -> Unit,
+    onMoveUpClick: (LocalAccountId) -> Unit,
+    onMoveDownClick: (LocalAccountId) -> Unit,
+    onRenameClick: (LocalAccountId) -> Unit,
+    onReloginClick: (LocalAccountId) -> Unit,
+    onQuotaAlertToggle: (LocalAccountId, QuotaWindowId, Boolean) -> Unit,
+    onDeleteClick: (LocalAccountId) -> Unit,
+) {
+    val animatorsEnabled = rememberCodexMeterAnimatorsEnabled()
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        val toggleLabel = stringResource(
+            if (account.isExpanded) R.string.account_collapse else R.string.account_expand,
+        )
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClickLabel = toggleLabel) { onToggleExpanded(account.id) },
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AccountAvatar(account = account, size = 48.dp)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.xs),
-            ) {
+            ProviderChip(name = account.providerName)
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = account.displayName,
                     style = MaterialTheme.typography.titleMedium,
@@ -87,115 +115,59 @@ internal fun CurrentAccountCard(account: AccountItemUi) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = stringResource(R.string.account_current_card_description),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = account.subtitle(moment),
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            StatusBadge(account = account)
+            account.badgeLabelResId?.let { badge ->
+                StatusBadge(labelResId = badge, tone = account.tone)
+            }
+            ExpandChevron(isExpanded = account.isExpanded, animatorsEnabled = animatorsEnabled)
         }
-    }
-}
-
-@Composable
-internal fun EmptyAccountsCard(onAddAccountClick: () -> Unit) {
-    AccountSurfaceCard {
-        Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = account.isVisible,
+                    role = Role.Switch,
+                    onValueChange = { visible -> onVisibilityChange(account.id, visible) },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = stringResource(R.string.account_no_accounts_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.account_no_accounts_description),
+                text = stringResource(R.string.account_show_on_home),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
             )
-            OutlinedButton(onClick = onAddAccountClick, shape = CodexMeterShapes.md) {
-                Text(text = stringResource(R.string.account_add_account))
-            }
+            // The whole row toggles; the switch only mirrors the state.
+            Switch(checked = account.isVisible, onCheckedChange = null)
         }
+        AccountDetailsDrawer(
+            account = account,
+            animatorsEnabled = animatorsEnabled,
+            onMoveUpClick = onMoveUpClick,
+            onMoveDownClick = onMoveDownClick,
+            onRenameClick = onRenameClick,
+            onReloginClick = onReloginClick,
+            onQuotaAlertToggle = onQuotaAlertToggle,
+            onDeleteClick = onDeleteClick,
+        )
     }
 }
 
 @Composable
-internal fun AccountCard(
-    account: AccountItemUi,
-    onSetCurrentClick: (LocalAccountId) -> Unit,
-    onRenameClick: (LocalAccountId) -> Unit,
-    onReloginClick: (LocalAccountId) -> Unit,
-    onQuotaAlertToggle: (LocalAccountId, QuotaWindowId, Boolean) -> Unit,
-    onDeleteClick: (LocalAccountId) -> Unit,
-    onToggleExpanded: (LocalAccountId) -> Unit,
-) {
-    AccountSurfaceCard {
-        val animatorsEnabled = rememberCodexMeterAnimatorsEnabled()
-        Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
-            val toggleLabel = stringResource(
-                if (account.isExpanded) R.string.account_collapse else R.string.account_expand,
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClickLabel = toggleLabel) { onToggleExpanded(account.id) },
-                horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AccountAvatar(account = account, size = 44.dp)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = account.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(account.statusLabelResId),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = account.lastSuccessfulRefreshAt?.let {
-                            stringResource(account.refreshSummaryResId, formattedInstant(it))
-                        } ?: stringResource(account.refreshSummaryResId),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    StatusBadge(account = account)
-                    AccountExpandIconButton(
-                        isExpanded = account.isExpanded,
-                        contentDescription = toggleLabel,
-                        animatorsEnabled = animatorsEnabled,
-                        onClick = { onToggleExpanded(account.id) },
-                    )
-                }
-            }
-            AccountDetailsDrawer(
-                account = account,
-                animatorsEnabled = animatorsEnabled,
-                onSetCurrentClick = onSetCurrentClick,
-                onRenameClick = onRenameClick,
-                onReloginClick = onReloginClick,
-                onQuotaAlertToggle = onQuotaAlertToggle,
-                onDeleteClick = onDeleteClick,
-            )
-        }
-    }
+private fun AccountItemUi.subtitle(moment: (Instant) -> String): String {
+    val refresh = lastSuccessfulRefreshAt?.let { stringResource(R.string.account_last_refresh_format, moment(it)) }
+        ?: stringResource(R.string.account_last_refresh_unavailable)
+    return listOfNotNull(planType, refresh).joinToString(" · ")
 }
 
 @Composable
-private fun AccountExpandIconButton(
-    isExpanded: Boolean,
-    contentDescription: String,
-    animatorsEnabled: Boolean,
-    onClick: () -> Unit,
-) {
+private fun ExpandChevron(isExpanded: Boolean, animatorsEnabled: Boolean) {
     val rotation by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         animationSpec = if (animatorsEnabled) {
@@ -208,23 +180,23 @@ private fun AccountExpandIconButton(
         },
         label = "account_expand_icon_rotation",
     )
-    IconButton(onClick = onClick) {
-        Icon(
-            painter = painterResource(R.drawable.ic_chevron_down),
-            contentDescription = contentDescription,
-            modifier = Modifier
-                .size(20.dp)
-                .graphicsLayer { rotationZ = rotation },
-            tint = CodexMeterTheme.colors.accent,
-        )
-    }
+    Icon(
+        painter = painterResource(R.drawable.ic_chevron_down),
+        // The row it sits in carries the expand/collapse label.
+        contentDescription = null,
+        modifier = Modifier
+            .size(20.dp)
+            .graphicsLayer { rotationZ = rotation },
+        tint = CodexMeterTheme.colors.secondary,
+    )
 }
 
 @Composable
 private fun AccountDetailsDrawer(
     account: AccountItemUi,
     animatorsEnabled: Boolean,
-    onSetCurrentClick: (LocalAccountId) -> Unit,
+    onMoveUpClick: (LocalAccountId) -> Unit,
+    onMoveDownClick: (LocalAccountId) -> Unit,
     onRenameClick: (LocalAccountId) -> Unit,
     onReloginClick: (LocalAccountId) -> Unit,
     onQuotaAlertToggle: (LocalAccountId, QuotaWindowId, Boolean) -> Unit,
@@ -267,18 +239,26 @@ private fun AccountDetailsDrawer(
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md)) {
-            PlanCreditsRow(account = account)
-            QuotaSummaryRow(account.quotaSummaries)
+            HorizontalDivider(thickness = 1.dp, color = CodexMeterTheme.colors.border)
+            if (account.credits !is AccountCreditsUi.Unavailable) {
+                CreditsLine(account.credits)
+            }
+            if (account.quotaSummaries.isNotEmpty()) {
+                QuotaSummaryRow(account.quotaSummaries)
+            }
             if (account.modelFamilies.isNotEmpty()) {
                 ModelDetailsSection(account.modelFamilies)
             }
-            QuotaAlertSwitches(
-                account = account,
-                onQuotaAlertToggle = onQuotaAlertToggle,
-            )
+            if (account.alertToggles.isNotEmpty()) {
+                QuotaAlertSwitches(
+                    account = account,
+                    onQuotaAlertToggle = onQuotaAlertToggle,
+                )
+            }
             AccountActions(
                 account = account,
-                onSetCurrentClick = onSetCurrentClick,
+                onMoveUpClick = onMoveUpClick,
+                onMoveDownClick = onMoveDownClick,
                 onRenameClick = onRenameClick,
                 onReloginClick = onReloginClick,
                 onDeleteClick = onDeleteClick,
@@ -288,84 +268,21 @@ private fun AccountDetailsDrawer(
 }
 
 @Composable
-internal fun SectionLabel(resId: Int) {
-    Text(
-        text = stringResource(resId),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
-@Composable
-internal fun AccountSurfaceCard(content: @Composable () -> Unit) {
-    Card(
-        shape = CodexMeterShapes.xl,
-        colors = CardDefaults.cardColors(containerColor = CodexMeterTheme.colors.surface),
-        border = BorderStroke(1.dp, CodexMeterTheme.colors.border),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(CodexMeterSpacing.lg),
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun PlanCreditsRow(account: AccountItemUi) {
+private fun CreditsLine(credits: AccountCreditsUi) {
     val locale = LocalConfiguration.current.locales[0] ?: Locale.ROOT
-    // Providers expose different fields: show only the tiles that actually have data so that, e.g.,
-    // Kimi (no plan/credits) or Antigravity (plan only) don't render "Unavailable" placeholders.
-    val planType = account.planType
-    val hasCredits = account.credits !is AccountCreditsUi.Unavailable
-    if (planType == null && !hasCredits) return
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md),
-    ) {
-        if (planType != null) {
-            AccountMetadataTile(
-                label = stringResource(R.string.account_plan_label),
-                value = planType,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        if (hasCredits) {
-            AccountMetadataTile(
-                label = stringResource(R.string.account_credits_label),
-                value = account.credits.displayText(locale),
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun AccountMetadataTile(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .clip(CodexMeterShapes.md)
-            .background(CodexMeterTheme.colors.surfaceSoft)
-            .padding(CodexMeterSpacing.md),
-        verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.xs),
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
+            text = stringResource(R.string.account_credits_label),
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
+            text = credits.displayText(locale),
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -547,102 +464,86 @@ private fun QuotaAlertSwitchLine(
 @Composable
 private fun AccountActions(
     account: AccountItemUi,
-    onSetCurrentClick: (LocalAccountId) -> Unit,
+    onMoveUpClick: (LocalAccountId) -> Unit,
+    onMoveDownClick: (LocalAccountId) -> Unit,
     onRenameClick: (LocalAccountId) -> Unit,
     onReloginClick: (LocalAccountId) -> Unit,
     onDeleteClick: (LocalAccountId) -> Unit,
 ) {
+    // Disabled buttons keep an explicit outline: Material's disabled border would all but vanish.
     val actionButtonBorder = BorderStroke(1.dp, CodexMeterTheme.colors.border)
     Column(verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm)) {
         Row(horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm)) {
             OutlinedButton(
-                onClick = { onSetCurrentClick(account.id) },
+                onClick = { onMoveUpClick(account.id) },
                 modifier = Modifier.weight(1f),
-                enabled = !account.isCurrent,
+                enabled = account.canMoveUp,
                 shape = CodexMeterShapes.md,
                 border = actionButtonBorder,
             ) {
-                Text(text = stringResource(R.string.account_set_current))
+                Text(text = stringResource(R.string.account_move_up))
             }
             OutlinedButton(
-                onClick = { onRenameClick(account.id) },
+                onClick = { onMoveDownClick(account.id) },
                 modifier = Modifier.weight(1f),
+                enabled = account.canMoveDown,
                 shape = CodexMeterShapes.md,
+                border = actionButtonBorder,
             ) {
-                Text(text = stringResource(R.string.account_rename))
+                Text(text = stringResource(R.string.account_move_down))
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(CodexMeterSpacing.sm)) {
             OutlinedButton(
-                onClick = { onReloginClick(account.id) },
+                onClick = { onRenameClick(account.id) },
                 modifier = Modifier.weight(1f),
                 shape = CodexMeterShapes.md,
+                border = actionButtonBorder,
             ) {
-                Text(text = stringResource(R.string.account_relogin))
+                Text(text = stringResource(R.string.account_rename))
             }
             OutlinedButton(
-                onClick = { onDeleteClick(account.id) },
+                onClick = { onReloginClick(account.id) },
                 modifier = Modifier.weight(1f),
                 shape = CodexMeterShapes.md,
                 border = actionButtonBorder,
             ) {
                 Text(
-                    text = stringResource(R.string.account_delete),
-                    color = CodexMeterTheme.colors.danger,
+                    text = stringResource(R.string.account_relogin),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-    }
-}
-
-
-@Composable
-private fun StatusBadge(account: AccountItemUi) {
-    Box(
-        modifier = Modifier
-            .clip(CodexMeterShapes.pill)
-            .background(account.tone.softColor())
-            .padding(horizontal = CodexMeterSpacing.md, vertical = CodexMeterSpacing.sm),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(account.badgeLabelResId),
-            style = MaterialTheme.typography.labelSmall,
-            color = account.tone.color(),
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun AccountAvatar(account: AccountItemUi, size: Dp) {
-    run {
-        Box(
-            modifier = Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(avatarColor(account.avatarColorKey)),
-            contentAlignment = Alignment.Center,
+        OutlinedButton(
+            onClick = { onDeleteClick(account.id) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = CodexMeterShapes.md,
+            border = actionButtonBorder,
         ) {
             Text(
-                text = account.avatarInitial,
-                style = MaterialTheme.typography.titleMedium,
-                color = avatarInitialColor(),
-                maxLines = 1,
+                text = stringResource(R.string.account_delete),
+                color = CodexMeterTheme.colors.danger,
             )
         }
     }
 }
 
 @Composable
-private fun formattedInstant(instant: Instant): String {
-    val locale = LocalConfiguration.current.locales[0]
-    return remember(instant, locale) {
-        DateTimeFormatter
-            .ofLocalizedDateTime(FormatStyle.SHORT)
-            .withLocale(locale)
-            .withZone(ZoneId.systemDefault())
-            .format(instant)
+private fun StatusBadge(labelResId: Int, tone: AccountStatusTone) {
+    Box(
+        modifier = Modifier
+            .clip(CodexMeterShapes.pill)
+            .background(tone.softColor())
+            .padding(horizontal = CodexMeterSpacing.md, vertical = CodexMeterSpacing.xs),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(labelResId),
+            style = MaterialTheme.typography.labelSmall,
+            color = tone.color(),
+            maxLines = 1,
+        )
     }
 }
 

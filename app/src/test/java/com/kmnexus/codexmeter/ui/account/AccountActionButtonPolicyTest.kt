@@ -11,11 +11,12 @@ class AccountActionButtonPolicyTest {
         val source = sourceFile("src/main/java/com/kmnexus/codexmeter/ui/account/AccountCards.kt").readText()
         val actions = source.functionBlock("private fun AccountActions")
 
-        val setCurrent = actions.buttonBlock("account_set_current")
-        assertTrue(
-            "Disabled 'set current' must keep an explicit outline instead of relying on a Material disabled border.",
-            setCurrent.contains("border = actionButtonBorder"),
-        )
+        listOf("account_move_up", "account_move_down").forEach { label ->
+            assertTrue(
+                "Move buttons are disabled at the ends of the list and must keep an explicit outline instead of relying on a Material disabled border.",
+                actions.buttonBlock(label).contains("border = actionButtonBorder"),
+            )
+        }
 
         val delete = actions.buttonBlock("account_delete")
         assertTrue(
