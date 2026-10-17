@@ -94,6 +94,33 @@ class CodexDeviceCodeClientTest {
     }
 
     @Test
+    fun `request accepts expires at with an offset and fractional seconds`() = runTest {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body(
+                    """
+                    {
+                      "device_auth_id": "$SAMPLE_DEVICE_AUTH_ID",
+                      "user_code": "ABCD-EFGH",
+                      "interval": "5",
+                      "expires_at": "2026-05-25T10:36:28.123456+00:00"
+                    }
+                    """.trimIndent(),
+                )
+                .build(),
+        )
+        val client = newClient(
+            clock = Clock.fixed(Instant.parse("2026-05-25T10:26:28Z"), ZoneOffset.UTC),
+        )
+
+        val result = client.requestDeviceCode()
+
+        assertTrue(result is CodexDeviceCodeClient.Result.Success)
+        assertEquals(600, (result as CodexDeviceCodeClient.Result.Success).value.expiresInSeconds)
+    }
+
+    @Test
     fun `request rejects unsafe verification uri`() = runTest {
         server.enqueue(
             MockResponse.Builder()

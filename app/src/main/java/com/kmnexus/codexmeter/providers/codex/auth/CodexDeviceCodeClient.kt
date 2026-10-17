@@ -7,7 +7,7 @@ import com.kmnexus.codexmeter.providers.common.network.unexpectedStatusError
 import java.io.IOException
 import java.time.Clock
 import java.time.Duration
-import java.time.Instant
+import java.time.OffsetDateTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -249,9 +249,11 @@ class CodexDeviceCodeClient(
             ?.toIntOrNull()
             ?.takeIf { it > 0 }
 
+    // OffsetDateTime accepts both `Z` and an offset such as `+00:00`. Instant.parse only accepts `Z`
+    // on Android versions whose java.time predates JDK 12 (Android 12 among them).
     private fun String.expiresInSecondsOrNull(): Int? =
         try {
-            Duration.between(clock.instant(), Instant.parse(this))
+            Duration.between(clock.instant(), OffsetDateTime.parse(this).toInstant())
                 .seconds
                 .takeIf { it > 0 && it <= Int.MAX_VALUE }
                 ?.toInt()

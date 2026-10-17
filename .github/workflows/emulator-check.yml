@@ -1,8 +1,10 @@
 # Manual check of the app on an Android EMULATOR from GitHub's runner (not a phone).
 #
-# 1. Renders every widget state with the instrumented WidgetScreenshotTest (debug build).
+# 1. Runs the instrumented tests (debug build): WidgetScreenshotTest renders every widget state, and
+#    CodexDeviceCodeExpiryTest decodes a device-code answer with that Android version's java.time.
 # 2. Installs the R8-processed RELEASE build, signed with a throwaway key generated in this job (the
 #    release key never reaches GitHub), and drives it with scripts/ci/emulator_smoke.py.
+# A separate job prints the format of auth.openai.com's device-code answer with every value masked.
 # Screenshots are printed base64-encoded at the end of the log. No credentials exist here: the Codex
 # screen asks auth.openai.com for a device code (not captured) and the Claude screen opens claude.ai
 # in the browser, as a user starting a sign-in would; both attempts are cancelled.
@@ -15,6 +17,17 @@ permissions:
   contents: read
 
 jobs:
+  codex-answer-format:
+    name: Codex device-code answer format (values masked)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ask auth.openai.com for a device code as the app does
+        run: python3 scripts/ci/codex_device_code_shape.py
+
   emulator:
     name: Emulator API ${{ matrix.api }} (${{ matrix.locale }})
     runs-on: ubuntu-latest
@@ -98,7 +111,8 @@ jobs:
           if [ "${{ matrix.locale }}" != "en-US" ]; then
             # System locale via a persistent property and a reboot, so the framework does not
             # restart later while the tests are running (what -change-locale does).
-            adb root
+            # adbd restarts as root; on a slow runner the first attempt can find it still closed.
+            for attempt in 1 2 3; do adb root && break; sleep 10; adb wait-for-device; done
             sleep 5
             adb wait-for-device
             adb shell setprop persist.sys.locale "${{ matrix.locale }}"
@@ -115,15 +129,16 @@ jobs:
           echo "Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r')), locale $(adb shell getprop persist.sys.locale | tr -d '\r')"
           adb shell pm list packages | grep -iE "chrome|browser|webview" || true
 
-      - name: Render widget states (instrumented test, debug build)
+      - name: Instrumented tests (debug build)
         timeout-minutes: 10
         run: |
           for apk in app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk; do
             for attempt in 1 2 3; do adb install -r "$apk" && break; sleep 15; done
           done
-          adb shell am instrument -w -e class com.kmnexus.codexmeter.widget.WidgetScreenshotTest \
+          adb shell am instrument -w \
+            -e class com.kmnexus.codexmeter.widget.WidgetScreenshotTest,com.kmnexus.codexmeter.providers.codex.auth.CodexDeviceCodeExpiryTest \
             "$PKG.debug.test/androidx.test.runner.AndroidJUnitRunner" | tee "$RUNNER_TEMP/instrument.log"
-          grep -q "^OK (1 test)" "$RUNNER_TEMP/instrument.log"
+          grep -q "^OK (3 tests)" "$RUNNER_TEMP/instrument.log"
           mkdir -p shots/widget
           for f in $(adb shell run-as "$PKG.debug" ls files/widget-shots | tr -d '\r'); do
             adb exec-out run-as "$PKG.debug" cat "files/widget-shots/$f" > "shots/widget/$f"
