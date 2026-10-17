@@ -45,7 +45,7 @@ def shot(name):
     print(f"  screenshot {os.path.basename(path)} ({len(data)} bytes)")
 
 
-def nodes():
+def dump():
     out = ""
     for _ in range(4):
         out = adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", check=False)
@@ -55,6 +55,24 @@ def nodes():
         time.sleep(2)
     print(f"  uiautomator dump failed: {out.strip()}")
     return []
+
+
+def nodes():
+    """UI nodes on screen, after dismissing the emulator's own "isn't responding" dialogs."""
+    found = dump()
+    for _ in range(3):
+        texts = [(n.get("text") or "") for n in found]
+        if not any("isn't responding" in t or "no responde" in t for t in texts):
+            return found
+        wait = next((n for n in found if (n.get("text") or "").strip() in ("Wait", "Esperar")), None)
+        if wait is None:
+            return found
+        x1, y1, x2, y2 = bounds(wait)
+        adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
+        print("  dismissed a system 'not responding' dialog")
+        time.sleep(3)
+        found = dump()
+    return found
 
 
 def screen_height():
