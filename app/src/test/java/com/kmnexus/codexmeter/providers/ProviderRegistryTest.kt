@@ -27,49 +27,28 @@ class ProviderRegistryTest {
         assertEquals(ProviderId("codex"), ProviderRegistry.defaultProvider().providerId)
     }
 
+    /** Scope guard: the app tracks exactly the Codex and Claude subscriptions, nothing else. */
     @Test
-    fun deepseekProvider_hasBalanceSupport() {
-        val ds = ProviderRegistry.configFor(ProviderId("deepseek"))
-        assertTrue(ds.supportsBalance)
-        assertEquals(ProviderAuthKind.ApiKeyImport, ds.authKind)
-    }
-
-    @Test
-    fun zaiBalanceProviderIsApiKeyBalance() {
-        val config = ProviderRegistry.configFor(com.kmnexus.codexmeter.domain.model.ProviderId("zai_balance"))
-        assertEquals(ProviderAuthKind.ApiKeyImport, config.authKind)
-        assertTrue(config.supportsBalance)
-        assertEquals("z.ai API", config.displayName)
-    }
-
-    @Test
-    fun zaiCodingPlanProvider_hasRenamedDisplayName() {
-        assertEquals("z.ai Coding Plan", ProviderRegistry.configFor(ProviderId("zai")).displayName)
-    }
-
-    @Test
-    fun grokProvider_isDeviceCodeLogin() {
-        val config = ProviderRegistry.configFor(ProviderRegistry.GROK)
-        assertEquals(ProviderAuthKind.DeviceCodeLogin, config.authKind)
-        assertEquals("Grok", config.displayName)
-        assertFalse(config.supportsBalance)
-        assertFalse(config.isDefault)
-    }
-
-    @Test
-    fun kimiCodeProvider_isApiKeyImportRightAfterKimi() {
-        val config = ProviderRegistry.configFor(ProviderRegistry.KIMI_CODE)
-        assertEquals("Kimi Code API", config.displayName)
-        assertEquals(ProviderAuthKind.ApiKeyImport, config.authKind)
-        assertFalse(config.supportsBalance)
-        assertFalse(config.isDefault)
+    fun registryContainsOnlyCodexAndClaude() {
         assertEquals(
-            com.kmnexus.codexmeter.R.drawable.ic_brand_kimi,
-            config.iconResId,
+            listOf(ProviderRegistry.CLAUDE, ProviderRegistry.CODEX),
+            ProviderRegistry.all.map { it.providerId },
         )
-        val ids = ProviderRegistry.all.map { it.providerId }
-        // Picker order is alphabetical by display name: "Kimi" < "Kimi Code API" < "MiniMax".
-        assertEquals(ids.indexOf(ProviderRegistry.KIMI) + 1, ids.indexOf(ProviderRegistry.KIMI_CODE))
-        assertTrue(ids.indexOf(ProviderRegistry.KIMI_CODE) < ids.indexOf(ProviderRegistry.MINIMAX))
+        assertTrue(ProviderRegistry.all.none { it.supportsBalance })
+    }
+
+    @Test
+    fun claudeProvider_usesOAuthPkceAndIsNotDefault() {
+        val config = ProviderRegistry.configFor(ProviderRegistry.CLAUDE)
+        assertEquals("Claude", config.displayName)
+        assertEquals(ProviderAuthKind.OAuthPkceLogin, config.authKind)
+        assertFalse(config.isDefault)
+        assertEquals(com.kmnexus.codexmeter.R.drawable.ic_brand_claude, config.iconResId)
+    }
+
+    @Test
+    fun unknownProviderFallsBackToRawIdWithoutIcon() {
+        assertEquals("deepseek", ProviderRegistry.displayNameFor(ProviderId("deepseek")))
+        assertEquals(null, ProviderRegistry.iconFor(ProviderId("deepseek")))
     }
 }

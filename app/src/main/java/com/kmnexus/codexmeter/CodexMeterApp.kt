@@ -9,7 +9,6 @@ import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.data.currency.ExchangeRateReader
-import com.kmnexus.codexmeter.domain.auth.ApiKeyLoginUseCase
 import com.kmnexus.codexmeter.domain.auth.SessionLoginUseCase
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceReader
 import com.kmnexus.codexmeter.domain.currency.CurrencyPreferenceStore
@@ -89,9 +88,6 @@ class CodexMeterApp :
 
     val deviceCodeLoginControllers: Map<ProviderId, DeviceCodeLoginController>
         get() = appContainer.deviceCodeLoginControllers
-
-    val deviceCodeLoginNotifiers: Map<ProviderId, DeviceCodeLoginNotifier>
-        get() = appContainer.deviceCodeLoginNotifiers
 
     val deviceCodeLoginNotifier: DeviceCodeLoginNotifier
         get() = appContainer.deviceCodeLoginNotifier

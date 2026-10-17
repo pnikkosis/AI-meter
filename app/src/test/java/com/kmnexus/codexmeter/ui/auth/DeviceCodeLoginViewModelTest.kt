@@ -71,16 +71,16 @@ class DeviceCodeLoginViewModelTest {
         runCurrent()
     }
 
-    /** The provider-parameterized re-login path must carry the expected account id (mismatch check). */
+    /** The Codex re-login path must carry the expected account id (mismatch check). */
     @Test
-    fun `device code relogin entry mode passes expected account id to controller`() = runTest {
+    fun `codex relogin entry mode passes expected account id to controller`() = runTest {
         val controller = RecordingDeviceCodeLoginController(
             reloginResults = ArrayDeque(
                 listOf(
                     DeviceCodeLoginResult.AwaitingUserAuthorization(
                         attemptId = "attempt-1",
                         userCode = "ABCD-EFGH",
-                        verificationUri = "https://auth.x.ai/device",
+                        verificationUri = "https://auth.openai.com/codex/device",
                         pollIntervalSeconds = 5,
                         expiresAt = Instant.parse("2026-09-10T09:15:00Z"),
                     ),
@@ -89,13 +89,7 @@ class DeviceCodeLoginViewModelTest {
         )
         val viewModel = DeviceCodeLoginViewModel(controller = controller)
 
-        viewModel.applyEntryMode(
-            AddAccountEntryMode.DeviceCodeLogin(
-                providerId = ProviderId("grok"),
-                reloginAccountId = LocalAccountId("grok-1"),
-                expectedProviderAccountId = "sub-789",
-            ),
-        )
+        viewModel.applyEntryMode(AddAccountEntryMode.CodexRelogin(expectedProviderAccountId = "sub-789"))
 
         assertEquals(listOf("sub-789"), controller.reloginExpectedAccountIds)
         assertEquals(0, controller.startCount)
@@ -103,16 +97,16 @@ class DeviceCodeLoginViewModelTest {
         runCurrent()
     }
 
-    /** Without an expected account id the provider-parameterized mode degrades to a plain login. */
+    /** Without an expected account id the Codex re-login mode degrades to a plain login. */
     @Test
-    fun `device code entry mode without expected account starts plain login`() = runTest {
+    fun `codex relogin entry mode without expected account starts plain login`() = runTest {
         val controller = RecordingDeviceCodeLoginController(
             startResults = ArrayDeque(
                 listOf(
                     DeviceCodeLoginResult.AwaitingUserAuthorization(
                         attemptId = "attempt-1",
                         userCode = "ABCD-EFGH",
-                        verificationUri = "https://auth.x.ai/device",
+                        verificationUri = "https://auth.openai.com/codex/device",
                         pollIntervalSeconds = 5,
                         expiresAt = Instant.parse("2026-09-10T09:15:00Z"),
                     ),
@@ -121,7 +115,7 @@ class DeviceCodeLoginViewModelTest {
         )
         val viewModel = DeviceCodeLoginViewModel(controller = controller)
 
-        viewModel.applyEntryMode(AddAccountEntryMode.DeviceCodeLogin(providerId = ProviderId("grok")))
+        viewModel.applyEntryMode(AddAccountEntryMode.CodexRelogin(expectedProviderAccountId = null))
 
         assertEquals(1, controller.startCount)
         assertEquals(emptyList<String>(), controller.reloginExpectedAccountIds)

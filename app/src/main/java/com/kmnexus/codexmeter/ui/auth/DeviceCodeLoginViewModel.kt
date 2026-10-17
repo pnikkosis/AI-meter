@@ -80,14 +80,7 @@ class DeviceCodeLoginViewModel(
             is AddAccountEntryMode.ProviderSelection -> Unit
             is AddAccountEntryMode.LoginToCodex -> startDeviceCodeLogin()
             is AddAccountEntryMode.CodexRelogin -> startDeviceCodeRelogin(entryMode.expectedProviderAccountId)
-            is AddAccountEntryMode.ApiKeyInput -> Unit // handled by the API-key screen
-            is AddAccountEntryMode.WebViewCookieAuth -> Unit // handled by the WebView screen
-            is AddAccountEntryMode.WebViewOAuthPkce -> Unit // handled by the WebView screen
-            // Relogin carries the expected provider account id: a different signed-in account then
-            // surfaces as a mismatch decision. Without it (first login) this degrades to a plain
-            // login; the two-phase importer still reconciles by the JWT `sub` claim.
-            is AddAccountEntryMode.DeviceCodeLogin ->
-                startDeviceCodeRelogin(entryMode.expectedProviderAccountId)
+            is AddAccountEntryMode.WebViewOAuthPkce -> Unit // handled by the Claude sign-in screen
         }
     }
 
@@ -362,7 +355,6 @@ internal fun String.toDeviceCodeLoginErrorResId(): Int =
         "error_auth_required" -> R.string.error_auth_required
         "error_session_persistence" -> R.string.error_session_persistence
         "error_login_not_wired" -> R.string.error_login_not_wired
-        "error_grok_access_denied" -> R.string.error_grok_access_denied
         "error_device_code_account_mismatch" -> R.string.add_account_device_code_account_mismatch
         else -> R.string.error_unknown
     }

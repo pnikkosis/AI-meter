@@ -63,7 +63,6 @@ import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginNotifier
 import com.kmnexus.codexmeter.domain.auth.NoopDeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.NoopDeviceCodeLoginNotifier
 import com.kmnexus.codexmeter.domain.model.ProviderId
-import com.kmnexus.codexmeter.domain.auth.ApiKeyLoginUseCase
 import com.kmnexus.codexmeter.domain.auth.SessionLoginUseCase
 import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
@@ -82,8 +81,6 @@ import com.kmnexus.codexmeter.ui.account.NoopAccountQuotaAlertEvaluationRequeste
 import com.kmnexus.codexmeter.ui.account.NoopAccountRefreshAllUseCase
 import com.kmnexus.codexmeter.ui.auth.AddAccountEntryMode
 import com.kmnexus.codexmeter.ui.auth.AddAccountRoute
-import com.kmnexus.codexmeter.ui.auth.ApiKeyAuthRegion
-import com.kmnexus.codexmeter.ui.auth.ApiKeyAuthScreen
 import com.kmnexus.codexmeter.refresh.RefreshWorkScheduler
 import com.kmnexus.codexmeter.ui.auth.ProviderSelectionScreen
 import com.kmnexus.codexmeter.ui.auth.ProviderSelectionSheet
@@ -124,7 +121,6 @@ fun CodexMeterNavHost(
     // Per-provider device-code login controllers; lookup falls back to the Noop controller so
     // previews/tests stay valid with an empty map. The legacy Codex modes resolve the codex entry.
     deviceCodeLoginControllers: Map<ProviderId, DeviceCodeLoginController> = emptyMap(),
-    deviceCodeLoginNotifiers: Map<ProviderId, DeviceCodeLoginNotifier> = emptyMap(),
     deviceCodeLoginNotifier: DeviceCodeLoginNotifier = NoopDeviceCodeLoginNotifier,
     accountListUseCase: AccountListUseCase,
     accountDeleteUseCase: AccountDeleteUseCase,
@@ -184,14 +180,8 @@ fun CodexMeterNavHost(
         val nextMode = when (config.authKind) {
             com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthWebView ->
                 AddAccountEntryMode.LoginToCodex
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.ApiKeyImport ->
-                AddAccountEntryMode.ApiKeyInput(providerId)
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.CookieAuth ->
-                AddAccountEntryMode.WebViewCookieAuth(providerId)
             com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthPkceLogin ->
                 AddAccountEntryMode.WebViewOAuthPkce(providerId)
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.DeviceCodeLogin ->
-                AddAccountEntryMode.DeviceCodeLogin(providerId)
         }
         navigateToAddAccount(nextMode)
     }
@@ -207,18 +197,8 @@ fun CodexMeterNavHost(
         val nextMode = when (config.authKind) {
             com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthWebView ->
                 AddAccountEntryMode.CodexRelogin(providerAccountId)
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.ApiKeyImport ->
-                AddAccountEntryMode.ApiKeyInput(providerId, reloginAccountId = localAccountId)
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.CookieAuth ->
-                AddAccountEntryMode.WebViewCookieAuth(providerId, reloginAccountId = localAccountId)
             com.kmnexus.codexmeter.providers.ProviderAuthKind.OAuthPkceLogin ->
                 AddAccountEntryMode.WebViewOAuthPkce(providerId, reloginAccountId = localAccountId)
-            com.kmnexus.codexmeter.providers.ProviderAuthKind.DeviceCodeLogin ->
-                AddAccountEntryMode.DeviceCodeLogin(
-                    providerId = providerId,
-                    reloginAccountId = localAccountId,
-                    expectedProviderAccountId = providerAccountId,
-                )
         }
         navigateToAddAccount(nextMode)
     }
@@ -261,169 +241,6 @@ fun CodexMeterNavHost(
                         )
                     }
                 }
-                is AddAccountEntryMode.DeviceCodeLogin -> {
-                    CodexMeterDestination(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = innerPadding,
-                    ) {
-                        AddAccountRoute(
-                            entryMode = entryMode,
-                            deviceCodeLoginController = deviceCodeLoginControllers[
-                                entryMode.providerId,
-                            ] ?: NoopDeviceCodeLoginController,
-                            deviceCodeLoginNotifier = deviceCodeLoginNotifiers[
-                                entryMode.providerId,
-                            ] ?: deviceCodeLoginNotifier,
-                            providerDisplayName = com.kmnexus.codexmeter.providers.ProviderRegistry
-                                .displayNameFor(entryMode.providerId),
-                            onBackClick = { navController.popBackStack() },
-                            onLoginSaved = { navigateToAccountAfterSave() },
-                        )
-                    }
-                }
-                is AddAccountEntryMode.ApiKeyInput -> {
-                    CodexMeterDestination(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = innerPadding,
-                    ) {
-                        val useCase = apiKeyLoginUseCase
-                        if (useCase != null) {
-                            // Region options for providers whose balance/usage API differs by platform.
-                            // Endpoint URLs are pending owner verification; persisted per account.
-                            val regions = remember(entryMode.providerId) {
-                                when (entryMode.providerId.value) {
-                                    "zai" -> listOf(
-                                        ApiKeyAuthRegion("🇨🇳 中国站 (bigmodel.cn)", "https://open.bigmodel.cn"),
-                                        ApiKeyAuthRegion("🌍 国际站 (z.ai)", "https://api.z.ai"),
-                                    )
-                                    "minimax" -> listOf(
-                                        ApiKeyAuthRegion("🌍 国际站 (api.minimax.io)", "https://api.minimax.io"),
-                                        ApiKeyAuthRegion("🇨🇳 中国站 (api.minimaxi.com)", "https://api.minimaxi.com"),
-                                    )
-                                    // Kimi Code console keys live on one of two platforms; the first
-                                    // entry is the default region.
-                                    "kimi_code" -> listOf(
-                                        ApiKeyAuthRegion("🇨🇳 中国站 (api.kimi.com)", "https://api.kimi.com"),
-                                        ApiKeyAuthRegion("🌍 国际站 (api.kimi.ai)", "https://api.kimi.ai"),
-                                    )
-                                    else -> emptyList()
-                                }
-                            }
-                            ApiKeyAuthScreen(
-                                providerId = entryMode.providerId,
-                                regions = regions,
-                                onImportApiKey = { apiKey, label, apiBaseUrl ->
-                                    val reloginAccountId = entryMode.reloginAccountId
-                                    if (reloginAccountId != null) {
-                                        useCase.reloginApiKey(
-                                            localAccountId = reloginAccountId,
-                                            apiKey = apiKey,
-                                            apiBaseUrl = apiBaseUrl,
-                                        ).map { }
-                                    } else {
-                                        useCase.importApiKey(
-                                            providerId = entryMode.providerId,
-                                            providerDisplayName = com.kmnexus.codexmeter.providers.ProviderRegistry
-                                                .displayNameFor(entryMode.providerId),
-                                            apiKey = apiKey,
-                                            label = label,
-                                            apiBaseUrl = apiBaseUrl,
-                                        ).map { }
-                                    }
-                                },
-                                onBack = { navController.popBackStack() },
-                                onSaved = { navigateToAccountAfterSave() },
-                            )
-                        } else {
-                            StubAuthScreen(
-                                title = "API Key — ${entryMode.providerId.value}",
-                                onBack = { navController.popBackStack() },
-                            )
-                        }
-                    }
-                }
-                is AddAccountEntryMode.WebViewCookieAuth -> {
-                    CodexMeterDestination(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = innerPadding,
-                    ) {
-                        val useCase = apiKeyLoginUseCase
-                        if (useCase != null) {
-                            val cookieConfig = remember(entryMode.providerId) {
-                                when (entryMode.providerId.value) {
-                                    "cursor" -> WebViewAuthConfig.Cookie(
-                                        providerId = entryMode.providerId,
-                                        loginUrl = "https://cursor.com",
-                                        cookieDomain = "cursor.com",
-                                        targetCookieNames = listOf("WorkosCursorSessionToken"),
-                                    )
-                                    // CodexBar uses a single www.kimi.com host (no region split);
-                                    // the kimi-auth cookie is the JWT used for the billing API.
-                                    // Load /code directly: /code/console client-redirects logged-out
-                                    // users to /code, and in a WebView that redirected page's login
-                                    // button stops opening the modal. kimi sets a guest kimi-auth
-                                    // before login, so capture only on explicit "Done".
-                                    "kimi" -> WebViewAuthConfig.Cookie(
-                                        providerId = entryMode.providerId,
-                                        loginUrl = "https://www.kimi.com/code",
-                                        cookieDomain = "www.kimi.com",
-                                        targetCookieNames = listOf("kimi-auth"),
-                                        autoCapture = false,
-                                        cookiePaths = listOf(
-                                            "/apiv2/kimi.gateway.billing.v1.BillingService/GetUsages",
-                                            "/code/console",
-                                            "/code",
-                                        ),
-                                        localStorageTokenKey = "access_token",
-                                        tipResId = R.string.auth_tip_kimi,
-                                        // Open the login modal automatically, unless it is already shown.
-                                        injectOnLoadJs = """
-                                            if(!document.querySelector('input[type=tel]')){
-                                              var t=[].slice.call(document.querySelectorAll('a,button,[role=button]'))
-                                                .filter(function(e){return /登录|登入|log\s*in|sign\s*in/i.test(e.textContent||'')})[0];
-                                              if(t)t.click();
-                                            }
-                                        """.trimIndent(),
-                                    )
-                                    else -> null
-                                }
-                            }
-                            if (cookieConfig != null) {
-                                WebViewAuthScreen(
-                                    config = cookieConfig,
-                                    onCredentialExtracted = { cookie, _ ->
-                                        val reloginAccountId = entryMode.reloginAccountId
-                                        if (reloginAccountId != null) {
-                                            useCase.reloginCookie(
-                                                localAccountId = reloginAccountId,
-                                                cookieValue = cookie,
-                                            ).map { }
-                                        } else {
-                                            useCase.importCookie(
-                                                providerId = entryMode.providerId,
-                                                providerDisplayName = com.kmnexus.codexmeter.providers.ProviderRegistry
-                                                    .displayNameFor(entryMode.providerId),
-                                                cookieValue = cookie,
-                                            ).map { }
-                                        }
-                                    },
-                                    onBack = { navController.popBackStack() },
-                                    onSaved = { navigateToAccountAfterSave() },
-                                )
-                            } else {
-                                StubAuthScreen(
-                                    title = "Web Login — ${entryMode.providerId.value}",
-                                    onBack = { navController.popBackStack() },
-                                )
-                            }
-                        } else {
-                            StubAuthScreen(
-                                title = "Web Login — ${entryMode.providerId.value}",
-                                onBack = { navController.popBackStack() },
-                            )
-                        }
-                    }
-                }
                 is AddAccountEntryMode.WebViewOAuthPkce -> {
                     CodexMeterDestination(
                         modifier = Modifier.fillMaxSize(),
@@ -460,28 +277,6 @@ fun CodexMeterNavHost(
                                             expectedState = state,
                                             appendStateToCode = true,
                                             tipResId = R.string.auth_tip_claude,
-                                        )
-                                    }
-                                    // The embedded WebView now passes Google's bot/UA checks, so we
-                                    // intercept the loopback redirect in-app instead of bouncing to an
-                                    // external browser (which never returned the callback). Google's
-                                    // loopback clients accept any 127.0.0.1 port; nothing actually binds
-                                    // it — the redirect is caught before the WebView loads it.
-                                    "antigravity" -> {
-                                        val redirectUri = "http://127.0.0.1:8089/callback"
-                                        val authUrl = buildOAuthUrl(
-                                            "https://accounts.google.com/o/oauth2/v2/auth",
-                                            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-                                            redirectUri,
-                                            "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/userinfo.email",
-                                            codeChallenge,
-                                            state,
-                                        ) + "&access_type=offline"
-                                        WebViewAuthConfig.OAuthIntercept(
-                                            providerId = entryMode.providerId,
-                                            authorizationUrl = authUrl,
-                                            redirectUriPrefix = redirectUri,
-                                            expectedState = state,
                                         )
                                     }
                                     else -> null
@@ -879,19 +674,3 @@ private fun generateRandomState(): String {
     return bytes.joinToString("") { "%02x".format(it) }
 }
 
-private fun buildOAuthUrl(
-    endpoint: String,
-    clientId: String,
-    redirectUri: String,
-    scope: String,
-    codeChallenge: String,
-    state: String,
-): String =
-    "$endpoint?" +
-        "client_id=${java.net.URLEncoder.encode(clientId, "UTF-8")}" +
-        "&redirect_uri=${java.net.URLEncoder.encode(redirectUri, "UTF-8")}" +
-        "&response_type=code" +
-        "&scope=${java.net.URLEncoder.encode(scope, "UTF-8")}" +
-        "&state=$state" +
-        "&code_challenge=$codeChallenge" +
-        "&code_challenge_method=S256"

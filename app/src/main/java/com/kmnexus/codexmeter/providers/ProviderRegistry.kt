@@ -2,19 +2,14 @@ package com.kmnexus.codexmeter.providers
 
 import com.kmnexus.codexmeter.domain.model.ProviderId
 
+/**
+ * The two subscriptions AI Usage Widget tracks. Upstream CodexMeter registered nine more providers;
+ * they were removed on purpose (scope: Codex + Claude only), together with their network clients.
+ */
 object ProviderRegistry {
     /** Known provider ID constants. */
     val CODEX = ProviderId("codex")
-    val DEEPSEEK = ProviderId("deepseek")
-    val GROK = ProviderId("grok")
-    val ZAI = ProviderId("zai")
-    val MINIMAX = ProviderId("minimax")
-    val CURSOR = ProviderId("cursor")
-    val KIMI = ProviderId("kimi")
-    val KIMI_CODE = ProviderId("kimi_code")
     val CLAUDE = ProviderId("claude")
-    val ANTIGRAVITY = ProviderId("antigravity")
-    val ZAI_BALANCE = ProviderId("zai_balance")
 
     /**
      * All registered providers, ordered alphabetically by display name (the order shown in the
@@ -22,16 +17,6 @@ object ProviderRegistry {
      * not by list position.
      */
     val all: List<ProviderConfig> = listOf(
-        ProviderConfig(
-            providerId = ANTIGRAVITY,
-            displayName = "Antigravity",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_antigravity,
-            authKind = ProviderAuthKind.OAuthPkceLogin,
-            supportsBalance = false,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
         ProviderConfig(
             providerId = CLAUDE,
             displayName = "Claude",
@@ -52,87 +37,6 @@ object ProviderRegistry {
             supportsInviteLimitSnooping = false,
             isDefault = true,
         ),
-        ProviderConfig(
-            providerId = CURSOR,
-            displayName = "Cursor",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_cursor,
-            authKind = ProviderAuthKind.CookieAuth,
-            supportsBalance = false,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
-        ProviderConfig(
-            providerId = DEEPSEEK,
-            displayName = "DeepSeek",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_deepseek,
-            authKind = ProviderAuthKind.ApiKeyImport,
-            supportsBalance = true,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
-        ProviderConfig(
-            providerId = GROK,
-            displayName = "Grok",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_grok,
-            authKind = ProviderAuthKind.DeviceCodeLogin,
-            supportsBalance = false,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
-        ProviderConfig(
-            providerId = KIMI,
-            displayName = "Kimi",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_kimi,
-            authKind = ProviderAuthKind.CookieAuth,
-            supportsBalance = false,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
-        ProviderConfig(
-            providerId = KIMI_CODE,
-            displayName = "Kimi Code API",
-            // Shares the Kimi brand mark: same product, different credential surface.
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_kimi,
-            authKind = ProviderAuthKind.ApiKeyImport,
-            supportsBalance = false,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
-        ProviderConfig(
-            providerId = MINIMAX,
-            displayName = "MiniMax",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_minimax,
-            authKind = ProviderAuthKind.ApiKeyImport,
-            supportsBalance = false,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
-        ProviderConfig(
-            providerId = ZAI_BALANCE,
-            displayName = "z.ai API",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_zai,
-            authKind = ProviderAuthKind.ApiKeyImport,
-            supportsBalance = true,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
-        ProviderConfig(
-            providerId = ZAI,
-            displayName = "z.ai Coding Plan",
-            iconResId = com.kmnexus.codexmeter.R.drawable.ic_brand_zai,
-            authKind = ProviderAuthKind.ApiKeyImport,
-            supportsBalance = false,
-            supportsRefill = false,
-            supportsInviteLimitSnooping = false,
-            isDefault = false,
-        ),
     )
 
     fun configFor(providerId: ProviderId): ProviderConfig =
@@ -151,11 +55,11 @@ object ProviderRegistry {
 }
 
 enum class ProviderAuthKind {
+    /** Codex device-code sign-in in the external browser (historical enum name kept from upstream). */
     OAuthWebView,
-    ApiKeyImport,
-    CookieAuth,
+
+    /** Claude OAuth authorization-code + PKCE sign-in. */
     OAuthPkceLogin,
-    DeviceCodeLogin,
 }
 
 data class ProviderConfig(

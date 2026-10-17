@@ -99,12 +99,12 @@ class ProviderAccountTest {
     fun providerAccount_providerIconResId_carriesIcon() {
         val account = ProviderAccount.createNew(
             localAccountId = LocalAccountId("acc_1"),
-            providerId = ProviderId("deepseek"),
+            providerId = ProviderId("claude"),
             providerAccountId = null,
             displayName = "Test Account",
             now = Instant.EPOCH,
-        ).copy(providerIconResId = R.drawable.ic_brand_deepseek)
-        assertEquals(R.drawable.ic_brand_deepseek, account.providerIconResId)
+        ).copy(providerIconResId = R.drawable.ic_brand_claude)
+        assertEquals(R.drawable.ic_brand_claude, account.providerIconResId)
     }
 
     private fun createAccount(

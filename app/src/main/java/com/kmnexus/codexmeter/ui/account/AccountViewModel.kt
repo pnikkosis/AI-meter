@@ -535,12 +535,12 @@ class AccountViewModel(
             isExpanded = isExpanded,
             alertToggles = buildAlertToggles(latestQuotaSnapshot, notificationPreferences),
             quotaSummaries = buildQuotaSummaries(latestQuotaSnapshot),
-            modelFamilies = buildModelFamilies(providerId, latestQuotaSnapshot),
+            modelFamilies = buildModelFamilies(latestQuotaSnapshot),
             providerIconResId = ProviderRegistry.iconFor(providerId),
         )
     }
 
-    private fun buildModelFamilies(providerId: ProviderId, snapshot: QuotaSnapshot?): List<AccountModelFamilyUi> {
+    private fun buildModelFamilies(snapshot: QuotaSnapshot?): List<AccountModelFamilyUi> {
         val buckets = snapshot?.windows
             ?.filter { it.displayKind == QuotaWindowDisplayKind.MultiModelFraction }
             ?.flatMap { it.modelBuckets }
@@ -548,7 +548,7 @@ class AccountViewModel(
             .orEmpty()
         if (buckets.isEmpty()) return emptyList()
         return buckets
-            .groupBy { modelFamilyOf(providerId, it.modelId) }
+            .groupBy { modelFamilyOf(it.modelId) }
             .filterKeys { it != null }
             .map { (family, familyBuckets) ->
                 AccountModelFamilyUi(
@@ -565,14 +565,11 @@ class AccountViewModel(
             }
     }
 
-    /** Classifies a model id into a display family; null hides it. Rules differ per provider. */
-    private fun modelFamilyOf(providerId: ProviderId, modelId: String): String? {
-        val id = modelId.lowercase()
-        return when (providerId) {
-            ProviderRegistry.MINIMAX -> miniMaxModelFamily(id)
-            else -> antigravityModelFamily(id)
-        }
-    }
+    /**
+     * Classifies a model id into a display family; null hides it. Only multi-model windows reach this,
+     * and neither Codex nor Claude currently reports any, so this is upstream's generic fallback rule.
+     */
+    private fun modelFamilyOf(modelId: String): String? = antigravityModelFamily(modelId.lowercase())
 
     private fun antigravityModelFamily(id: String): String? =
         when {
@@ -583,16 +580,6 @@ class AccountViewModel(
             id.contains("gemini") && id.contains("pro") -> "Gemini Pro"
             id.contains("gemini") && id.contains("flash") -> "Gemini Flash"
             else -> null
-        }
-
-    /** MiniMax surfaces every non-text-gen model, mirroring CodexBar's service categories. */
-    private fun miniMaxModelFamily(id: String): String =
-        when {
-            id.contains("speech") || id.contains("tts") -> "Speech"
-            id.contains("hailuo") || id.contains("video") -> "Video"
-            id.contains("image") -> "Image"
-            id.contains("music") || id.contains("lyrics") -> "Music"
-            else -> "Other"
         }
 
     private fun displayableWindows(snapshot: QuotaSnapshot?): List<QuotaWindow> =

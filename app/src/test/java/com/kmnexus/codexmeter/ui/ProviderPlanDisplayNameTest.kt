@@ -15,28 +15,14 @@ class ProviderPlanDisplayNameTest {
     }
 
     @Test
-    fun cursorBrandsMembershipType() {
-        assertEquals("Cursor Pro", providerPlanDisplayName(ProviderRegistry.CURSOR, "pro"))
-        assertEquals("Cursor Free", providerPlanDisplayName(ProviderRegistry.CURSOR, "free"))
-        assertEquals("Cursor Enterprise", providerPlanDisplayName(ProviderRegistry.CURSOR, "enterprise"))
-    }
-
-    @Test
-    fun zaiCapitalizesLevelWithoutCodexMapping() {
-        // Regression: previously rendered "Pro 20x" by reusing the Codex mapping.
-        assertEquals("Pro", providerPlanDisplayName(ProviderRegistry.ZAI, "pro"))
-        assertEquals("Free", providerPlanDisplayName(ProviderRegistry.ZAI, "free"))
-    }
-
-    @Test
-    fun miniMaxAndAntigravityShowApiValueVerbatim() {
-        assertEquals("MiniMax Coding Pro", providerPlanDisplayName(ProviderRegistry.MINIMAX, "MiniMax Coding Pro"))
-        assertEquals("Antigravity", providerPlanDisplayName(ProviderRegistry.ANTIGRAVITY, "Antigravity"))
+    fun claudeShowsAnyReportedPlanVerbatimWithoutCodexMapping() {
+        // Regression guard: the Codex "Pro 20x" mapping must never leak into another provider.
+        assertEquals("pro", providerPlanDisplayName(ProviderRegistry.CLAUDE, "pro"))
     }
 
     @Test
     fun blankOrMissingPlanIsNull() {
-        assertNull(providerPlanDisplayName(ProviderRegistry.KIMI, null))
-        assertNull(providerPlanDisplayName(ProviderRegistry.ZAI, "   "))
+        assertNull(providerPlanDisplayName(ProviderRegistry.CLAUDE, null))
+        assertNull(providerPlanDisplayName(ProviderRegistry.CODEX, "   "))
     }
 }

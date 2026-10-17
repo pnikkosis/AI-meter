@@ -1,20 +1,19 @@
 package com.kmnexus.codexmeter.ui.auth
 
+import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderId
 import com.kmnexus.codexmeter.providers.ProviderAuthKind
 import com.kmnexus.codexmeter.providers.ProviderRegistry
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProviderSelectionViewModelTest {
     @Test
-    fun `providerSelection contains Codex and DeepSeek`() {
-        val providers = ProviderRegistry.all
-        assertTrue(providers.any { it.providerId.value == "codex" })
-        assertTrue(providers.any { it.providerId.value == "deepseek" })
+    fun `providerSelection contains Codex and Claude only`() {
+        val providers = ProviderRegistry.all.map { it.providerId.value }
+        assertEquals(listOf("claude", "codex"), providers)
     }
 
     @Test
@@ -26,33 +25,25 @@ class ProviderSelectionViewModelTest {
     }
 
     @Test
-    fun `providerSelection DeepSeek uses ApiKeyImport auth`() {
-        val deepseek = ProviderRegistry.all.find { it.providerId.value == "deepseek" }
-        assertNotNull(deepseek)
-        assertEquals(ProviderAuthKind.ApiKeyImport, deepseek!!.authKind)
-        assertTrue(deepseek.supportsBalance)
-    }
-
-    @Test
-    fun `providerSelection contains Kimi Code API with ApiKeyImport auth`() {
-        val kimiCode = ProviderRegistry.all.find { it.providerId.value == "kimi_code" }
-        assertNotNull(kimiCode)
-        assertEquals(ProviderAuthKind.ApiKeyImport, kimiCode!!.authKind)
-        assertEquals("Kimi Code API", kimiCode.displayName)
-        assertFalse(kimiCode.supportsBalance)
-    }
-
-    @Test
     fun `entry mode from route value parses login correctly`() {
         val mode = AddAccountEntryMode.fromRouteValue("login")
         assertTrue(mode is AddAccountEntryMode.LoginToCodex)
     }
 
     @Test
-    fun `entry mode from route value parses apikey with provider`() {
-        val mode = AddAccountEntryMode.fromRouteValue("apikey:deepseek")
-        assertTrue(mode is AddAccountEntryMode.ApiKeyInput)
-        assertEquals(ProviderId("deepseek"), (mode as AddAccountEntryMode.ApiKeyInput).providerId)
+    fun `retired api key and cookie routes fall back to provider selection`() {
+        assertTrue(AddAccountEntryMode.fromRouteValue("apikey:deepseek") is AddAccountEntryMode.ProviderSelection)
+        assertTrue(AddAccountEntryMode.fromRouteValue("cookie:kimi") is AddAccountEntryMode.ProviderSelection)
+        assertTrue(AddAccountEntryMode.fromRouteValue("devicecode:grok") is AddAccountEntryMode.ProviderSelection)
+    }
+
+    @Test
+    fun `claude pkce entry mode round-trips with and without relogin account`() {
+        val add = AddAccountEntryMode.WebViewOAuthPkce(ProviderId("claude"))
+        assertEquals(add, AddAccountEntryMode.fromRouteValue(add.routeValue))
+
+        val relogin = AddAccountEntryMode.WebViewOAuthPkce(ProviderId("claude"), LocalAccountId("claude-1"))
+        assertEquals(relogin, AddAccountEntryMode.fromRouteValue(relogin.routeValue))
     }
 
     @Test

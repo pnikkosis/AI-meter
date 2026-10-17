@@ -3,7 +3,6 @@ package com.kmnexus.codexmeter.app
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
-import com.kmnexus.codexmeter.BuildConfig
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
@@ -32,7 +31,6 @@ import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
 import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
-import com.kmnexus.codexmeter.domain.auth.ApiKeyLoginUseCase
 import com.kmnexus.codexmeter.domain.auth.SessionLoginUseCase
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginDiagnosticsReader
@@ -56,7 +54,6 @@ import com.kmnexus.codexmeter.notification.CurrentQuotaNotificationPublisher
 import com.kmnexus.codexmeter.notification.NotificationPreferenceAlertThresholdsReader
 import com.kmnexus.codexmeter.notification.NotificationPreferenceQuotaAlertWindowReader
 import com.kmnexus.codexmeter.providers.SessionImportRouter
-import com.kmnexus.codexmeter.providers.ProviderRegistry
 import com.kmnexus.codexmeter.providers.common.auth.OAuthTokenClient
 import com.kmnexus.codexmeter.providers.codex.CodexRefreshProvider
 import com.kmnexus.codexmeter.providers.codex.CodexSessionCipher
@@ -74,48 +71,9 @@ import com.kmnexus.codexmeter.providers.codex.mapper.CodexUsageMapper
 import com.kmnexus.codexmeter.providers.codex.network.CodexUsageClient
 import com.kmnexus.codexmeter.providers.codex.session.AndroidKeystoreCodexSessionCipher
 import com.kmnexus.codexmeter.providers.codex.session.CodexSessionPayload
-import com.kmnexus.codexmeter.providers.deepseek.DeepSeekRefreshProvider
-import com.kmnexus.codexmeter.providers.deepseek.auth.DeepSeekSessionImporter
-import com.kmnexus.codexmeter.providers.deepseek.network.DeepSeekBalanceClient
-import com.kmnexus.codexmeter.providers.zai.ZaiRefreshProvider
-import com.kmnexus.codexmeter.providers.zai.auth.ZaiSessionImporter
-import com.kmnexus.codexmeter.providers.zai.network.ZaiQuotaClient
-import com.kmnexus.codexmeter.providers.minimax.MiniMaxRefreshProvider
-import com.kmnexus.codexmeter.providers.minimax.auth.MiniMaxSessionImporter
-import com.kmnexus.codexmeter.providers.minimax.network.MiniMaxUsageClient
-import com.kmnexus.codexmeter.providers.cursor.CursorRefreshProvider
-import com.kmnexus.codexmeter.providers.cursor.auth.CursorSessionImporter
-import com.kmnexus.codexmeter.providers.cursor.network.CursorUsageClient
-import com.kmnexus.codexmeter.providers.kimi.KimiRefreshProvider
-import com.kmnexus.codexmeter.providers.kimi.auth.KimiSessionImporter
-import com.kmnexus.codexmeter.providers.kimi.network.KimiQuotaClient
-import com.kmnexus.codexmeter.providers.kimicode.KimiCodeRefreshProvider
-import com.kmnexus.codexmeter.providers.kimicode.auth.KimiCodeSessionImporter
-import com.kmnexus.codexmeter.providers.kimicode.network.KimiCodeUsageClient
-import com.kmnexus.codexmeter.providers.zaibalance.ZaiBalanceRefreshProvider
-import com.kmnexus.codexmeter.providers.zaibalance.auth.ZaiBalanceSessionImporter
-import com.kmnexus.codexmeter.providers.zaibalance.network.ZaiBalanceClient
 import com.kmnexus.codexmeter.providers.claude.ClaudeRefreshProvider
 import com.kmnexus.codexmeter.providers.claude.auth.ClaudeSessionImporter
 import com.kmnexus.codexmeter.providers.claude.network.ClaudeUsageClient
-import com.kmnexus.codexmeter.providers.antigravity.AntigravityRefreshProvider
-import com.kmnexus.codexmeter.providers.antigravity.auth.AntigravitySessionImporter
-import com.kmnexus.codexmeter.providers.antigravity.network.AntigravityQuotaClient
-import com.kmnexus.codexmeter.providers.grok.GrokRefreshProvider
-import com.kmnexus.codexmeter.providers.grok.GrokSessionCipher
-import com.kmnexus.codexmeter.providers.grok.GrokBillingFetcher
-import com.kmnexus.codexmeter.providers.grok.GrokTokenRefresh
-import com.kmnexus.codexmeter.providers.grok.auth.GrokDeviceCodeLoginAttemptId
-import com.kmnexus.codexmeter.providers.grok.auth.GrokDeviceCodeLoginController
-import com.kmnexus.codexmeter.providers.grok.auth.GrokLoginIdentity
-import com.kmnexus.codexmeter.providers.grok.auth.GrokOAuthToken
-import com.kmnexus.codexmeter.providers.grok.auth.GrokSessionImporter
-import com.kmnexus.codexmeter.providers.grok.auth.GrokTokenRefresher
-import com.kmnexus.codexmeter.providers.grok.network.GrokBillingClient
-import com.kmnexus.codexmeter.providers.grok.network.GrokDeviceCodeChallenge
-import com.kmnexus.codexmeter.providers.grok.network.GrokDeviceCodeClient
-import com.kmnexus.codexmeter.providers.grok.network.GrokOAuthDiscoveryClient
-import com.kmnexus.codexmeter.providers.grok.session.GrokSessionPayload
 import com.kmnexus.codexmeter.data.currency.ExchangeRateClient
 import com.kmnexus.codexmeter.data.currency.ExchangeRateRepository
 import com.kmnexus.codexmeter.data.preferences.CurrencyPreferencesDataStore
@@ -146,7 +104,6 @@ import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 
 class AppContainer private constructor(
     val refreshCoordinator: RefreshCoordinator,
@@ -160,7 +117,6 @@ class AppContainer private constructor(
     val deviceCodeLoginController: DeviceCodeLoginController,
     /** Per-provider device-code login controllers; the legacy single property is the codex entry. */
     val deviceCodeLoginControllers: Map<ProviderId, DeviceCodeLoginController>,
-    val deviceCodeLoginNotifiers: Map<ProviderId, DeviceCodeLoginNotifier>,
     val deviceCodeLoginNotifier: DeviceCodeLoginNotifier,
     val retentionPreferences: RetentionPreferences,
     val notificationPreferences: NotificationPreferenceStore,
@@ -267,55 +223,6 @@ class AppContainer private constructor(
                 usageFetcher = CodexUsageFetcher(usageClient::fetchUsage),
                 clock = clock,
             )
-            val deepseekBalanceClient = DeepSeekBalanceClient(httpClient)
-            val deepseekRefreshProvider = DeepSeekRefreshProvider(
-                client = deepseekBalanceClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val zaiQuotaClient = ZaiQuotaClient(httpClient)
-            val zaiRefreshProvider = ZaiRefreshProvider(
-                client = zaiQuotaClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val minimaxUsageClient = MiniMaxUsageClient(httpClient)
-            val minimaxRefreshProvider = MiniMaxRefreshProvider(
-                client = minimaxUsageClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val cursorUsageClient = CursorUsageClient(httpClient)
-            val cursorRefreshProvider = CursorRefreshProvider(
-                client = cursorUsageClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val kimiQuotaClient = KimiQuotaClient(httpClient)
-            val kimiRefreshProvider = KimiRefreshProvider(
-                client = kimiQuotaClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val kimiCodeUsageClient = KimiCodeUsageClient(httpClient)
-            val kimiCodeRefreshProvider = KimiCodeRefreshProvider(
-                client = kimiCodeUsageClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val zaiBalanceClient = ZaiBalanceClient(httpClient)
-            val zaiBalanceRefreshProvider = ZaiBalanceRefreshProvider(
-                client = zaiBalanceClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
             val claudeUsageClient = ClaudeUsageClient(httpClient)
             val claudeTokenClient = OAuthTokenClient(
                 httpClient = httpClient,
@@ -336,90 +243,11 @@ class AppContainer private constructor(
                 payloadCipher = payloadCipher,
                 clock = clock,
             )
-            val antigravityQuotaClient = AntigravityQuotaClient(httpClient)
-            val antigravityTokenClient = OAuthTokenClient(
-                httpClient = httpClient,
-                tokenEndpoint = "https://oauth2.googleapis.com/token",
-                clientId = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-                clientSecret = BuildConfig.ANTIGRAVITY_OAUTH_CLIENT_SECRET,
-                diagnosticsPrefix = "antigravity_oauth",
-            )
-            val antigravityRefreshProvider = AntigravityRefreshProvider(
-                client = antigravityQuotaClient,
-                tokenClient = antigravityTokenClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val grokSessionCipher = AesGcmGrokSessionCipher(payloadCipher)
-            val grokBillingClient = GrokBillingClient(httpClient)
-            // xAI rotates the refresh token on every grant: the refresher must keep its default
-            // ProviderHttpClient.noRetry() client — a retrying shared client would silently burn
-            // the retired refresh token when a refresh response is lost in transport.
-            val grokTokenRefresher = GrokTokenRefresher()
-            val grokRefreshProvider = GrokRefreshProvider(
-                sessionStore = sessionStore,
-                sessionCipher = grokSessionCipher,
-                tokenRefresh = GrokTokenRefresh(grokTokenRefresher::refresh),
-                billingFetcher = GrokBillingFetcher(grokBillingClient::fetchBilling),
-                clock = clock,
-            )
             val compositeRefreshProvider = CompositeRefreshProvider(
                 providers = mapOf(
                     ProviderId("codex") to codexRefreshProvider,
-                    ProviderId("deepseek") to deepseekRefreshProvider,
-                    ProviderId("zai") to zaiRefreshProvider,
-                    ProviderId("minimax") to minimaxRefreshProvider,
-                    ProviderId("cursor") to cursorRefreshProvider,
-                    ProviderId("kimi") to kimiRefreshProvider,
-                    ProviderId("kimi_code") to kimiCodeRefreshProvider,
-                    ProviderId("zai_balance") to zaiBalanceRefreshProvider,
                     ProviderId("claude") to claudeRefreshProvider,
-                    ProviderId("antigravity") to antigravityRefreshProvider,
-                    ProviderId("grok") to grokRefreshProvider,
                 ),
-            )
-            val deepseekSessionImporter = DeepSeekSessionImporter(
-                balanceClient = deepseekBalanceClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val minimaxSessionImporter = MiniMaxSessionImporter(
-                usageClient = minimaxUsageClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val zaiSessionImporter = ZaiSessionImporter(
-                client = zaiQuotaClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val cursorSessionImporter = CursorSessionImporter(
-                usageClient = cursorUsageClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val kimiSessionImporter = KimiSessionImporter(
-                client = kimiQuotaClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val kimiCodeSessionImporter = KimiCodeSessionImporter(
-                usageClient = kimiCodeUsageClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-            val zaiBalanceSessionImporter = ZaiBalanceSessionImporter(
-                client = zaiBalanceClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
             )
             val claudeSessionImporter = ClaudeSessionImporter(
                 tokenClient = claudeTokenClient,
@@ -428,14 +256,6 @@ class AppContainer private constructor(
                 payloadCipher = payloadCipher,
                 clock = clock,
             )
-            val antigravitySessionImporter = AntigravitySessionImporter(
-                tokenClient = antigravityTokenClient,
-                client = antigravityQuotaClient,
-                sessionStore = sessionStore,
-                payloadCipher = payloadCipher,
-                clock = clock,
-            )
-
             return fromDatabase(
                 appContext = appContext,
                 database = database,
@@ -448,23 +268,9 @@ class AppContainer private constructor(
                 sessionCipher = sessionCipher,
                 refreshProvider = compositeRefreshProvider,
                 usageClient = usageClient,
-                deepseekSessionImporter = deepseekSessionImporter,
-                minimaxSessionImporter = minimaxSessionImporter,
-                zaiSessionImporter = zaiSessionImporter,
-                cursorSessionImporter = cursorSessionImporter,
-                kimiSessionImporter = kimiSessionImporter,
-                kimiCodeSessionImporter = kimiCodeSessionImporter,
-                zaiBalanceSessionImporter = zaiBalanceSessionImporter,
                 claudeSessionImporter = claudeSessionImporter,
-                antigravitySessionImporter = antigravitySessionImporter,
                 deviceCodeLoginNotifier = AndroidDeviceCodeLoginNotifier(
                     notificationSink = AndroidNotificationSink(appContext),
-                ),
-                grokSessionCipher = grokSessionCipher,
-                grokBillingClient = grokBillingClient,
-                grokDeviceCodeLoginNotifier = AndroidDeviceCodeLoginNotifier(
-                    notificationSink = AndroidNotificationSink(appContext),
-                    providerDisplayName = ProviderRegistry.displayNameFor(ProviderRegistry.GROK),
                 ),
                 currentQuotaStatePublisher = CompositeCurrentQuotaStatePublisher(
                     listOf(
@@ -550,19 +356,8 @@ class AppContainer private constructor(
             sessionCipher: CodexSessionCipher,
             refreshProvider: RefreshProvider,
             usageClient: CodexUsageClient,
-            deepseekSessionImporter: DeepSeekSessionImporter,
-            minimaxSessionImporter: MiniMaxSessionImporter,
-            zaiSessionImporter: ZaiSessionImporter,
-            cursorSessionImporter: CursorSessionImporter,
-            kimiSessionImporter: KimiSessionImporter,
-            kimiCodeSessionImporter: KimiCodeSessionImporter,
-            zaiBalanceSessionImporter: ZaiBalanceSessionImporter,
             claudeSessionImporter: ClaudeSessionImporter,
-            antigravitySessionImporter: AntigravitySessionImporter,
             deviceCodeLoginNotifier: DeviceCodeLoginNotifier,
-            grokSessionCipher: GrokSessionCipher,
-            grokBillingClient: GrokBillingClient,
-            grokDeviceCodeLoginNotifier: DeviceCodeLoginNotifier,
             currentQuotaStatePublisher: CurrentQuotaStatePublisher,
             currentQuotaStateRepository: CurrentQuotaStateRepository,
             accountListRepository: AccountListRepository,
@@ -595,43 +390,10 @@ class AppContainer private constructor(
                 defaultDisplayName = defaultAccountDisplayName,
                 clock = clock,
             )
-            // Grok mirrors Codex's two-phase device-code import; persistence reuses the same
-            // Room reconcile-and-rollback path (reconciliation is by provider account id).
-            val grokSessionImportPersistence = RoomCodexSessionImportPersistence(
-                database = database,
-                sessionStore = sessionStore,
-                currentAccountStore = currentAccountPreferences,
-            )
-            val grokSessionImporter = GrokSessionImporter(
-                billingClient = GrokSessionImporter.BillingClient(grokBillingClient::fetchBilling),
-                importPersistence = GrokSessionImporter.ImportPersistence { account, envelope, snapshot ->
-                    val committed = grokSessionImportPersistence.save(account, envelope, snapshot)
-                    GrokSessionImporter.CommittedImport(
-                        account = committed.account,
-                        sessionEnvelope = committed.sessionEnvelope,
-                        snapshot = committed.snapshot,
-                    )
-                },
-                sessionEnvelopeFactory = GrokSessionEnvelopeFactory(grokSessionCipher),
-                localAccountIdProvider = GrokSessionImporter.LocalAccountIdProvider {
-                    LocalAccountId("grok-${UUID.randomUUID()}")
-                },
-                defaultDisplayName = defaultAccountDisplayName,
-                clock = clock,
-            )
             val sessionImportRouter = SessionImportRouter(
                 importers = mapOf(
                     ProviderId("codex") to sessionImporter,
-                    ProviderId("deepseek") to deepseekSessionImporter,
-                    ProviderId("zai") to zaiSessionImporter,
-                    ProviderId("minimax") to minimaxSessionImporter,
-                    ProviderId("cursor") to cursorSessionImporter,
-                    ProviderId("kimi") to kimiSessionImporter,
-                    ProviderId("kimi_code") to kimiCodeSessionImporter,
-                    ProviderId("zai_balance") to zaiBalanceSessionImporter,
                     ProviderId("claude") to claudeSessionImporter,
-                    ProviderId("antigravity") to antigravitySessionImporter,
-                    ProviderId("grok") to grokSessionImporter,
                 ),
             )
             val sessionLoginUseCase = SessionLoginUseCase(
@@ -669,50 +431,6 @@ class AppContainer private constructor(
                     DeviceCodeLoginAttemptId("device-${UUID.randomUUID()}")
                 },
                 clock = clock,
-            )
-            val grokOAuthDiscoveryClient = GrokOAuthDiscoveryClient(httpClient)
-            val grokDeviceCodeClient = GrokDeviceCodeClient(httpClient)
-            val grokDeviceCodeLoginController = GrokDeviceCodeLoginController(
-                discoveryClient = GrokDeviceCodeLoginController.DiscoveryClient(
-                    grokOAuthDiscoveryClient::fetchEndpoints,
-                ),
-                deviceCodeClient = object : GrokDeviceCodeLoginController.DeviceCodeClient {
-                    override suspend fun requestDeviceCode(deviceAuthorizationEndpointUrl: String) =
-                        grokDeviceCodeClient.requestDeviceCode(deviceAuthorizationEndpointUrl)
-
-                    override suspend fun awaitAuthorization(
-                        challenge: GrokDeviceCodeChallenge,
-                        tokenEndpointUrl: String,
-                    ) = grokDeviceCodeClient.awaitAuthorization(challenge, tokenEndpointUrl)
-                },
-                sessionImporter = object : GrokDeviceCodeLoginController.SessionImporter {
-                    override suspend fun prepareDeviceCodeSession(
-                        oauthToken: GrokOAuthToken,
-                        identity: GrokLoginIdentity,
-                        tokenEndpoint: String?,
-                    ): GrokSessionImporter.PreparedImport =
-                        grokSessionImporter.prepareDeviceCodeSession(oauthToken, identity, tokenEndpoint)
-
-                    override suspend fun commitPreparedDeviceCodeSession(
-                        preparedImport: GrokSessionImporter.PreparedImport,
-                    ): GrokSessionImporter.Result =
-                        grokSessionImporter.commitPreparedDeviceCodeSession(preparedImport)
-                },
-                attemptIdProvider = {
-                    GrokDeviceCodeLoginAttemptId("device-${UUID.randomUUID()}")
-                },
-                clock = clock,
-                onSaved = { saved ->
-                    currentQuotaStatePublisher.publish(
-                        currentQuotaStateFactory.create(
-                            account = saved.account,
-                            latestSnapshot = saved.snapshot,
-                            latestAttempt = null,
-                            now = clock.instant(),
-                            primaryWindowId = primaryQuotaWindowPreferences.primaryQuotaWindowId(),
-                        ),
-                    )
-                },
             )
             val currentQuotaRefreshAccountStore = CurrentQuotaRefreshAccountStore(
                 currentAccountReader = currentAccountReader,
@@ -826,11 +544,6 @@ class AppContainer private constructor(
                 deviceCodeLoginController = deviceCodeLoginController,
                 deviceCodeLoginControllers = mapOf(
                     ProviderId("codex") to deviceCodeLoginController,
-                    ProviderId("grok") to grokDeviceCodeLoginController,
-                ),
-                deviceCodeLoginNotifiers = mapOf(
-                    ProviderId("codex") to deviceCodeLoginNotifier,
-                    ProviderId("grok") to grokDeviceCodeLoginNotifier,
                 ),
                 deviceCodeLoginNotifier = deviceCodeLoginNotifier,
                 retentionPreferences = retentionPreferences,
@@ -907,63 +620,3 @@ private class CodexSessionEnvelopeFactory(
 }
 
 private val CODEX_PROVIDER_ID = ProviderId("codex")
-private val GROK_PROVIDER_ID = ProviderId("grok")
-private const val GROK_SESSION_SCHEMA_VERSION = 1
-
-/** Encrypts/decrypts [GrokSessionPayload] envelopes with the shared Keystore-backed AES-GCM cipher. */
-private class AesGcmGrokSessionCipher(
-    private val payloadCipher: PayloadCipher,
-) : GrokSessionCipher {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
-
-    override fun decrypt(envelope: ProviderSessionEnvelope): Result<GrokSessionPayload> =
-        runCatching {
-            json.decodeFromString<GrokSessionPayload>(
-                payloadCipher
-                    .decrypt(envelope.payloadCiphertext, envelope.payloadNonce)
-                    .decodeToString(),
-            )
-        }
-
-    override fun encrypt(
-        session: GrokSessionPayload,
-        envelope: ProviderSessionEnvelope,
-        updatedAt: Instant,
-    ): ProviderSessionEnvelope {
-        val encrypted = payloadCipher.encrypt(
-            json.encodeToString(GrokSessionPayload.serializer(), session).encodeToByteArray(),
-        )
-        return envelope.copy(
-            schemaVersion = GROK_SESSION_SCHEMA_VERSION,
-            payloadCiphertext = encrypted.ciphertext,
-            payloadNonce = encrypted.nonce,
-            updatedAt = updatedAt.toString(),
-        )
-    }
-}
-
-private class GrokSessionEnvelopeFactory(
-    private val sessionCipher: GrokSessionCipher,
-) : GrokSessionImporter.SessionEnvelopeFactory {
-    override fun create(
-        payload: GrokSessionPayload,
-        localAccountId: LocalAccountId,
-        providerAccountId: ProviderAccountId?,
-        now: Instant,
-    ): ProviderSessionEnvelope {
-        val envelope = ProviderSessionEnvelope(
-            providerId = GROK_PROVIDER_ID.value,
-            localAccountId = localAccountId.value,
-            providerAccountId = providerAccountId?.value,
-            schemaVersion = GROK_SESSION_SCHEMA_VERSION,
-            payloadCiphertext = byteArrayOf(),
-            payloadNonce = byteArrayOf(),
-            createdAt = now.toString(),
-            updatedAt = now.toString(),
-        )
-        return sessionCipher.encrypt(payload, envelope, now)
-    }
-}

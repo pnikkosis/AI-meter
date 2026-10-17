@@ -5,7 +5,7 @@ import com.kmnexus.codexmeter.R
 
 /**
  * Maps a provider's `QuotaWindow.windowId` to a localized display label, so Home/Account/Widget
- * never surface raw mapper keys like `zai_5h_window`. Unknown ids fall back to a generic label.
+ * never surface raw mapper keys like `claude_7d_window`. Unknown ids fall back to a generic label.
  */
 /**
  * Formats a balance amount with a currency symbol (¥ / $) consistently across Home, Account and the
@@ -33,8 +33,8 @@ fun currencySymbol(currency: String?): String = when (currency?.uppercase()) {
  * `primary_window` / `secondary_window`, so the mapper can only guess `five_hour` / `weekly` from
  * the slot an entry arrived in. That guess broke when Codex dropped the 5-hour window and its
  * `primary_window` started carrying the weekly quota. For these two ids the window duration the
- * provider reports is the truth. Kimi is handled separately below; other providers' named windows
- * keep winning — Claude's 7-day Opus and Sonnet windows share a duration but must stay distinguishable.
+ * provider reports is the truth. Claude's named windows keep winning — its 7-day Opus and Sonnet
+ * windows share a duration but must stay distinguishable.
  */
 private val POSITIONAL_WINDOW_IDS = setOf("five_hour", "weekly")
 
@@ -44,16 +44,6 @@ private const val WEEK_SECONDS = 7 * DAY_SECONDS
 
 @StringRes
 fun quotaWindowLabelRes(windowId: String, limitWindowSeconds: Int? = null): Int {
-    // Older Kimi snapshots persisted a fabricated 7-day duration. Do not trust it or the legacy ID.
-    if (windowId == "kimi_weekly_window") return R.string.window_label_cycle
-    if (windowId == "kimi_rate_window") {
-        return limitWindowSeconds?.let(::windowDurationLabelRes) ?: R.string.window_label_cycle
-    }
-    // Kimi Code's count-fallback window only has the duration the API reported in `limits[0]`;
-    // same policy as the cookie provider's rate window above.
-    if (windowId == "kimi_code_rate") {
-        return limitWindowSeconds?.let(::windowDurationLabelRes) ?: R.string.window_label_cycle
-    }
     if (windowId in POSITIONAL_WINDOW_IDS) {
         // A duration we cannot name (or a missing window that reports none) is still better served by
         // the neutral label than by a positional guess that would state a window length the provider
@@ -73,31 +63,10 @@ private fun windowDurationLabelRes(limitWindowSeconds: Int): Int? = when (limitW
 
 @StringRes
 private fun providerNamedLabelRes(windowId: String): Int = when (windowId) {
-    "zai_5h_window", "claude_5h_window", "minimax_interval" ->
-        R.string.account_quota_five_hour_label
-    "zai_weekly_window", "minimax_weekly" -> R.string.account_quota_weekly_label
-    "claude_extra_usage" -> R.string.window_label_extra_usage
-    "balance" -> R.string.window_label_balance
-    "cursor_plan" -> R.string.window_label_plan
-    "cursor_on_demand" -> R.string.window_label_on_demand
-    "minimax_interval" -> R.string.window_label_interval
-    "kimi_daily_window" -> R.string.window_label_daily
-    "monthly", "kimi_monthly_window" -> R.string.window_label_monthly
-    "kimi_code_5h" -> R.string.account_quota_five_hour_label
-    "kimi_code_7d" -> R.string.account_quota_weekly_label
-    "kimi_code_month_total" -> R.string.window_label_monthly
-    "kimi_code_usage" -> R.string.window_label_cycle
+    "claude_5h_window" -> R.string.account_quota_five_hour_label
     "claude_7d_window" -> R.string.window_label_7d
     "claude_7d_opus_window" -> R.string.window_label_7d_opus
     "claude_7d_sonnet_window" -> R.string.window_label_7d_sonnet
-    "antigravity_overview_window" -> R.string.window_label_overview
-    "antigravity_claude_window" -> R.string.window_label_family_claude
-    "antigravity_gemini_pro_window" -> R.string.window_label_family_gemini_pro
-    "antigravity_gemini_flash_window" -> R.string.window_label_family_gemini_flash
-    "antigravity_gpt_oss_window" -> R.string.window_label_family_gpt_oss
-    else -> when {
-        windowId.contains("time_limit", ignoreCase = true) ||
-            windowId.contains("mcp", ignoreCase = true) -> R.string.window_label_mcp
-        else -> R.string.window_label_generic
-    }
+    "claude_extra_usage" -> R.string.window_label_extra_usage
+    else -> R.string.window_label_generic
 }

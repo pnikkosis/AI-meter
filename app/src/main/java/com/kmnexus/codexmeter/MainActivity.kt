@@ -39,7 +39,6 @@ class MainActivity : ComponentActivity() {
                 CodexMeterNavHost(
                     startDestination = startDestination,
                     deviceCodeLoginControllers = codexMeterApp.deviceCodeLoginControllers,
-                    deviceCodeLoginNotifiers = codexMeterApp.deviceCodeLoginNotifiers,
                     deviceCodeLoginNotifier = codexMeterApp.deviceCodeLoginNotifier,
                     accountListUseCase = codexMeterApp.accountListUseCase,
                     accountDeleteUseCase = codexMeterApp.accountDeleteUseCase,
