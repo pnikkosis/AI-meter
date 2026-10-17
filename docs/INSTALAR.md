@@ -4,9 +4,10 @@ Requisitos: Android 12 o posterior. No hace falta computadora, servidor ni servi
 
 ## 1. Instalar el APK
 
-1. Copiar `AIUsageWidget-1.0.0.apk` al teléfono (o descargarlo desde donde lo guardes).
-2. Opcional, recomendado: comprobar el SHA-256 del archivo. El de la versión 1.0.0 es
-   `c17d3e26b6d7029a4b80472c0c2271479bf6caeb17d4e55cd99a830e69ca4581` (también en el `.sha256` que
+1. Copiar `AIUsageWidget-1.0.1.apk` al teléfono (o descargarlo desde donde lo guardes). Si ya está
+   instalada la 1.0.0, la 1.0.1 se instala encima como actualización y conserva los datos.
+2. Opcional, recomendado: comprobar el SHA-256 del archivo. El de la versión 1.0.1 es
+   `250c231b4286f5ca25297a2b14e4c1312aa01321b2d69cbcef042802908181c0` (también en el `.sha256` que
    acompaña al APK y en `docs/COMPILAR.md`).
 3. Abrirlo desde el administrador de archivos. Android pedirá permitir “Instalar apps desconocidas”
    para esa app; concederlo solo para esta instalación.
@@ -19,6 +20,13 @@ CodexMeter si estuviera instalado.
 
 La interfaz está en español cuando el teléfono está en español (en otros idiomas, en inglés o
 chino). Abajo se citan los textos en español y, entre paréntesis, en inglés.
+
+Antes de empezar, una sola vez: OpenAI exige activar el inicio de sesión con **código de
+dispositivo** en la configuración de seguridad de ChatGPT. El enlace de OpenAI lleva a la versión
+web (`chatgpt.com/#settings/Security`, abrirla en el navegador); la pantalla Seguridad de la app de
+ChatGPT para Android no muestra esa opción. Si no está activada, OpenAI pide el código del
+autenticador y después muestra “Activa el inicio de sesión con código de dispositivo para Codex…”.
+Con la opción activada, no ingresar nunca un código que no se haya generado uno mismo.
 
 1. Abrir la app → **Agregar cuenta** (*Add account*; también el botón **+** arriba a la derecha en
    la pestaña **Cuentas**) → **Codex**.
@@ -34,12 +42,13 @@ chino). Abajo se citan los textos en español y, entre paréntesis, en inglés.
 2. **Continuar en el navegador** (*Continue in browser*): se abre claude.ai en una pestaña del
    navegador. Iniciar sesión si hace falta y autorizar.
 3. Cuando la página diga “Sesión iniciada en AI Usage Widget” (*Signed in to AI Usage Widget*),
-   cerrar esa pestaña (la **X** arriba) para volver a la app. La app termina el intercambio, valida
-   leyendo el consumo y guarda la cuenta.
+   cerrar esa pestaña (la **X** arriba) para volver a la app. Recién entonces la app termina el
+   intercambio (Android no le da red mientras la pestaña la tapa), valida leyendo el consumo y
+   guarda la cuenta.
 4. Si algo falla, la pantalla dice el motivo (cancelado, permiso rechazado, sin conexión, límite de
    peticiones, etc.) y permite **Reintentar**. No se guarda nada si falla. En particular, si aparece
    “Claude aceptó el inicio de sesión pero se negó a informar el consumo”, lo más probable es que
-   Anthropic no acepte el permiso mínimo `user:profile` para leer el uso (ver la sección 6 de
+   Anthropic no acepte el permiso mínimo `user:profile` para leer el uso (ver la sección 7 de
    `docs/INFORME-PRUEBAS.md`).
 
 ## 4. Agregar los widgets

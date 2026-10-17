@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.1] - 2026-10-17
+
+Correcciones tras la primera prueba en un teléfono real.
+
+- Claude: el inicio de sesión llegaba a "Sesión iniciada en AI Usage Widget" pero la app terminaba
+  en "Sin conexión". El código llega mientras la pestaña del navegador tapa la app, y Android corta
+  la red de una app que queda detrás de otra pantalla (a los pocos segundos, hasta 20; comprobado
+  con `dumpsys netpolicy` en el emulador con Android 15, no pasa en Android 12). Ahora el
+  código se canjea recién cuando la app vuelve al frente, y si el canje no encuentra red se reenvía
+  una vez al segundo.
+- Versión 1.0.1 (código 2): se instala como actualización de 1.0.0 y conserva los datos.
+- Documentación: OpenAI exige activar antes el inicio de sesión con código de dispositivo en la
+  configuración de seguridad de ChatGPT (su enlace lleva a la versión web; la app de ChatGPT para
+  Android no muestra la opción).
+
 ## [1.0.0] AI Usage Widget (fork) - 2026-10-17
 
 Fork personal de CodexMeter 0.2.4 (`2f7bf52`). Cambios respecto del original:

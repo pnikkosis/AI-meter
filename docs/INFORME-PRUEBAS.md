@@ -1,4 +1,4 @@
-# Informe de pruebas — AI Usage Widget 1.0.0
+# Informe de pruebas — AI Usage Widget 1.0.1
 
 Qué se comprobó, cómo y qué falta comprobar en un teléfono con cuentas reales. Cada resultado indica
 su tipo:
@@ -11,24 +11,25 @@ su tipo:
   falsos (código, token) para ver cómo responden. No usan ninguna cuenta.
 - **Pendiente (teléfono):** solo se puede comprobar con un teléfono y cuentas reales. **No se hizo.**
 
-Base: commit `d0d3d0651573012e321f6bad15dde643d7a26b9d` (d0d3d06) de la rama `ccr-4fef7446-jet13v`,
-del que se compiló el APK entregado; los commits posteriores solo cambian documentación. Las
-corridas del emulador anteriores a la 11 usaron commits previos del mismo trabajo.
+Base: commit `e5a37954844f57f8970d7be144164114ddf03e45` (e5a3795) de la rama `ccr-4fef7446-jet13v`,
+del que se compiló el APK 1.0.1; los commits posteriores solo cambian documentación. La 1.0.0 salió
+del commit d0d3d06. Las corridas del emulador anteriores a la 12 usaron commits previos del mismo
+trabajo.
 
 ## 1. Compilación y análisis (GitHub Actions)
 
 | Comprobación | Resultado |
 | --- | --- |
 | JDK Temurin 21.0.12, Gradle 9.5.1, AGP 9.2.1, SDK 37.0 / build-tools 37.0.0 | Usados en todas las ejecuciones |
-| Pruebas unitarias `:app:testDebugUnitTest` | 716 pruebas en 116 clases, 0 fallos (CI del commit d0d3d06) |
+| Pruebas unitarias `:app:testDebugUnitTest` | 719 pruebas en 116 clases, 0 fallos (CI del commit e5a3795) |
 | APK debug y release (R8 + `lintVitalRelease`) | Compilan |
 | Lint (`lintDebug`) | 0 errores; 77 advertencias y 5 sugerencias (versiones de dependencias, recursos sin usar, estilo). La única relacionada con seguridad, `ExportedContentProvider`, señala `androidx.startup.InitializationProvider`, que en el manifiesto final queda `exported=false` |
 | Permisos del APK release (`aapt2 dump permissions`) | `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (solo se usa si se toca **Permitir** en Ajustes), y `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE` que agrega WorkManager, más el permiso propio `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` que AndroidX declara para sus receptores internos |
 | Dependencias de ejecución del release | AndroidX, Kotlin/kotlinx, OkHttp/Okio, `listenablefuture`, `jspecify` y `com.qmdeve.liquidglass:core`. Ningún SDK de analíticas, publicidad, crash reporting ni Google Play Services |
-| Reproducibilidad | El commit d0d3d06 compilado en cuatro runners distintos (CI, exportación y los dos emuladores) dio el mismo APK sin firmar, `f4b3534aecf273773084d9ca7e11a58adc1fe3ff1ab11ce7424c38b2ea1ba472`. Firmar dos veces da el mismo APK firmado, con las mismas 1008 entradas que el sin firmar |
+| Reproducibilidad | El commit e5a3795 compilado en cuatro runners distintos (CI, exportación y los dos emuladores) dio el mismo APK sin firmar, `d2dd62a49594ddf045e36b46aeb1400a912adb1438a5b90ac16fcfd6e8e80045` (lo mismo pasó con d0d3d06 para la 1.0.0). Firmar dos veces da el mismo APK firmado, con las mismas 1008 entradas que el sin firmar |
 
 Durante el desarrollo también se usó un arnés JVM local (sin SDK de Android, que no se puede
-descargar en el entorno de trabajo): 477 pruebas en 64 clases, todas correctas. Las pruebas que
+descargar en el entorno de trabajo): 480 pruebas en 64 clases, todas correctas. Las pruebas que
 necesitan Robolectric solo corren en GitHub Actions.
 
 ## 2. Qué cubren las pruebas automáticas (simulado)
@@ -79,7 +80,8 @@ Workflow manual **Emulator check (manual)**: emulador oficial de Android con ima
 x86_64 en un runner de GitHub Actions, en dos configuraciones: **Android 15 (API 35) en español
 (es-AR)** y **Android 12 (API 31) en inglés**. Se instaló el APK release procesado por R8 (firmado con
 una clave descartable creada en el job, nunca con la de release) y el debug para las pruebas
-instrumentadas. Última corrida: la 11 (commit d0d3d06), correcta en las dos configuraciones.
+instrumentadas. Última corrida: la 12 (commit e5a3795, versión 1.0.1), correcta en las dos
+configuraciones.
 
 **Widget renderizado en Android (prueba instrumentada).** 15 estados en inglés y español,
 generados con la misma fábrica de estados y el mismo layout Glance que usa el widget real, en ambas
@@ -115,17 +117,22 @@ versión de Android. Correcta en Android 12 y 15 con el código corregido (ver C
   retornos falsos no cortan el intento, y cancelar cierra el receptor. En Android 15 esta prueba
   encontró un defecto real (la respuesta se cortaba si no se leían los encabezados) que se corrigió.
   No se completó un inicio de sesión real: el emulador no tiene cuenta.
-- **Codex:** la pantalla pide un código de dispositivo a `auth.openai.com` al abrirse. En la
-  corrida 11 las dos versiones mostraron el código (el script solo informa si aparece, no lo
+- **Red de la app detrás del navegador** (corrida 12): con la pestaña de Claude abierta 25 s,
+  `dumpsys netpolicy` informa en Android 15 `blocked_state={blocked=APP_BACKGROUND,…,
+  effective=APP_BACKGROUND}` (la app no tiene red) y, al volver al frente, `effective=NONE` (la red
+  vuelve). En Android 12 no hay esa restricción (`rules=0 (NONE)`). Es la causa del “Sin conexión”
+  de Claude en el teléfono (sección 5) y lo que aprovecha el arreglo de 1.0.1.
+- **Codex:** la pantalla pide un código de dispositivo a `auth.openai.com` al abrirse. En las
+  corridas 11 y 12 las dos versiones mostraron el código (el script solo informa si aparece, no lo
   captura) y cancelar lo descartó. Esta prueba encontró un defecto real heredado del original: en
   Android 12 la app decía “Sin conexión” (corrida 9) y, ya corregida la clasificación de errores,
   que la respuesta no se podía leer (corrida 10). La causa: OpenAI envía `expires_at` con
   desplazamiento (`+00:00`, ver sección 4) y `Instant.parse` del java.time de Android 12 solo acepta
   `Z`, así que **el inicio de sesión de Codex fallaba siempre en Android 12** (probablemente también
-  en 13; no se probó). Corregido en d0d3d06 y comprobado en la corrida 11. Ningún código se aprobó:
-  el emulador no tiene cuenta.
+  en 13; no se probó). Corregido en d0d3d06 y comprobado en las corridas 11 y 12. Ningún código se
+  aprobó: el emulador no tiene cuenta.
 - **Registros:** las líneas de log que escribe la app no contienen valores con forma de credencial
-  (0 en ambas versiones, corrida 11). El filtro también enmascaró algunos valores en líneas del
+  (0 en ambas versiones, corridas 11 y 12). El filtro también enmascaró algunos valores en líneas del
   sistema que nombran la app (identificadores de ventanas o de tareas): falsos positivos.
 - **Incidente durante las pruebas:** en una corrida intermedia, la pantalla de Codex pidió un código
   de dispositivo al abrirse y una captura lo incluyó en el registro del job. Era el código de una
@@ -147,23 +154,41 @@ credenciales:
 | `GET https://api.anthropic.com/api/oauth/usage` (token falso) | 401 `authentication_error` | El endpoint existe y exige autenticación; la app lo trata como sesión vencida |
 | `POST https://auth.openai.com/api/accounts/deviceauth/usercode` (cuerpo y cabeceras de la app; desde un runner de GitHub, `scripts/ci/codex_device_code_shape.py`, y desde los emuladores) | 200 JSON con `device_auth_id`, `user_code`, `interval` (texto) y `expires_at` con desplazamiento y fracciones de segundo (`AAAA-MM-DDThh:mm:ss.ffffff+00:00`). Solo se registró el formato, nunca los valores | El endpoint y el client id de Codex CLI aceptan la petición de la app. El formato de `expires_at` explicó el fallo de Android 12 (sección 3). El código pedido nunca se aprobó y venció sin usarse |
 
-## 5. Pendiente: comprobar en el teléfono
+## 5. Primera prueba en el teléfono (versión 1.0.0, hecha por el dueño)
 
-Nada de esto se probó con cuentas reales. Orden sugerido, con el resultado esperado:
+- **Claude:** la página de claude.ai mostró “Claude Code quiere conectarse a tu Claude chat account”
+  con un solo permiso, “Acceder a su información de perfil de Anthropic”: **aceptó `user:profile`
+  solo**. Tras autorizar, el navegador mostró “Sesión iniciada en AI Usage Widget” (el retorno
+  loopback funcionó en el teléfono), pero la app terminó en “Sin conexión”. Causa: el código llega
+  mientras la pestaña del navegador tapa la app, y Android corta la red de una app que queda detrás
+  de otra pantalla (cadena de firewall de segundo plano: la red se quita a los 5–20 s y se devuelve
+  sin demora al volver al frente). La app canjeaba el código en ese momento. Corregido en 1.0.1: el
+  canje espera a que la app vuelva al frente y se reenvía una vez si no encuentra red (pruebas en
+  `ClaudeLoginViewModelTest`). Falta confirmar en el teléfono el canje y la lectura del consumo.
+- **Codex:** la app obtuvo el código y abrió la página; OpenAI pidió el código del autenticador y
+  después mostró “Activa el inicio de sesión con código de dispositivo para Codex, Excel, PowerPoint
+  y Word en la configuración de seguridad de ChatGPT”. Es un ajuste de la cuenta de OpenAI, no de la
+  app; la pantalla Seguridad de la app de ChatGPT para Android no lo muestra (ver
+  `docs/INSTALAR.md`). Falta activarlo y repetir.
 
-1. **Instalar** `AIUsageWidget-1.0.0.apk` y comprobar el SHA-256. Esperado: se instala en Android 12+.
-2. **Codex:** Agregar cuenta → Codex → Iniciar sesión → abrir la página → aprobar con el código.
-   Esperado: “Cuenta conectada.” y en Inicio los límites de 5 h y semanal con su reinicio. Anotar
-   la versión de Android del teléfono: el arreglo de `expires_at` se comprobó en Android 12 y 15.
-3. **Claude:** Agregar cuenta → Claude → leer el aviso → Continuar en el navegador → iniciar sesión
-   y autorizar. Puntos a observar:
-   - si la página de Anthropic acepta el permiso `user:profile` solo (si no, la app muestra
-     “Claude no aceptó el permiso pedido (user:profile)”);
-   - si al terminar aparece la página “Sesión iniciada en AI Usage Widget” (retorno loopback) en el
-     navegador que use el teléfono (Chrome; si es otro, anotar cuál);
+## 6. Pendiente: comprobar en el teléfono
+
+Fuera de lo que cuenta la sección 5, nada de esto se probó con cuentas reales. Orden sugerido, con
+el resultado esperado:
+
+1. **Instalar** `AIUsageWidget-1.0.1.apk` encima de 1.0.0 y comprobar el SHA-256. Esperado: se
+   instala como actualización (misma firma, código de versión 2).
+2. **Codex:** activar primero el inicio de sesión con código de dispositivo en la configuración de
+   seguridad de ChatGPT (sección 5). Después: Agregar cuenta → Codex → Iniciar sesión → abrir la
+   página → aprobar con el código. Esperado: “Cuenta conectada.” y en Inicio los límites de 5 h y
+   semanal con su reinicio.
+3. **Claude (1.0.1):** Agregar cuenta → Claude → leer el aviso → Continuar en el navegador →
+   autorizar → cuando aparezca “Sesión iniciada en AI Usage Widget”, cerrar la pestaña. La
+   autorización con `user:profile` y el retorno loopback ya funcionaron en el teléfono (sección 5).
+   Falta ver:
+   - que al volver a la app el canje termine (ya no “Sin conexión”);
    - si el endpoint de uso acepta el token (si no, la app muestra “Claude aceptó el inicio de sesión
-     pero se negó a informar el consumo”).
-   Si cualquiera de los dos rechazos aparece, ver la alternativa en la sección 6.
+     pero se negó a informar el consumo”; ver la alternativa en la sección 7).
 4. **Widgets:** agregar uno por cuenta, elegir campos, probar los cuatro tamaños y el botón de
    actualizar. Esperado: proveedor, ventana, “disponible”, hora de los datos y reinicio legibles.
 5. **Estados:** modo avión y tocar actualizar → “Sin conexión · Actualizado …” con valores
@@ -178,17 +203,18 @@ Nada de esto se probó con cuentas reales. Orden sugerido, con el resultado espe
    la app; deberían aparecer solo `auth.openai.com`, `chatgpt.com`, `platform.claude.com` y
    `api.anthropic.com`.
 
-## 6. Limitaciones conocidas
+## 7. Limitaciones conocidas
 
 - **Política de Anthropic:** sus términos reservan el inicio de sesión de Claude.ai para Claude Code y
   las apps de Anthropic. Esta app usa el cliente de Claude Code y guarda el token; Anthropic podría
   restringir la cuenta (ver `docs/SEGURIDAD.md`). Alternativa sin ese riesgo: no conectar Claude y
   ver el uso en la app oficial o en claude.ai.
-- **Permiso mínimo de Claude sin confirmar:** Claude Code solo consulta el uso con tokens que tienen
-  `user:inference` y `user:profile`. La app pide solo `user:profile`. Si en el teléfono la
-  autorización o el endpoint de uso lo rechazan, la alternativa concreta es pedir también
-  `user:inference` (un cambio en `ClaudeOAuthConfig.SCOPE` y en el aviso, y una nueva compilación).
-  Ese permiso es más amplio: permite usar el plan para enviar mensajes. No se activó sin acuerdo.
+- **Permiso mínimo de Claude a medio confirmar:** la autorización de claude.ai aceptó
+  `user:profile` solo (sección 5), pero Claude Code solo consulta el uso con tokens que tienen
+  `user:inference` y `user:profile`, y falta ver si el endpoint de uso acepta el token. Si lo
+  rechaza, la alternativa concreta es pedir también `user:inference` (un cambio en
+  `ClaudeOAuthConfig.SCOPE` y en el aviso, y una nueva compilación). Ese permiso es más amplio:
+  permite usar el plan para enviar mensajes. No se activó sin acuerdo.
 - **Endpoints no documentados:** `chatgpt.com/backend-api/wham/usage` y `api.anthropic.com/api/oauth/usage`
   no son APIs públicas; pueden cambiar sin aviso. La app lo mostraría como “Datos ilegibles” o
   “Error del proveedor”, nunca como 0 %.
