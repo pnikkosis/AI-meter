@@ -47,6 +47,7 @@ import com.kmnexus.codexmeter.MainActivity
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.ui.navigation.CodexMeterLaunchDestination
 import com.kmnexus.codexmeter.ui.navigation.CodexMeterRoute
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelString
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -578,7 +579,7 @@ private fun WidgetField.titleResId(): Int =
 
 /** Window label that also says the number is what is LEFT ("5h quota · left"); balances keep theirs. */
 private fun WidgetField.title(context: Context): String {
-    val label = context.getString(titleResId())
+    val label = context.quotaWindowLabelString(titleResId(), labelName)
     return if (isBalance) label else context.getString(R.string.quota_window_remaining_format, label)
 }
 

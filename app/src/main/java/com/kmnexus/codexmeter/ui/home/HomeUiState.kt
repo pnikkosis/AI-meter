@@ -75,6 +75,8 @@ data class HomeQuotaCardUi(
     val originalBalanceCurrency: String? = null,
     val grantedBalance: String? = null,
     val toppedUpBalance: String? = null,
+    /** The provider's own name for a meter with no label of its own here; see quotaWindowLabelName. */
+    val titleName: String? = null,
 ) {
     /** Remaining percent for PercentQuotaCard rendering (100 - usedPercent). */
     val percent: Int? get() = usedPercent?.let { 100 - it.coerceIn(0, 100) }

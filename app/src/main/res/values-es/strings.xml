@@ -129,6 +129,7 @@
     <string name="window_label_7d_opus">7 días · Opus</string>
     <string name="window_label_7d_sonnet">7 días · Sonnet</string>
     <string name="window_label_extra_usage">Uso adicional</string>
+    <string name="window_label_named_format">%1$s · %2$s</string>
     <string name="account_quota_alerts_label">Alertas de límite</string>
     <string name="account_model_details_title">Detalle por modelo</string>
     <string name="account_quota_alert_five_hour">Alerta de 5 horas</string>

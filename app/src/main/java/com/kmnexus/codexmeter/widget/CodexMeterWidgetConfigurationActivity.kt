@@ -17,6 +17,7 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.kmnexus.codexmeter.CodexMeterApp
 import com.kmnexus.codexmeter.domain.model.AccountStatus
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowAvailability
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelName
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import kotlinx.coroutines.CoroutineScope
@@ -99,6 +100,7 @@ class CodexMeterWidgetConfigurationActivity : ComponentActivity() {
                         WidgetWindowOption(
                             it.windowId.value,
                             quotaWindowLabelRes(it.windowId.value, it.limitWindowSeconds),
+                            quotaWindowLabelName(it.windowId.value, it.subLabel),
                         )
                     }
                     ?.distinctBy { it.windowId }

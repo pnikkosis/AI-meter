@@ -12,6 +12,7 @@ import com.kmnexus.codexmeter.domain.quota.QuotaWindowAvailability
 data class NotificationWindowChoice(
     val windowId: QuotaWindowId,
     val limitWindowSeconds: Int? = null,
+    val subLabel: String? = null,
 )
 
 fun interface NotificationWindowChoicesLoader {
@@ -44,6 +45,6 @@ class DefaultNotificationWindowChoicesLoader(
         return snapshot.windows
             // A slot the provider never sent has nothing to notify about; hide it like Home does.
             .filterNot { it.availability == QuotaWindowAvailability.Missing }
-            .map { NotificationWindowChoice(it.windowId, it.limitWindowSeconds) }
+            .map { NotificationWindowChoice(it.windowId, it.limitWindowSeconds, it.subLabel) }
     }
 }

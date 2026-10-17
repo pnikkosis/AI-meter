@@ -129,6 +129,7 @@
     <string name="window_label_7d_opus">7-day · Opus</string>
     <string name="window_label_7d_sonnet">7-day · Sonnet</string>
     <string name="window_label_extra_usage">Extra usage</string>
+    <string name="window_label_named_format">%1$s · %2$s</string>
     <string name="account_quota_alerts_label">Quota alerts</string>
     <string name="account_model_details_title">Model details</string>
     <string name="account_quota_alert_five_hour">5h quota alert</string>

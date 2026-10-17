@@ -117,6 +117,7 @@ private fun Preferences.readFields(): List<WidgetField> {
             resetAt = this[WidgetQuotaPreferenceKeys.fieldResetAt(i)]?.toInstantOrNull(),
             tone = enumValue(WidgetQuotaPreferenceKeys.fieldTone(i), WidgetQuotaTone.Neutral),
             limitWindowSeconds = this[WidgetQuotaPreferenceKeys.fieldLimitWindowSeconds(i)],
+            labelName = this[WidgetQuotaPreferenceKeys.fieldLabelName(i)],
         )
     }
 }
@@ -135,6 +136,7 @@ private fun MutablePreferences.writeFields(fields: List<WidgetField>) {
             remove(WidgetQuotaPreferenceKeys.fieldResetAt(i))
             remove(WidgetQuotaPreferenceKeys.fieldTone(i))
             remove(WidgetQuotaPreferenceKeys.fieldLimitWindowSeconds(i))
+            remove(WidgetQuotaPreferenceKeys.fieldLabelName(i))
         } else {
             this[WidgetQuotaPreferenceKeys.fieldWindowId(i)] = field.windowId
             this[WidgetQuotaPreferenceKeys.fieldIsBalance(i)] = field.isBalance
@@ -144,6 +146,7 @@ private fun MutablePreferences.writeFields(fields: List<WidgetField>) {
             putOrRemove(WidgetQuotaPreferenceKeys.fieldResetAt(i), field.resetAt?.toString())
             this[WidgetQuotaPreferenceKeys.fieldTone(i)] = field.tone.name
             putOrRemove(WidgetQuotaPreferenceKeys.fieldLimitWindowSeconds(i), field.limitWindowSeconds)
+            putOrRemove(WidgetQuotaPreferenceKeys.fieldLabelName(i), field.labelName)
         }
     }
 }
@@ -189,6 +192,7 @@ internal object WidgetQuotaPreferenceKeys {
     fun fieldResetAt(i: Int) = stringPreferencesKey("widget_field_${i}_reset_at")
     fun fieldTone(i: Int) = stringPreferencesKey("widget_field_${i}_tone")
     fun fieldLimitWindowSeconds(i: Int) = intPreferencesKey("widget_field_${i}_limit_window_seconds")
+    fun fieldLabelName(i: Int) = stringPreferencesKey("widget_field_${i}_label_name")
 }
 
 private const val DEFAULT_PROVIDER_NAME = "AI Usage Widget"

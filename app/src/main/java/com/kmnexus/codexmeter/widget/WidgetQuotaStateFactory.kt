@@ -7,6 +7,7 @@ import com.kmnexus.codexmeter.domain.quota.QuotaWindowAvailability
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.providers.ProviderRegistry
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelName
 
 class WidgetQuotaStateFactory(
     private val providerDisplayName: String = UNCONFIGURED_HEADER,
@@ -83,6 +84,7 @@ class WidgetQuotaStateFactory(
                     resetAt = window.resetAt,
                     tone = window.percentTone(notificationPreferences),
                     limitWindowSeconds = window.limitWindowSeconds,
+                    labelName = quotaWindowLabelName(window.windowId.value, window.subLabel),
                 )
             }
     }

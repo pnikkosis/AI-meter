@@ -38,6 +38,9 @@ fun currencySymbol(currency: String?): String = when (currency?.uppercase()) {
  */
 private val POSITIONAL_WINDOW_IDS = setOf("five_hour", "weekly")
 
+// Claude's weekly limit of its own for one model or product, keyed by the name the server gives it.
+private const val CLAUDE_SCOPED_WEEKLY_PREFIX = "claude_7d_scoped_"
+
 private const val FIVE_HOUR_SECONDS = 5 * 60 * 60
 private const val DAY_SECONDS = 24 * 60 * 60
 private const val WEEK_SECONDS = 7 * DAY_SECONDS
@@ -51,6 +54,19 @@ fun quotaWindowLabelRes(windowId: String, limitWindowSeconds: Int? = null): Int 
         return limitWindowSeconds?.let(::windowDurationLabelRes) ?: R.string.window_label_generic
     }
     return providerNamedLabelRes(windowId)
+}
+
+/**
+ * The provider's own name for a meter that has no label of its own here, shown after the label as
+ * "7 días · Fable": a weekly limit Claude keeps for one model or product, or a meter this version
+ * does not know yet (after the generic label). Null when the label already names the window, and for
+ * the spend figure Claude's extra usage carries in the same field.
+ */
+fun quotaWindowLabelName(windowId: String, subLabel: String?): String? {
+    val name = subLabel?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val unnamedHere = windowId.startsWith(CLAUDE_SCOPED_WEEKLY_PREFIX) ||
+        (windowId !in POSITIONAL_WINDOW_IDS && providerNamedLabelRes(windowId) == R.string.window_label_generic)
+    return name.takeIf { unnamedHere }
 }
 
 @StringRes
@@ -68,5 +84,5 @@ private fun providerNamedLabelRes(windowId: String): Int = when (windowId) {
     "claude_7d_opus_window" -> R.string.window_label_7d_opus
     "claude_7d_sonnet_window" -> R.string.window_label_7d_sonnet
     "claude_extra_usage" -> R.string.window_label_extra_usage
-    else -> R.string.window_label_generic
+    else -> if (windowId.startsWith(CLAUDE_SCOPED_WEEKLY_PREFIX)) R.string.window_label_7d else R.string.window_label_generic
 }

@@ -29,6 +29,7 @@ import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.RetentionPreference
 import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelName
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,7 @@ import kotlinx.coroutines.sync.withLock
 data class SettingsNotificationWindowChoice(
     val windowId: QuotaWindowId,
     @get:StringRes val labelResId: Int,
+    val labelName: String? = null,
 )
 
 enum class SettingsRetentionOption(val days: Int?, @get:StringRes val labelResId: Int) {
@@ -815,6 +817,7 @@ private fun NotificationWindowChoice.toSettingsNotificationWindowChoice(): Setti
     SettingsNotificationWindowChoice(
         windowId = windowId,
         labelResId = quotaWindowLabelRes(windowId.value, limitWindowSeconds),
+        labelName = quotaWindowLabelName(windowId.value, subLabel),
     )
 
 private fun SettingsNotificationAccountSelection.toNotificationAccountSelection(): NotificationAccountSelection? =

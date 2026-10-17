@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
 
@@ -60,6 +61,7 @@ internal fun retainAvailableWindowIds(current: List<String>, available: List<Str
 internal data class WidgetWindowOption(
     val windowId: String,
     @get:androidx.annotation.StringRes val labelResId: Int,
+    val labelName: String? = null,
 )
 
 internal data class WidgetConfigurationScreenState(
@@ -233,7 +235,7 @@ private fun WidgetConfigurationScreen(
                     val checked = state.selectedWindowIds.contains(option.windowId)
                     val enabled = checked || state.selectedWindowIds.size < WIDGET_MAX_FIELDS
                     FieldOptionRow(
-                        label = stringResource(option.labelResId),
+                        label = quotaWindowLabelText(option.labelResId, option.labelName),
                         checked = checked,
                         enabled = enabled,
                         onClick = { onWindowToggled(option.windowId) },
@@ -353,7 +355,7 @@ private fun WidgetConfigurationScreenState.selectedAccountLabel(): String =
 @Composable
 private fun WidgetConfigurationScreenState.fieldsSummary(): String {
     val labels = selectedWindowIds.mapNotNull { id ->
-        windowOptions.firstOrNull { it.windowId == id }?.let { stringResource(it.labelResId) }
+        windowOptions.firstOrNull { it.windowId == id }?.let { quotaWindowLabelText(it.labelResId, it.labelName) }
     }
     return if (labels.isEmpty()) {
         stringResource(R.string.widget_config_account_none)

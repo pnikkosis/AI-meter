@@ -68,6 +68,7 @@ import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.domain.settings.NoopQuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.QuotaHistoryClearUseCase
 import com.kmnexus.codexmeter.domain.settings.RetentionPreferenceStore
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
@@ -544,9 +545,9 @@ private fun SettingsChoiceDialogContent(
                         }
                     SettingsChoiceDialog.NotificationWindow ->
                         uiState.persistentNotification.windowChoices.forEach { choice ->
-                            OptionButton(
-                                choice.labelResId,
-                                uiState.persistentNotification.selectedWindowId == choice.windowId,
+                            OptionTextButton(
+                                label = quotaWindowLabelText(choice.labelResId, choice.labelName),
+                                selected = uiState.persistentNotification.selectedWindowId == choice.windowId,
                             ) {
                                 onPersistentNotificationWindowSelected(choice.windowId)
                             }

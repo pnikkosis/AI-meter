@@ -53,6 +53,7 @@ import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.QuotaWindowId
 import com.kmnexus.codexmeter.ui.motion.CodexMeterMotion
 import com.kmnexus.codexmeter.ui.motion.rememberCodexMeterAnimatorsEnabled
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
@@ -387,9 +388,12 @@ private fun QuotaSummaryRow(summaries: List<AccountQuotaSummaryUi>) {
                 Text(
                     text = if (summary.valueText == null && summary.percent != null) {
                         // Percent values are the share LEFT in the window.
-                        stringResource(R.string.quota_window_remaining_format, stringResource(summary.labelResId))
+                        stringResource(
+                            R.string.quota_window_remaining_format,
+                            quotaWindowLabelText(summary.labelResId, summary.labelName),
+                        )
                     } else {
-                        stringResource(summary.labelResId)
+                        quotaWindowLabelText(summary.labelResId, summary.labelName)
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -506,7 +510,7 @@ private fun QuotaAlertSwitches(
         )
         account.alertToggles.forEach { toggle ->
             QuotaAlertSwitchLine(
-                label = stringResource(toggle.labelResId),
+                label = quotaWindowLabelText(toggle.labelResId, toggle.labelName),
                 checked = toggle.enabled,
                 onCheckedChange = { enabled ->
                     onQuotaAlertToggle(account.id, QuotaWindowId(toggle.windowId), enabled)

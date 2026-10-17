@@ -2,6 +2,7 @@ package com.kmnexus.codexmeter.ui.quota
 
 import com.kmnexus.codexmeter.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class QuotaWindowLabelsTest {
@@ -95,5 +96,44 @@ class QuotaWindowLabelsTest {
             R.string.window_label_generic,
             quotaWindowLabelRes(windowId = "brand_new_window", limitWindowSeconds = null),
         )
+    }
+
+    @Test
+    fun `a claude weekly limit of its own for a model or product is labelled with the server's name`() {
+        // Claude can report a separate weekly limit for one model or product; the mapper keys it by
+        // that name. The label says 7 days and the name goes after it ("7 días · Fable").
+        assertEquals(
+            R.string.window_label_7d,
+            quotaWindowLabelRes(windowId = "claude_7d_scoped_fable", limitWindowSeconds = weekSeconds),
+        )
+        assertEquals("Fable", quotaWindowLabelName(windowId = "claude_7d_scoped_fable", subLabel = "Fable"))
+    }
+
+    @Test
+    fun `a meter this version does not know keeps the generic label and adds the server's name`() {
+        assertEquals(
+            R.string.window_label_generic,
+            quotaWindowLabelRes(windowId = "claude_new_meter_claude_design", limitWindowSeconds = null),
+        )
+        assertEquals(
+            "Claude Design",
+            quotaWindowLabelName(windowId = "claude_new_meter_claude_design", subLabel = " Claude Design "),
+        )
+    }
+
+    @Test
+    fun `labels that already name the window get no extra name`() {
+        assertNull(quotaWindowLabelName(windowId = "claude_7d_opus_window", subLabel = "Opus"))
+        assertNull(quotaWindowLabelName(windowId = "claude_7d_sonnet_window", subLabel = "Sonnet"))
+        // Claude's extra usage carries its spend figure in the same field; it is not a name.
+        assertNull(quotaWindowLabelName(windowId = "claude_extra_usage", subLabel = "$1.00 / $5.00"))
+        assertNull(quotaWindowLabelName(windowId = "five_hour", subLabel = "anything"))
+        assertNull(quotaWindowLabelName(windowId = "weekly", subLabel = "anything"))
+    }
+
+    @Test
+    fun `a missing or blank name adds nothing`() {
+        assertNull(quotaWindowLabelName(windowId = "claude_7d_scoped_fable", subLabel = null))
+        assertNull(quotaWindowLabelName(windowId = "claude_new_meter", subLabel = "  "))
     }
 }

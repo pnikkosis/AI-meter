@@ -37,6 +37,7 @@ import com.kmnexus.codexmeter.ui.motion.AnimatedQuotaPercent
 import com.kmnexus.codexmeter.ui.motion.CodexMeterMotion
 import com.kmnexus.codexmeter.ui.motion.MotionQuotaRail
 import com.kmnexus.codexmeter.ui.motion.rememberCodexMeterAnimatorsEnabled
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTypography
 
@@ -110,7 +111,10 @@ private fun PercentQuotaCard(card: HomeQuotaCardUi) {
         ) {
             Text(
                 // The big number below is the share LEFT; say so next to the window name.
-                text = stringResource(R.string.quota_window_remaining_format, stringResource(card.titleResId)),
+                text = stringResource(
+                    R.string.quota_window_remaining_format,
+                    quotaWindowLabelText(card.titleResId, card.titleName),
+                ),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -158,7 +162,7 @@ private fun BalanceQuotaCard(card: HomeQuotaCardUi) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(card.titleResId),
+                text = quotaWindowLabelText(card.titleResId, card.titleName),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -231,7 +235,7 @@ private fun UsageCountQuotaCard(card: HomeQuotaCardUi) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(card.titleResId),
+                text = quotaWindowLabelText(card.titleResId, card.titleName),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

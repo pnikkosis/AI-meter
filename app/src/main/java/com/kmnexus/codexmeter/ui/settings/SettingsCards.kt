@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.theme.ThemeMode
 import com.kmnexus.codexmeter.ui.motion.rememberCodexMeterAnimatorsEnabled
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterTheme
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
@@ -184,7 +185,7 @@ internal fun PersistentNotificationCard(
                 descriptionResId = null,
                 valueText = persistentNotification.windowChoices
                     .firstOrNull { it.windowId == persistentNotification.selectedWindowId }
-                    ?.let { stringResource(it.labelResId) }
+                    ?.let { quotaWindowLabelText(it.labelResId, it.labelName) }
                     ?: stringResource(R.string.settings_value_placeholder),
                 onClick = onWindowClick,
             )

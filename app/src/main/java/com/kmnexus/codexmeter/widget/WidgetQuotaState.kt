@@ -36,6 +36,8 @@ data class WidgetField(
     // Provider-reported window duration. Positional ids (Codex "five_hour"/"weekly") pick their
     // label from this instead of the slot they arrived in.
     val limitWindowSeconds: Int? = null,
+    /** The provider's own name for a meter with no label of its own here; see quotaWindowLabelName. */
+    val labelName: String? = null,
 )
 
 data class WidgetQuotaState(

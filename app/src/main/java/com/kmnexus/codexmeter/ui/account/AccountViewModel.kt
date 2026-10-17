@@ -37,6 +37,7 @@ import com.kmnexus.codexmeter.ui.quota.formatProviderBalance
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceStore
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.ui.providerPlanDisplayName
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelName
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
@@ -79,6 +80,8 @@ data class AccountQuotaSummaryUi(
     /** Non-null for DeepSeek-style granted/topped-up breakdown (native currency). */
     val grantedText: String? = null,
     val toppedUpText: String? = null,
+    /** The provider's own name for a meter with no label of its own here; see quotaWindowLabelName. */
+    val labelName: String? = null,
 )
 
 /** A per-window quota alert toggle (label + current on/off state). */
@@ -86,6 +89,7 @@ data class AccountAlertToggleUi(
     val windowId: String,
     @get:StringRes val labelResId: Int,
     val enabled: Boolean,
+    val labelName: String? = null,
 )
 
 /** A single model's remaining quota inside a multi-model provider (MiniMax / Antigravity). */
@@ -637,6 +641,7 @@ class AccountViewModel(
                 originalValueText = formatProviderBalance(converted.originalBalanceAmount, converted.originalBalanceCurrency),
                 grantedText = formatProviderBalance(converted.grantedBalance, nativeCurrency),
                 toppedUpText = formatProviderBalance(converted.toppedUpBalance, nativeCurrency),
+                labelName = quotaWindowLabelName(converted.windowId.value, converted.subLabel),
             )
         }
 
@@ -653,6 +658,7 @@ class AccountViewModel(
                     localAccountId = localAccountId,
                     windowId = window.windowId,
                 ),
+                labelName = quotaWindowLabelName(window.windowId.value, window.subLabel),
             )
         }
 

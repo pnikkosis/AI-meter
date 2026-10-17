@@ -7,6 +7,7 @@ import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.providers.ProviderRegistry
 import com.kmnexus.codexmeter.ui.quota.quotaErrorMessageRes
+import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelName
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelRes
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
@@ -345,6 +346,7 @@ class HomeViewModel(
         return HomeQuotaCardUi(
             windowId = windowId.value,
             titleResId = quotaWindowLabelRes(windowId.value, limitWindowSeconds),
+            titleName = quotaWindowLabelName(windowId.value, subLabel),
             displayKind = displayKind,
             usedPercent = usedPercent,
             balanceAmount = balanceAmount,
