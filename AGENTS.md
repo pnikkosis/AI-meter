@@ -14,9 +14,9 @@ This file is the canonical operating guide for AI agents and human maintainers w
 > - Since 1.1.0 the user has no "current account": Home lists every account visible on Home, in the
 >   order set in the Accounts tab (where accounts are also shown or hidden); the status notification
 >   and the accounts widget follow the visible accounts unless the user picks accounts for them. The
->   upstream rules about a current-account summary and account switching no longer apply. Some
->   internal plumbing still keeps a current-account selection (set on sign-in, moved on deletion,
->   reported in diagnostics); it is not offered as a choice in the UI.
+>   upstream rules about a current-account summary and account switching no longer apply. Nothing
+>   stores a selection either: the shared preferences file drops the keys older versions kept, and
+>   the diagnostics report gives every account the same detail.
 > - `DESIGN.md` was rewritten for the "Sobria" style (Geist, flat neutral surfaces, one accent
 >   blue); the upstream Air Glass Dashboard rules no longer apply.
 
