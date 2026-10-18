@@ -22,18 +22,18 @@ data class CodexMeterColorPalette(
 
 val LightCodexMeterColors = CodexMeterColorPalette(
     isDark = false,
-    primary = Color(0xFF14171C), secondary = Color(0xFF5B6472), tertiary = Color(0xFF8A93A0),
+    primary = Color(0xFF14171C), secondary = Color(0xFF5B6472), tertiary = Color(0xFF686F79),
     neutral = Color(0xFFF4F5F7), neutralAlt = Color(0xFFECEEF1), surface = Color(0xFFFFFFFF), surfaceSoft = Color(0xFFF7F8FA),
     border = Color(0xFFE2E5EA), borderStrong = Color(0xFFC9CED6), track = Color(0xFFE3E7ED),
     accent = Color(0xFF2F6BEF), accentSoft = Color(0xFFEAF0FE),
-    success = Color(0xFF1F9D63), successSoft = Color(0xFFE6F5EE),
-    warning = Color(0xFFB7791F), warningSoft = Color(0xFFFBF1E1),
-    danger = Color(0xFFD9452F), dangerSoft = Color(0xFFFCEBE8),
+    success = Color(0xFF187D4F), successSoft = Color(0xFFE6F5EE),
+    warning = Color(0xFF966319), warningSoft = Color(0xFFFBF1E1),
+    danger = Color(0xFFBE3C29), dangerSoft = Color(0xFFFCEBE8),
 )
 
 val DarkCodexMeterColors = CodexMeterColorPalette(
     isDark = true,
-    primary = Color(0xFFEDEFF3), secondary = Color(0xFFA3ABB7), tertiary = Color(0xFF747C88),
+    primary = Color(0xFFEDEFF3), secondary = Color(0xFFA3ABB7), tertiary = Color(0xFF7C838F),
     neutral = Color(0xFF0E1013), neutralAlt = Color(0xFF0B0D10), surface = Color(0xFF171A1F), surfaceSoft = Color(0xFF1D2127),
     border = Color(0xFF23272E), borderStrong = Color(0xFF3A404A), track = Color(0xFF2A3039),
     accent = Color(0xFF6E9BFF), accentSoft = Color(0xFF1A2436),

@@ -409,7 +409,7 @@ def main():
     reopen_page = ["Abrir otra vez la página de inicio de sesión"] if es else ["Open the sign-in page again"]
     cancel_sign_in = ["Cancelar inicio de sesión"] if es else ["Cancel sign-in"]
     settings_tab = ["Ajustes", "Pestaña Ajustes"] if es else ["Settings", "Settings tab"]
-    accounts_tab = ["Cuentas", "Pestaña Cuentas"] if es else ["Account", "Account tab"]
+    accounts_tab = ["Cuentas", "Pestaña Cuentas"] if es else ["Accounts", "Accounts tab", "Account", "Account tab"]
     home_tab = ["Inicio", "Pestaña Inicio"] if es else ["Home", "Home tab"]
 
     print("== launch")
