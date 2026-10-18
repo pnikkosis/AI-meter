@@ -7,7 +7,6 @@ import com.kmnexus.codexmeter.domain.quota.QuotaSnapshot
 
 data class AccountListResult(
     val accounts: List<ProviderAccount>,
-    val currentAccountId: LocalAccountId?,
     val latestQuotaSnapshots: Map<LocalAccountId, QuotaSnapshot> = emptyMap(),
 )
 
@@ -17,7 +16,7 @@ fun interface AccountListUseCase {
 
 object NoopAccountListUseCase : AccountListUseCase {
     override suspend fun loadAccounts(): AccountListResult =
-        AccountListResult(accounts = emptyList(), currentAccountId = null)
+        AccountListResult(accounts = emptyList())
 }
 
 /**
@@ -48,14 +47,6 @@ object NoopAccountDeleteUseCase : AccountDeleteUseCase {
         RemoteRevocation.NothingToRevoke
 }
 
-fun interface AccountSwitchUseCase {
-    suspend fun switchCurrentAccount(providerId: ProviderId, localAccountId: LocalAccountId): Boolean
-}
-
-object NoopAccountSwitchUseCase : AccountSwitchUseCase {
-    override suspend fun switchCurrentAccount(providerId: ProviderId, localAccountId: LocalAccountId): Boolean = false
-}
-
 fun interface AccountRenameUseCase {
     suspend fun renameAccount(
         providerId: ProviderId,
@@ -70,14 +61,6 @@ object NoopAccountRenameUseCase : AccountRenameUseCase {
         localAccountId: LocalAccountId,
         displayName: String,
     ): ProviderAccount? = null
-}
-
-fun interface AccountSwitchRefreshRequester {
-    suspend fun requestAccountSwitchRefresh(account: ProviderAccount)
-}
-
-object NoopAccountSwitchRefreshRequester : AccountSwitchRefreshRequester {
-    override suspend fun requestAccountSwitchRefresh(account: ProviderAccount) = Unit
 }
 
 /** Republishes one account's stored state after a change that did not refresh it (a rename). */

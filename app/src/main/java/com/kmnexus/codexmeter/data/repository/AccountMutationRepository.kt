@@ -1,13 +1,8 @@
 package com.kmnexus.codexmeter.data.repository
 
 import com.kmnexus.codexmeter.data.local.dao.ProviderAccountDao
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchUseCase
-import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.account.AccountStateRepublisher
-import com.kmnexus.codexmeter.domain.account.NoopAccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.account.NoopAccountStateRepublisher
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
@@ -17,32 +12,9 @@ import kotlinx.coroutines.CancellationException
 
 class AccountMutationRepository(
     private val providerAccountDao: ProviderAccountDao,
-    private val currentAccountStore: CurrentAccountStore,
-    private val accountSwitchRefreshRequester: AccountSwitchRefreshRequester = NoopAccountSwitchRefreshRequester,
     private val accountStateRepublisher: AccountStateRepublisher = NoopAccountStateRepublisher,
     private val clock: Clock,
-) : AccountSwitchUseCase, AccountRenameUseCase {
-    override suspend fun switchCurrentAccount(
-        providerId: ProviderId,
-        localAccountId: LocalAccountId,
-    ): Boolean {
-        val account = providerAccountDao.getById(localAccountId.value)
-            ?.takeIf { it.providerId == providerId.value }
-            ?.toDomain()
-            ?: return false
-
-        currentAccountStore.updateCurrentAccountSelection(
-            CurrentAccountSelection(
-                providerId = account.providerId,
-                localAccountId = account.localAccountId,
-            ),
-        )
-        runPostMutationEffect {
-            accountSwitchRefreshRequester.requestAccountSwitchRefresh(account)
-        }
-        return true
-    }
-
+) : AccountRenameUseCase {
     override suspend fun renameAccount(
         providerId: ProviderId,
         localAccountId: LocalAccountId,
@@ -77,8 +49,8 @@ class AccountMutationRepository(
         } catch (exception: CancellationException) {
             throw exception
         } catch (_: Exception) {
-            // Persistence already succeeded; widget/refresh republish failures are recovered by
-            // the next app open or refresh and must not roll back the user-visible mutation.
+            // Persistence already succeeded; republish failures are recovered by the next app open
+            // or refresh and must not roll back the user-visible mutation.
         }
     }
 }

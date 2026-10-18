@@ -8,8 +8,6 @@ import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
 import com.kmnexus.codexmeter.data.local.entity.QuotaSnapshotEntity
 import com.kmnexus.codexmeter.data.local.entity.RefreshAttemptEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
 import com.kmnexus.codexmeter.data.secure.ProviderSessionEnvelope
 import com.kmnexus.codexmeter.data.secure.SecureSessionStore
 import com.kmnexus.codexmeter.domain.model.AccountStatus
@@ -92,7 +90,6 @@ class RoomRefreshAccountStatusStore(
 class RoomCodexSessionImportPersistence(
     private val database: CodexMeterDatabase,
     private val sessionStore: SecureSessionStore,
-    private val currentAccountStore: CurrentAccountStore,
     private val beforeRoomCommit: suspend () -> Unit = {},
 ) : CodexSessionImporter.ImportPersistence {
     override suspend fun save(
@@ -111,7 +108,6 @@ class RoomCodexSessionImportPersistence(
             sessionEnvelope = committedEnvelope,
             snapshot = committedSnapshot,
         )
-        val previousSelection = currentAccountStore.currentAccountSelection()
         val previousEnvelope = sessionStore.load(
             providerId = committed.sessionEnvelope.providerId,
             localAccountId = committed.sessionEnvelope.localAccountId,
@@ -119,21 +115,12 @@ class RoomCodexSessionImportPersistence(
 
         try {
             sessionStore.save(committed.sessionEnvelope)
-            currentAccountStore.updateCurrentAccountSelection(
-                CurrentAccountSelection(
-                    providerId = committed.account.providerId,
-                    localAccountId = committed.account.localAccountId,
-                ),
-            )
             database.withTransaction {
                 database.providerAccountDao().upsert(committed.account.toEntity())
                 beforeRoomCommit()
                 database.quotaSnapshotDao().insert(committed.snapshot.toEntity())
             }
         } catch (throwable: Throwable) {
-            runCatching {
-                currentAccountStore.updateCurrentAccountSelection(previousSelection)
-            }
             runCatching {
                 if (previousEnvelope == null) {
                     sessionStore.delete(

@@ -2,8 +2,6 @@ package com.kmnexus.codexmeter.data.repository
 
 import androidx.room.withTransaction
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
 import com.kmnexus.codexmeter.data.secure.SecureSessionStore
 import com.kmnexus.codexmeter.data.secure.SessionRevoker
 import com.kmnexus.codexmeter.domain.account.DeletedAccountStateCleanup
@@ -23,7 +21,6 @@ import kotlinx.coroutines.CancellationException
 class AccountDeletionRepository(
     private val database: CodexMeterDatabase,
     private val secureSessionStore: SecureSessionStore,
-    private val currentAccountStore: CurrentAccountStore,
     private val deletedAccountStateCleaner: DeletedAccountStateCleaner,
     private val localDataDeleter: AccountLocalDataDeleter = RoomAccountLocalDataDeleter(database),
     private val sessionRevoker: SessionRevoker = SessionRevoker { RemoteRevocation.NotSupported },
@@ -34,14 +31,6 @@ class AccountDeletionRepository(
     ): RemoteRevocation {
         val providerValue = providerId.value
         val localValue = localAccountId.value
-        val previousSelection = currentAccountStore.currentAccountSelection()
-        val nextSelection = nextCurrentSelectionAfterDeleting(
-            providerId = providerId,
-            deletedLocalAccountId = localAccountId,
-            currentSelection = previousSelection,
-        )
-        val shouldUpdateCurrentSelection = previousSelection?.providerId == providerId &&
-            previousSelection.localAccountId == localAccountId
         val sessionBeforeDelete = secureSessionStore.load(
             providerId = providerValue,
             localAccountId = localValue,
@@ -62,9 +51,6 @@ class AccountDeletionRepository(
         var deletedAccountStateCleanup: DeletedAccountStateCleanup? = null
 
         try {
-            if (shouldUpdateCurrentSelection) {
-                currentAccountStore.updateCurrentAccountSelection(nextSelection)
-            }
             deletedAccountStateCleanup = deletedAccountStateCleaner.clearDeletedAccountState(
                 providerId = providerId,
                 localAccountId = localAccountId,
@@ -81,35 +67,9 @@ class AccountDeletionRepository(
             if (sessionBeforeDelete != null) {
                 runCatching { secureSessionStore.save(sessionBeforeDelete) }
             }
-            if (shouldUpdateCurrentSelection) {
-                runCatching { currentAccountStore.updateCurrentAccountSelection(previousSelection) }
-            }
             throw throwable
         }
         return revocation
-    }
-
-    private suspend fun nextCurrentSelectionAfterDeleting(
-        providerId: ProviderId,
-        deletedLocalAccountId: LocalAccountId,
-        currentSelection: CurrentAccountSelection?,
-    ): CurrentAccountSelection? {
-        if (currentSelection?.providerId != providerId ||
-            currentSelection.localAccountId != deletedLocalAccountId
-        ) {
-            return currentSelection
-        }
-
-        return database.providerAccountDao()
-            .listByProvider(providerId.value)
-            .filterNot { it.localAccountId == deletedLocalAccountId.value }
-            .firstOrNull()
-            ?.let { account ->
-                CurrentAccountSelection(
-                    providerId = providerId,
-                    localAccountId = LocalAccountId(account.localAccountId),
-                )
-            }
     }
 }
 

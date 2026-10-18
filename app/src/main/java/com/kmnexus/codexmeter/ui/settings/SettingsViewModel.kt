@@ -184,7 +184,33 @@ data class DiagnosticsAccountSummary(
     val lastAttemptAt: String? = null,
     val lastSuccessfulRefreshAt: String? = null,
     val latestSnapshotAt: String? = null,
+    // Detail line; only the values that are known are printed.
+    val sessionEnvelopeStatus: String? = null,
+    val sessionProviderAccountIdStatus: String? = null,
+    val consecutiveFailures: Int? = null,
+    val latestSnapshotSource: String? = null,
+    val latestSnapshotDigestStatus: String? = null,
+    val lastAttemptTrigger: String? = null,
+    val httpStatus: Int? = null,
+    val retryable: Boolean? = null,
+    val userActionRequired: Boolean? = null,
+    val diagnosticsDigest: String? = null,
 )
+
+/** The account's detail values that are known, as "key=value" pairs on one line; null when none is. */
+private fun DiagnosticsAccountSummary.detailLine(): String? =
+    listOfNotNull(
+        sessionEnvelopeStatus?.let { "sessionEnvelopeStatus=$it" },
+        sessionProviderAccountIdStatus?.let { "sessionProviderAccountIdStatus=$it" },
+        consecutiveFailures?.let { "consecutiveFailures=$it" },
+        latestSnapshotSource?.let { "latestSnapshotSource=$it" },
+        latestSnapshotDigestStatus?.let { "latestSnapshotDigestStatus=$it" },
+        lastAttemptTrigger?.let { "lastAttemptTrigger=$it" },
+        httpStatus?.let { "httpStatus=$it" },
+        retryable?.let { "retryable=$it" },
+        userActionRequired?.let { "userActionRequired=$it" },
+        diagnosticsDigest?.let { "diagnosticsDigest=$it" },
+    ).takeIf { it.isNotEmpty() }?.joinToString(" ")
 
 data class DiagnosticsAccountAlertConfig(
     val providerId: String,
@@ -205,28 +231,6 @@ data class SettingsDiagnosticsInput(
     val appVersion: String = "0.1.0",
     val buildType: String = "debug",
     val androidSdk: String? = null,
-    val providerId: String = "codex",
-    val accountDiagnosticId: String = "not_connected",
-    val currentAccountSelectionStatus: String = "unknown",
-    val accountStatus: String? = null,
-    val accountCount: Int? = null,
-    val sessionEnvelopeStatus: String? = null,
-    val sessionProviderAccountIdStatus: String? = null,
-    val currentState: String = "noData",
-    val latestSnapshotStatus: String? = null,
-    val latestSnapshotSource: String? = null,
-    val latestSnapshotFetchedAt: String? = null,
-    val latestSnapshotDigestStatus: String? = null,
-    val lastSuccessfulRefreshAt: String = "unavailable",
-    val lastAttemptStatus: String = "none",
-    val lastAttemptTrigger: String? = null,
-    val lastAttemptStartedAt: String? = null,
-    val lastAttemptFinishedAt: String? = null,
-    val safeErrorCode: String? = null,
-    val httpStatus: Int? = null,
-    val retryable: Boolean? = null,
-    val userActionRequired: Boolean? = null,
-    val diagnosticsDigest: String? = null,
     val deviceCodeLoginStatus: String? = null,
     val deviceCodeLoginAttemptId: String? = null,
     val deviceCodeLoginSafeErrorCode: String? = null,
@@ -252,8 +256,6 @@ data class SettingsDiagnosticsInput(
     val workManagerNextScheduleAt: String? = null,
     val workManagerStopReason: String? = null,
     val onceWorkManagerStatus: String? = null,
-    // D: 连续失败
-    val consecutiveFailures: Int? = null,
     // E: 全账号摘要
     val accountSummaries: List<DiagnosticsAccountSummary> = emptyList(),
     // F: App 配置
@@ -609,6 +611,7 @@ class SettingsViewModel(
             input.widgetCount?.let { appendLine("widgetCount=$it") }
 
             appendLine("## ACCOUNTS")
+            appendLine("accountCount=${input.accountSummaries.size}")
             input.accountSummaries.forEach { summary ->
                 val attempt = if (summary.lastAttemptStatus == "none") {
                     "none"
@@ -622,32 +625,10 @@ class SettingsViewModel(
                         "lastAttempt=$attempt lastSuccess=${age(summary.lastSuccessfulRefreshAt) ?: "unavailable"} " +
                         "snapshot=${age(summary.latestSnapshotAt) ?: "missing"}",
                 )
+                summary.detailLine()?.let { appendLine("  $it") }
             }
 
-            appendLine("## CURRENT ACCOUNT")
-            appendLine("providerId=${input.providerId}")
-            appendLine("accountDiagnosticId=${input.accountDiagnosticId}")
-            appendLine("currentAccountSelectionStatus=${input.currentAccountSelectionStatus}")
-            input.accountStatus?.let { appendLine("accountStatus=$it") }
-            input.accountCount?.let { appendLine("accountCount=$it") }
-            input.consecutiveFailures?.let { appendLine("consecutiveFailures=$it") }
-            input.sessionEnvelopeStatus?.let { appendLine("sessionEnvelopeStatus=$it") }
-            input.sessionProviderAccountIdStatus?.let { appendLine("sessionProviderAccountIdStatus=$it") }
-            appendLine("currentState=${input.currentState}")
-            input.latestSnapshotStatus?.let { appendLine("latestSnapshotStatus=$it") }
-            input.latestSnapshotSource?.let { appendLine("latestSnapshotSource=$it") }
-            ts(input.latestSnapshotFetchedAt)?.let { appendLine("latestSnapshotFetchedAt=$it") }
-            input.latestSnapshotDigestStatus?.let { appendLine("latestSnapshotDigestStatus=$it") }
-            appendLine("lastSuccessfulRefreshAt=${ts(input.lastSuccessfulRefreshAt) ?: input.lastSuccessfulRefreshAt}")
-            appendLine("lastAttemptStatus=${input.lastAttemptStatus}")
-            input.lastAttemptTrigger?.let { appendLine("lastAttemptTrigger=$it") }
-            ts(input.lastAttemptStartedAt)?.let { appendLine("lastAttemptStartedAt=$it") }
-            ts(input.lastAttemptFinishedAt)?.let { appendLine("lastAttemptFinishedAt=$it") }
-            input.safeErrorCode?.let { appendLine("safeErrorCode=$it") }
-            input.httpStatus?.let { appendLine("httpStatus=$it") }
-            input.retryable?.let { appendLine("retryable=$it") }
-            input.userActionRequired?.let { appendLine("userActionRequired=$it") }
-            input.diagnosticsDigest?.let { appendLine("diagnosticsDigest=$it") }
+            appendLine("## DEVICE CODE SIGN-IN")
             input.deviceCodeLoginStatus?.let { appendLine("deviceCodeLoginStatus=$it") }
             input.deviceCodeLoginAttemptId?.let { appendLine("deviceCodeLoginAttemptId=$it") }
             input.deviceCodeLoginSafeErrorCode?.let { appendLine("deviceCodeLoginSafeErrorCode=$it") }

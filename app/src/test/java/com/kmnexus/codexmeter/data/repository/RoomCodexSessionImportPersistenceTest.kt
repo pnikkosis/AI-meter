@@ -1,12 +1,8 @@
 package com.kmnexus.codexmeter.data.repository
 
-import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountPreferences
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
 import com.kmnexus.codexmeter.data.secure.FakeSecureSessionStore
 import com.kmnexus.codexmeter.data.secure.ProviderSessionEnvelope
 import com.kmnexus.codexmeter.data.secure.SecureSessionStore
@@ -39,8 +35,8 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class RoomCodexSessionImportPersistenceTest {
     @Test
-    fun `successful import persists current account selection`() = runTest {
-        withPersistence { database, sessionStore, preferences, persistence ->
+    fun `successful import commits account session and first snapshot`() = runTest {
+        withPersistence { database, sessionStore, persistence ->
             val account = account(localAccountId = "local-1")
             val envelope = envelope(localAccountId = "local-1")
             val snapshot = snapshot(localAccountId = "local-1")
@@ -60,19 +56,12 @@ class RoomCodexSessionImportPersistenceTest {
                     localAccountId = "local-1",
                 ),
             )
-            assertEquals(
-                CurrentAccountSelection(
-                    providerId = ProviderId("codex"),
-                    localAccountId = LocalAccountId("local-1"),
-                ),
-                preferences.currentAccountSelection(),
-            )
         }
     }
 
     @Test
     fun `reimporting existing provider account preserves user alias`() = runTest {
-        withPersistence { database, _, _, persistence ->
+        withPersistence { database, _, persistence ->
             database.providerAccountDao().upsert(
                 account(localAccountId = "local-1").renamedTo(
                     displayName = "Work",
@@ -96,7 +85,7 @@ class RoomCodexSessionImportPersistenceTest {
 
     @Test
     fun `reimporting existing provider account restores active status while preserving alias`() = runTest {
-        withPersistence { database, _, _, persistence ->
+        withPersistence { database, _, persistence ->
             database.providerAccountDao().upsert(
                 account(localAccountId = "local-1").renamedTo(
                     displayName = "Work",
@@ -120,7 +109,7 @@ class RoomCodexSessionImportPersistenceTest {
 
     @Test
     fun `session save failure leaves no account or snapshot committed`() = runTest {
-        withPersistence(sessionStore = ThrowingSecureSessionStore()) { database, _, preferences, persistence ->
+        withPersistence(sessionStore = ThrowingSecureSessionStore()) { database, _, persistence ->
             try {
                 persistence.save(
                     account = account(localAccountId = "local-1"),
@@ -136,41 +125,15 @@ class RoomCodexSessionImportPersistenceTest {
                         localAccountId = "local-1",
                     ),
                 )
-                assertNull(preferences.currentAccountSelection())
             }
         }
     }
 
     @Test
-    fun `current account save failure leaves no account or snapshot committed`() = runTest {
-        val currentAccountStore = ThrowingCurrentAccountStore()
-        withPersistence(currentAccountStore = currentAccountStore) { database, sessionStore, _, persistence ->
-            try {
-                persistence.save(
-                    account = account(localAccountId = "local-1"),
-                    sessionEnvelope = envelope(localAccountId = "local-1"),
-                    snapshot = snapshot(localAccountId = "local-1"),
-                )
-                fail("Expected current account save failure")
-            } catch (_: IllegalStateException) {
-                assertNull(database.providerAccountDao().getById("local-1"))
-                assertNull(
-                    database.quotaSnapshotDao().getLatestForAccount(
-                        providerId = "codex",
-                        localAccountId = "local-1",
-                    ),
-                )
-                assertEquals(null, currentAccountStore.selection)
-                assertNull(sessionStore.load(providerId = "codex", localAccountId = "local-1"))
-            }
-        }
-    }
-
-    @Test
-    fun `room commit failure removes saved session and leaves no account snapshot or selection`() = runTest {
+    fun `room commit failure removes saved session and leaves no account or snapshot`() = runTest {
         withPersistence(
             beforeRoomCommit = { throw IllegalStateException("room unavailable") },
-        ) { database, sessionStore, preferences, persistence ->
+        ) { database, sessionStore, persistence ->
             try {
                 persistence.save(
                     account = account(localAccountId = "local-1"),
@@ -187,7 +150,6 @@ class RoomCodexSessionImportPersistenceTest {
                         localAccountId = "local-1",
                     ),
                 )
-                assertNull(preferences.currentAccountSelection())
             }
         }
     }
@@ -204,7 +166,7 @@ class RoomCodexSessionImportPersistenceTest {
         withPersistence(
             sessionStore = sessionStore,
             beforeRoomCommit = { throw IllegalStateException("room unavailable") },
-        ) { _, savedSessionStore, _, persistence ->
+        ) { _, savedSessionStore, persistence ->
             try {
                 persistence.save(
                     account = account(localAccountId = "local-1"),
@@ -226,12 +188,10 @@ class RoomCodexSessionImportPersistenceTest {
 
     private suspend fun withPersistence(
         sessionStore: SecureSessionStore = FakeSecureSessionStore(),
-        currentAccountStore: CurrentAccountStore? = null,
         beforeRoomCommit: suspend () -> Unit = {},
         block: suspend (
             CodexMeterDatabase,
             SecureSessionStore,
-            CurrentAccountPreferences,
             RoomCodexSessionImportPersistence,
         ) -> Unit,
     ) {
@@ -239,18 +199,13 @@ class RoomCodexSessionImportPersistenceTest {
             RuntimeEnvironment.getApplication(),
             CodexMeterDatabase::class.java,
         ).build()
-        val preferences = CurrentAccountPreferences.create(
-            RuntimeEnvironment.getApplication()
-                .preferencesDataStoreFile("room-import-persistence-test.preferences_pb"),
-        )
         val persistence = RoomCodexSessionImportPersistence(
             database = database,
             sessionStore = sessionStore,
-            currentAccountStore = currentAccountStore ?: preferences,
             beforeRoomCommit = beforeRoomCommit,
         )
         try {
-            block(database, sessionStore, preferences, persistence)
+            block(database, sessionStore, persistence)
         } finally {
             database.close()
         }
@@ -323,15 +278,5 @@ class RoomCodexSessionImportPersistenceTest {
         override suspend fun load(providerId: String, localAccountId: String): ProviderSessionEnvelope? = null
 
         override suspend fun delete(providerId: String, localAccountId: String) = Unit
-    }
-
-    private class ThrowingCurrentAccountStore : CurrentAccountStore {
-        var selection: CurrentAccountSelection? = null
-
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
-
-        override suspend fun updateCurrentAccountSelection(selection: CurrentAccountSelection?) {
-            throw IllegalStateException("current account store unavailable")
-        }
     }
 }

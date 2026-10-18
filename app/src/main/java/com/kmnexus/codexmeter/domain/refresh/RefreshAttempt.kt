@@ -9,7 +9,8 @@ enum class RefreshTrigger {
     AppOpen,
     Manual,
     Widget,
-    // Legacy trigger kept so older local refresh attempts can still be decoded.
+    // Legacy triggers kept so older local refresh attempts can still be decoded. AccountSwitch was
+    // the refresh after choosing a "current account", which versions after 1.1.0 no longer have.
     ImportValidation,
     AccountSwitch,
     Periodic,

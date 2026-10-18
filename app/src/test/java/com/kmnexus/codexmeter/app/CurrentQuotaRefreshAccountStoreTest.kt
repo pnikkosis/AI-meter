@@ -3,10 +3,6 @@ package com.kmnexus.codexmeter.app
 import androidx.room.Room
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.domain.model.LocalAccountId
-import com.kmnexus.codexmeter.domain.model.ProviderId
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -70,33 +66,7 @@ class CurrentQuotaRefreshAccountStoreTest {
         }
     }
 
-    @Test
-    fun `current account is refreshable for manual retry even when it needs reauth`() = runTest {
-        withStore(
-            selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-reauth")),
-        ) { db, store ->
-            db.providerAccountDao().upsert(account("local-reauth", "codex", "needs_reauth"))
-
-            val account = store.currentAccount()
-
-            assertEquals("local-reauth", account?.localAccountId?.value)
-        }
-    }
-
-    @Test
-    fun `current account is not refreshable when disabled`() = runTest {
-        withStore(
-            selection = CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-disabled")),
-        ) { db, store ->
-            db.providerAccountDao().upsert(account("local-disabled", "codex", "disabled"))
-
-            assertEquals(null, store.currentAccount())
-        }
-    }
-
     private suspend fun withStore(
-        selection: CurrentAccountSelection? =
-            CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-active")),
         block: suspend (CodexMeterDatabase, CurrentQuotaRefreshAccountStore) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
@@ -104,9 +74,6 @@ class CurrentQuotaRefreshAccountStoreTest {
             CodexMeterDatabase::class.java,
         ).build()
         val store = CurrentQuotaRefreshAccountStore(
-            currentAccountReader = object : CurrentAccountReader {
-                override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
-            },
             providerAccountDao = db.providerAccountDao(),
         )
 

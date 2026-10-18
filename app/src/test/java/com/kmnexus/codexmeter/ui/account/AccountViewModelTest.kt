@@ -68,7 +68,6 @@ class AccountViewModelTest {
         val accountListUseCase = RecordingAccountListUseCase(
             AccountListResult(
                 accounts = listOf(account("local-1"), account("local-2"), account("local-3")),
-                currentAccountId = null,
             ),
         )
         val viewModel = viewModel(
@@ -137,7 +136,6 @@ class AccountViewModelTest {
         val accountListUseCase = RecordingAccountListUseCase(
             AccountListResult(
                 accounts = listOf(account("local-1")),
-                currentAccountId = localId("local-1"),
                 latestQuotaSnapshots = mapOf(
                     localId("local-1") to quotaSnapshot(
                         localAccountId = "local-1",
@@ -161,7 +159,6 @@ class AccountViewModelTest {
         val accountListUseCase = RecordingAccountListUseCase(
             AccountListResult(
                 accounts = listOf(account("prolite"), account("pro")),
-                currentAccountId = localId("local-1"),
                 latestQuotaSnapshots = mapOf(
                     localId("prolite") to quotaSnapshot(
                         localAccountId = "prolite",
@@ -210,7 +207,6 @@ class AccountViewModelTest {
         val accountListUseCase = RecordingAccountListUseCase(
             AccountListResult(
                 accounts = listOf(account("balance"), account("unlimited"), account("missing")),
-                currentAccountId = localId("balance"),
                 latestQuotaSnapshots = mapOf(
                     localId("balance") to quotaSnapshot(
                         localAccountId = "balance",
@@ -262,7 +258,6 @@ class AccountViewModelTest {
             accountListUseCase = RecordingAccountListUseCase(
                 AccountListResult(
                     accounts = listOf(account("local-1")),
-                    currentAccountId = localId("local-1"),
                     latestQuotaSnapshots = mapOf(
                         localId("local-1") to quotaSnapshot(
                             localAccountId = "local-1",

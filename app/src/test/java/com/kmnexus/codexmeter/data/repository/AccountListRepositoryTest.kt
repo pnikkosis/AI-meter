@@ -3,8 +3,6 @@ package com.kmnexus.codexmeter.data.repository
 import androidx.room.Room
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderId
@@ -50,9 +48,6 @@ class AccountListRepositoryTest {
             val repository = AccountListRepository(
                 providerAccountDao = db.providerAccountDao(),
                 quotaSnapshotDao = db.quotaSnapshotDao(),
-                currentAccountReader = StaticCurrentAccountReader(
-                    CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1")),
-                ),
             )
 
             val result = repository.loadAccounts()
@@ -79,9 +74,6 @@ class AccountListRepositoryTest {
             val repository = AccountListRepository(
                 providerAccountDao = db.providerAccountDao(),
                 quotaSnapshotDao = db.quotaSnapshotDao(),
-                currentAccountReader = StaticCurrentAccountReader(
-                    CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1")),
-                ),
             )
 
             val account = repository.loadAccounts().accounts.single()
@@ -100,12 +92,6 @@ class AccountListRepositoryTest {
         } finally {
             db.close()
         }
-    }
-
-    private class StaticCurrentAccountReader(
-        private val selection: CurrentAccountSelection?,
-    ) : CurrentAccountReader {
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
     }
 
     private fun account(localAccountId: String): ProviderAccountEntity =

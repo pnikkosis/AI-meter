@@ -13,9 +13,6 @@ import com.kmnexus.codexmeter.data.local.dao.QuotaSnapshotDao
 import com.kmnexus.codexmeter.data.local.dao.RefreshAttemptDao
 import com.kmnexus.codexmeter.data.local.db.CODEXMETER_DB_SCHEMA_VERSION
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
-import com.kmnexus.codexmeter.data.local.entity.QuotaSnapshotEntity
-import com.kmnexus.codexmeter.data.local.entity.RefreshAttemptEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
 import com.kmnexus.codexmeter.data.secure.SecureSessionStore
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginDiagnosticsReader
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceReader
@@ -32,7 +29,6 @@ import kotlinx.coroutines.withContext
 
 internal class SettingsDiagnosticsRepository(
     private val context: Context,
-    private val currentAccountReader: CurrentAccountReader,
     private val providerAccountDao: ProviderAccountDao,
     private val quotaSnapshotDao: QuotaSnapshotDao,
     private val refreshAttemptDao: RefreshAttemptDao,
@@ -48,38 +44,6 @@ internal class SettingsDiagnosticsRepository(
     private val nowMillisProvider: () -> Long = { System.currentTimeMillis() },
 ) : SettingsDiagnosticsReader {
     override suspend fun diagnosticsInput(): SettingsDiagnosticsInput {
-        val selection = currentAccountReader.currentAccountSelection()
-        val account = selection?.let { providerAccountDao.getById(it.localAccountId.value) }
-        val accountMatchesSelection = account != null && account.providerId == selection?.providerId?.value
-        val selectedProviderId = selection?.providerId?.value ?: CODEX_PROVIDER_ID
-        val selectedLocalAccountId = selection?.localAccountId?.value
-        val latestSnapshot = if (accountMatchesSelection && selectedLocalAccountId != null) {
-            quotaSnapshotDao.getLatestForAccount(
-                providerId = selectedProviderId,
-                localAccountId = selectedLocalAccountId,
-            )
-        } else {
-            null
-        }
-        val latestAttempt = if (accountMatchesSelection && selectedLocalAccountId != null) {
-            refreshAttemptDao.getLatestForAccount(
-                providerId = selectedProviderId,
-                localAccountId = selectedLocalAccountId,
-            )
-        } else {
-            null
-        }
-        val sessionEnvelope = if (accountMatchesSelection && selectedLocalAccountId != null) {
-            runCatching {
-                sessionStore.load(
-                    providerId = selectedProviderId,
-                    localAccountId = selectedLocalAccountId,
-                )
-            }.getOrNull()
-        } else {
-            null
-        }
-        val accountCount = providerAccountDao.listByProvider(CODEX_PROVIDER_ID).size
         val loginDiagnostics = deviceCodeLoginDiagnosticsReader.latestDeviceCodeLoginDiagnostics()
 
         val now = nowMillisProvider()
@@ -89,29 +53,7 @@ internal class SettingsDiagnosticsRepository(
         val retention = retentionPreferenceReader.retentionPreference()
         val widgetCount = widgetCountReader.configuredWidgetCount()
 
-        val consecutiveFailures = if (accountMatchesSelection && selectedLocalAccountId != null) {
-            refreshAttemptDao.countConsecutiveFailuresSinceLatestSuccess(
-                providerId = selectedProviderId,
-                localAccountId = selectedLocalAccountId,
-            )
-        } else {
-            null
-        }
-
-        val accountSummaries = providerAccountDao.listAll().map { acct ->
-            val attempt = refreshAttemptDao.getLatestForAccount(acct.providerId, acct.localAccountId)
-            val snapshot = quotaSnapshotDao.getLatestForAccount(acct.providerId, acct.localAccountId)
-            DiagnosticsAccountSummary(
-                providerId = acct.providerId,
-                accountIdHash = "sha256:${acct.localAccountId.diagnosticsSafeHash()}",
-                status = acct.status,
-                lastAttemptStatus = attempt?.status ?: "none",
-                lastAttemptErrorCode = attempt?.errorCode,
-                lastAttemptAt = attempt?.startedAt?.toString(),
-                lastSuccessfulRefreshAt = acct.lastSuccessfulRefreshAt?.toString(),
-                latestSnapshotAt = snapshot?.fetchedAt?.toString(),
-            )
-        }
+        val accountSummaries = providerAccountDao.listAll().map { account -> account.diagnosticsSummary() }
 
         val accountAlertConfigs = buildDiagnosticsAccountAlertConfigs(prefs.accountQuotaAlertSettings)
 
@@ -119,45 +61,6 @@ internal class SettingsDiagnosticsRepository(
             appVersion = BuildConfig.VERSION_NAME,
             buildType = BuildConfig.BUILD_TYPE,
             androidSdk = Build.VERSION.SDK_INT.toString(),
-            providerId = selectedProviderId,
-            accountDiagnosticId = selectedLocalAccountId?.let { "sha256:${it.diagnosticsSafeHash()}" } ?: "not_connected",
-            currentAccountSelectionStatus = selectionStatus(
-                hasSelection = selection != null,
-                account = account,
-                accountMatchesSelection = accountMatchesSelection,
-            ),
-            accountStatus = account?.status,
-            accountCount = accountCount,
-            sessionEnvelopeStatus = when {
-                !accountMatchesSelection -> "not_checked"
-                sessionEnvelope == null -> "missing_or_unreadable"
-                else -> "present"
-            },
-            sessionProviderAccountIdStatus = when {
-                sessionEnvelope == null -> null
-                sessionEnvelope.providerAccountId.isNullOrBlank() -> "missing"
-                else -> "present"
-            },
-            currentState = currentState(
-                account = account,
-                accountMatchesSelection = accountMatchesSelection,
-                latestSnapshot = latestSnapshot,
-                latestAttempt = latestAttempt,
-            ),
-            latestSnapshotStatus = if (latestSnapshot == null) "missing" else "present",
-            latestSnapshotSource = latestSnapshot?.source,
-            latestSnapshotFetchedAt = latestSnapshot?.fetchedAt?.toString(),
-            latestSnapshotDigestStatus = latestSnapshot?.responseDigest?.let { "present" } ?: "missing",
-            lastSuccessfulRefreshAt = account?.lastSuccessfulRefreshAt?.toString() ?: "unavailable",
-            lastAttemptStatus = latestAttempt?.status ?: "none",
-            lastAttemptTrigger = latestAttempt?.trigger,
-            lastAttemptStartedAt = latestAttempt?.startedAt?.toString(),
-            lastAttemptFinishedAt = latestAttempt?.finishedAt?.toString(),
-            safeErrorCode = latestAttempt?.errorCode,
-            httpStatus = latestAttempt?.httpStatus,
-            retryable = latestAttempt?.retryable,
-            userActionRequired = latestAttempt?.userActionRequired,
-            diagnosticsDigest = latestAttempt?.diagnosticsDigest,
             deviceCodeLoginStatus = loginDiagnostics.status,
             deviceCodeLoginAttemptId = loginDiagnostics.attemptId?.let { "sha256:${it.diagnosticsSafeHash()}" },
             deviceCodeLoginSafeErrorCode = loginDiagnostics.safeErrorCode,
@@ -180,7 +83,6 @@ internal class SettingsDiagnosticsRepository(
             workManagerNextScheduleAt = wm.periodicNextScheduleAtMillis?.toString(),
             workManagerStopReason = wm.periodicStopReason,
             onceWorkManagerStatus = wm.onceStatus,
-            consecutiveFailures = consecutiveFailures,
             accountSummaries = accountSummaries,
             roomSchemaVersion = roomSchemaVersion,
             retentionDays = when (retention) {
@@ -199,35 +101,43 @@ internal class SettingsDiagnosticsRepository(
         )
     }
 
-    private fun selectionStatus(
-        hasSelection: Boolean,
-        account: ProviderAccountEntity?,
-        accountMatchesSelection: Boolean,
-    ): String =
-        when {
-            !hasSelection -> "no_selection"
-            account == null -> "selected_account_missing"
-            !accountMatchesSelection -> "selected_account_provider_mismatch"
-            else -> "selected_account_present"
-        }
-
-    private fun currentState(
-        account: ProviderAccountEntity?,
-        accountMatchesSelection: Boolean,
-        latestSnapshot: QuotaSnapshotEntity?,
-        latestAttempt: RefreshAttemptEntity?,
-    ): String =
-        when {
-            account == null -> "noData"
-            !accountMatchesSelection -> "accountSelectionMismatch"
-            latestAttempt?.status == "failed" -> "failed"
-            latestAttempt?.status == "cancelled" -> "cancelled"
-            latestSnapshot != null -> "ready"
-            else -> "noData"
-        }
-
-    private companion object {
-        const val CODEX_PROVIDER_ID = "codex"
+    /**
+     * Every account gets the same detail. Only statuses leave the device: the session file is
+     * reported as present or not, never its contents, and the account id only as a hash.
+     */
+    private suspend fun ProviderAccountEntity.diagnosticsSummary(): DiagnosticsAccountSummary {
+        val attempt = refreshAttemptDao.getLatestForAccount(providerId, localAccountId)
+        val snapshot = quotaSnapshotDao.getLatestForAccount(providerId, localAccountId)
+        val session = runCatching {
+            sessionStore.load(providerId = providerId, localAccountId = localAccountId)
+        }.getOrNull()
+        return DiagnosticsAccountSummary(
+            providerId = providerId,
+            accountIdHash = "sha256:${localAccountId.diagnosticsSafeHash()}",
+            status = status,
+            lastAttemptStatus = attempt?.status ?: "none",
+            lastAttemptErrorCode = attempt?.errorCode,
+            lastAttemptAt = attempt?.startedAt?.toString(),
+            lastSuccessfulRefreshAt = lastSuccessfulRefreshAt?.toString(),
+            latestSnapshotAt = snapshot?.fetchedAt?.toString(),
+            sessionEnvelopeStatus = if (session == null) "missing_or_unreadable" else "present",
+            sessionProviderAccountIdStatus = when {
+                session == null -> null
+                session.providerAccountId.isNullOrBlank() -> "missing"
+                else -> "present"
+            },
+            consecutiveFailures = refreshAttemptDao.countConsecutiveFailuresSinceLatestSuccess(
+                providerId = providerId,
+                localAccountId = localAccountId,
+            ),
+            latestSnapshotSource = snapshot?.source,
+            latestSnapshotDigestStatus = snapshot?.let { if (it.responseDigest == null) "missing" else "present" },
+            lastAttemptTrigger = attempt?.trigger,
+            httpStatus = attempt?.httpStatus,
+            retryable = attempt?.retryable,
+            userActionRequired = attempt?.userActionRequired,
+            diagnosticsDigest = attempt?.diagnosticsDigest,
+        )
     }
 }
 

@@ -7,8 +7,7 @@ import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.core.network.ProviderHosts
 import com.kmnexus.codexmeter.core.network.ProviderHttpClient
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountPreferences
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountReader
+import com.kmnexus.codexmeter.data.preferences.AppPreferencesDataStore
 import com.kmnexus.codexmeter.data.preferences.NotificationPreferencesDataStore
 import com.kmnexus.codexmeter.data.preferences.PrimaryQuotaWindowPreferences
 import com.kmnexus.codexmeter.data.preferences.RetentionPreferences
@@ -33,7 +32,6 @@ import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountStateRepublisher
 import com.kmnexus.codexmeter.domain.account.AccountSurfacesRefresher
-import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginDiagnosticsReader
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginNotifier
@@ -142,11 +140,11 @@ class AppContainer private constructor(
     val initialThemeMode: ThemeMode,
     val currencyPreferences: CurrencyPreferencesDataStore,
     val exchangeRateRepository: ExchangeRateRepository,
-    private val currentAccountStore: CurrentQuotaRefreshAccountStore,
+    private val refreshAccountStore: CurrentQuotaRefreshAccountStore,
     val exchangeRateRefresher: ExchangeRateRefresher,
 ) {
     suspend fun activeQuotaRefreshAccounts(): List<ProviderAccount> =
-        currentAccountStore.activeAccounts()
+        refreshAccountStore.activeAccounts()
 
     /**
      * Pull-to-refresh on the Account screen: refresh every manually-refreshable account in parallel,
@@ -158,7 +156,7 @@ class AppContainer private constructor(
                 refreshCoordinator = refreshCoordinator,
                 exchangeRateRefresher = exchangeRateRefresher,
             ).refresh(
-                accounts = currentAccountStore.manuallyRefreshableAccounts(),
+                accounts = refreshAccountStore.manuallyRefreshableAccounts(),
                 trigger = RefreshTrigger.Manual,
             )
         }
@@ -171,7 +169,7 @@ class AppContainer private constructor(
                 CodexMeterDatabase::class.java,
                 CodexMeterDatabase.DATABASE_NAME,
             ).build()
-            val currentAccountPreferences = CurrentAccountPreferences.create(
+            val preferencesDataStore = AppPreferencesDataStore.create(
                 file = appContext.preferencesDataStoreFile(PREFERENCES_FILE_NAME),
             )
             val appearancePreferences = AppearancePreferences.create(
@@ -181,10 +179,10 @@ class AppContainer private constructor(
             val initialThemeMode = runBlocking {
                 appearancePreferences.themeMode.first()
             }
-            val retentionPreferences = RetentionPreferences(currentAccountPreferences.dataStore)
-            val notificationPreferences = NotificationPreferencesDataStore(currentAccountPreferences.dataStore)
-            val primaryQuotaWindowPreferences = PrimaryQuotaWindowPreferences(currentAccountPreferences.dataStore)
-            val storedDisplayPreferences = AccountDisplayPreferencesDataStore(currentAccountPreferences.dataStore)
+            val retentionPreferences = RetentionPreferences(preferencesDataStore)
+            val notificationPreferences = NotificationPreferencesDataStore(preferencesDataStore)
+            val primaryQuotaWindowPreferences = PrimaryQuotaWindowPreferences(preferencesDataStore)
+            val storedDisplayPreferences = AccountDisplayPreferencesDataStore(preferencesDataStore)
             // Every provider request goes over HTTPS, without following redirects, and each provider's
             // clients can only reach that provider's own hosts: a Codex token can never be sent to
             // Anthropic or the other way round. Token grants use a client that never replays a
@@ -209,7 +207,7 @@ class AppContainer private constructor(
             val payloadCipher: PayloadCipher = AesGcmPayloadCipher(AndroidKeystoreSecretKeyProvider())
             val widgetDeletedAccountStateCleaner = WidgetDeletedAccountStateCleaner(appContext)
             val clock = Clock.systemUTC()
-            val currencyPreferences = CurrencyPreferencesDataStore(currentAccountPreferences.dataStore)
+            val currencyPreferences = CurrencyPreferencesDataStore(preferencesDataStore)
             // Currency conversion is disabled: Codex and Claude report percentages, not balances, and
             // the app makes no network calls besides the providers' own APIs. The repository stays
             // as an empty cache so the balance display code paths remain inert.
@@ -333,8 +331,6 @@ class AppContainer private constructor(
             return fromDatabase(
                 appContext = appContext,
                 database = database,
-                currentAccountReader = currentAccountPreferences,
-                currentAccountPreferences = currentAccountPreferences,
                 retentionPreferences = retentionPreferences,
                 notificationPreferences = notificationPreferences,
                 primaryQuotaWindowPreferences = primaryQuotaWindowPreferences,
@@ -355,12 +351,10 @@ class AppContainer private constructor(
                 accountListRepository = AccountListRepository(
                     providerAccountDao = database.providerAccountDao(),
                     quotaSnapshotDao = database.quotaSnapshotDao(),
-                    currentAccountReader = currentAccountPreferences,
                 ),
                 accountDeletionRepository = AccountDeletionRepository(
                     database = database,
                     secureSessionStore = sessionStore,
-                    currentAccountStore = currentAccountPreferences,
                     deletedAccountStateCleaner = CompositeDeletedAccountStateCleaner(
                         listOf(
                             widgetDeletedAccountStateCleaner,
@@ -395,8 +389,6 @@ class AppContainer private constructor(
         private fun fromDatabase(
             appContext: Context,
             database: CodexMeterDatabase,
-            currentAccountReader: CurrentAccountReader,
-            currentAccountPreferences: CurrentAccountPreferences,
             retentionPreferences: RetentionPreferences,
             notificationPreferences: NotificationPreferencesDataStore,
             primaryQuotaWindowPreferences: PrimaryQuotaWindowPreferences,
@@ -429,11 +421,10 @@ class AppContainer private constructor(
             accountsWidgetStateLoader: AccountsWidgetStateLoader,
         ): AppContainer {
             // Shared by both providers: commits account, first snapshot and encrypted session together
-            // and rolls back the session file and current-account choice if the database write fails.
+            // and rolls back the session file if the database write fails.
             val importPersistence = RoomCodexSessionImportPersistence(
                 database = database,
                 sessionStore = sessionStore,
-                currentAccountStore = currentAccountPreferences,
             )
             val sessionImporter = CodexSessionImporter(
                 usageClient = CodexSessionImporter.UsageClient(usageClient::fetchUsage),
@@ -488,7 +479,6 @@ class AppContainer private constructor(
                 clock = clock,
             )
             val currentQuotaRefreshAccountStore = CurrentQuotaRefreshAccountStore(
-                currentAccountReader = currentAccountReader,
                 providerAccountDao = database.providerAccountDao(),
             )
             val refreshCoordinator = RefreshCoordinator(
@@ -505,19 +495,6 @@ class AppContainer private constructor(
             )
             val accountMutationRepository = AccountMutationRepository(
                 providerAccountDao = database.providerAccountDao(),
-                currentAccountStore = currentAccountPreferences,
-                accountSwitchRefreshRequester = AccountSwitchRefreshRequester { account ->
-                    try {
-                        refreshCoordinator.refresh(
-                            account = account,
-                            trigger = RefreshTrigger.AccountSwitch,
-                        )
-                    } catch (exception: CancellationException) {
-                        throw exception
-                    } catch (_: Exception) {
-                        // Account selection is already durable; a later refresh/app open can recover state.
-                    }
-                },
                 accountStateRepublisher = AccountStateRepublisher { account ->
                     currentQuotaStatePublisher.publish(
                         currentQuotaStateRepository.loadAccountState(
@@ -554,7 +531,6 @@ class AppContainer private constructor(
             val deviceCodeLoginDiagnosticsReader = deviceCodeLoginController as DeviceCodeLoginDiagnosticsReader
             val settingsDiagnosticsReader = SettingsDiagnosticsRepository(
                 context = appContext,
-                currentAccountReader = currentAccountReader,
                 providerAccountDao = database.providerAccountDao(),
                 quotaSnapshotDao = database.quotaSnapshotDao(),
                 refreshAttemptDao = database.refreshAttemptDao(),
@@ -618,7 +594,7 @@ class AppContainer private constructor(
                 initialThemeMode = initialThemeMode,
                 currencyPreferences = currencyPreferences,
                 exchangeRateRepository = exchangeRateRepository,
-                currentAccountStore = currentQuotaRefreshAccountStore,
+                refreshAccountStore = currentQuotaRefreshAccountStore,
                 exchangeRateRefresher = exchangeRateRefresher,
             )
         }

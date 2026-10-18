@@ -258,16 +258,19 @@ class SettingsViewModelTest {
     fun `diagnostics copy model is redacted`() {
         val copyModel = viewModel.buildDiagnosticsCopyModel(
             SettingsDiagnosticsInput(
-                providerId = "codex",
-                accountDiagnosticId = "acct-safe-hash",
-                currentState = "failed",
-                lastAttemptStatus = "failed",
+                accountSummaries = listOf(
+                    DiagnosticsAccountSummary(
+                        providerId = "codex",
+                        accountIdHash = "acct-safe-hash",
+                        status = "active",
+                        lastAttemptStatus = "failed",
+                    ),
+                ),
                 unsafeDetails = "Authorization: Bearer should_not_leave\nCookie: should_not_leave",
             ),
         )
 
-        assertTrue(copyModel.text.contains("providerId=codex"))
-        assertTrue(copyModel.text.contains("accountDiagnosticId=acct-safe-hash"))
+        assertTrue(copyModel.text.contains("codex/acct-safe-hash status=active lastAttempt=failed"))
         assertTrue(copyModel.text.contains("[REDACTED]"))
         assertFalse(copyModel.text.contains("should_not_leave"))
     }
@@ -307,28 +310,24 @@ class SettingsViewModelTest {
                 appVersion = "0.1.0-debug",
                 buildType = "debug",
                 androidSdk = "36",
-                providerId = "codex",
-                accountDiagnosticId = "sha256:abcdef123456",
-                currentAccountSelectionStatus = "selected_account_present",
-                accountStatus = "active",
-                accountCount = 1,
-                sessionEnvelopeStatus = "present",
-                sessionProviderAccountIdStatus = "present",
-                currentState = "failed",
-                latestSnapshotStatus = "present",
-                latestSnapshotSource = "device_code_login",
-                latestSnapshotFetchedAt = "1700000000000",
-                latestSnapshotDigestStatus = "present",
-                lastSuccessfulRefreshAt = "1700000000000",
-                lastAttemptStatus = "failed",
-                lastAttemptTrigger = "manual",
-                lastAttemptStartedAt = "1700000001000",
-                lastAttemptFinishedAt = "1700000002000",
-                safeErrorCode = "error_network",
-                httpStatus = 500,
-                retryable = true,
-                userActionRequired = false,
-                diagnosticsDigest = "codex_usage_http_500",
+                accountSummaries = listOf(
+                    DiagnosticsAccountSummary(
+                        providerId = "codex",
+                        accountIdHash = "sha256:abcdef123456",
+                        status = "active",
+                        lastAttemptStatus = "failed",
+                        lastAttemptErrorCode = "error_network",
+                        sessionEnvelopeStatus = "present",
+                        sessionProviderAccountIdStatus = "present",
+                        latestSnapshotSource = "device_code_login",
+                        latestSnapshotDigestStatus = "present",
+                        lastAttemptTrigger = "manual",
+                        httpStatus = 500,
+                        retryable = true,
+                        userActionRequired = false,
+                        diagnosticsDigest = "codex_usage_http_500",
+                    ),
+                ),
                 deviceCodeLoginStatus = "validation_failed",
                 deviceCodeLoginAttemptId = "sha256:fedcba654321",
                 deviceCodeLoginSafeErrorCode = "error_network",
@@ -342,8 +341,14 @@ class SettingsViewModelTest {
         )
 
         val text = copyModel.text
-        assertTrue(text.contains("sessionEnvelopeStatus=present"))
-        assertTrue(text.contains("diagnosticsDigest=codex_usage_http_500"))
+        assertTrue(
+            text.contains(
+                "  sessionEnvelopeStatus=present sessionProviderAccountIdStatus=present " +
+                    "latestSnapshotSource=device_code_login latestSnapshotDigestStatus=present " +
+                    "lastAttemptTrigger=manual httpStatus=500 retryable=true userActionRequired=false " +
+                    "diagnosticsDigest=codex_usage_http_500",
+            ),
+        )
         assertTrue(text.contains("deviceCodeLoginStatus=validation_failed"))
         assertTrue(text.contains("deviceCodeLoginVerificationUriStatus=official_auth_openai"))
         assertTrue(text.contains("workManagerStatus=quota_periodic_refresh:enqueued"))
@@ -357,8 +362,14 @@ class SettingsViewModelTest {
         val viewModel = SettingsViewModel(
             diagnosticsReader = SettingsDiagnosticsReader {
                 SettingsDiagnosticsInput(
-                    accountDiagnosticId = "sha256:from-reader",
-                    currentAccountSelectionStatus = "selected_account_present",
+                    accountSummaries = listOf(
+                        DiagnosticsAccountSummary(
+                            providerId = "claude",
+                            accountIdHash = "sha256:from-reader",
+                            status = "active",
+                            lastAttemptStatus = "success",
+                        ),
+                    ),
                     deviceCodeLoginStatus = "failed",
                     deviceCodeLoginSafeErrorCode = "error_network",
                 )
@@ -368,7 +379,7 @@ class SettingsViewModelTest {
         val copyModel = viewModel.copyDiagnostics()
 
         assertEquals(copyModel, viewModel.uiState.value.diagnostics.copyModel)
-        assertTrue(copyModel.text.contains("accountDiagnosticId=sha256:from-reader"))
+        assertTrue(copyModel.text.contains("claude/sha256:from-reader status=active lastAttempt=success"))
         assertTrue(copyModel.text.contains("deviceCodeLoginStatus=failed"))
         assertTrue(copyModel.text.contains("deviceCodeLoginSafeErrorCode=error_network"))
     }
@@ -409,7 +420,7 @@ class SettingsViewModelTest {
 
         val uiState = viewModel.uiState.value
         assertEquals(1, uiState.diagnostics.recheckRequestCount)
-        assertTrue(uiState.diagnostics.copyModel?.text?.contains("currentAccountSelectionStatus=unknown") == true)
+        assertTrue(uiState.diagnostics.copyModel?.text?.contains("accountCount=0") == true)
     }
 
     @Test
@@ -457,7 +468,9 @@ class SettingsViewModelTest {
         assertTrue(text.contains("## WORKMANAGER"))
         assertTrue(text.contains("## CONFIG"))
         assertTrue(text.contains("## ACCOUNTS"))
-        assertTrue(text.contains("## CURRENT ACCOUNT"))
+        assertTrue(text.contains("## DEVICE CODE SIGN-IN"))
+        // There is no current account: every account gets the same detail under ACCOUNTS.
+        assertFalse(text.contains("CURRENT ACCOUNT"))
         assertFalse(text.trimStart().startsWith("{"))
         assertFalse(text.trimStart().startsWith("["))
     }
@@ -468,12 +481,12 @@ class SettingsViewModelTest {
         val text = viewModel.buildDiagnosticsCopyModel(
             SettingsDiagnosticsInput(
                 generatedAtMillis = now,
-                latestSnapshotFetchedAt = (now - 3 * 3_600_000L).toString(),
+                appLastUpdateAt = (now - 3 * 3_600_000L).toString(),
             ),
         ).text
 
         assertTrue(text.contains("generatedAt=1700000000000 (2023-11-14T22:13:20Z)"))
-        assertTrue(text.contains("latestSnapshotFetchedAt=1699989200000 (2023-11-14T19:13:20Z, 3h ago)"))
+        assertTrue(text.contains("appLastUpdateAt=1699989200000 (2023-11-14T19:13:20Z, 3h ago)"))
     }
 
     @Test
@@ -481,7 +494,15 @@ class SettingsViewModelTest {
         val text = viewModel.buildDiagnosticsCopyModel(
             SettingsDiagnosticsInput(
                 generatedAtMillis = 1_700_000_000_000L,
-                consecutiveFailures = 4,
+                accountSummaries = listOf(
+                    DiagnosticsAccountSummary(
+                        providerId = "codex",
+                        accountIdHash = "sha256:abcdef123456",
+                        status = "active",
+                        lastAttemptStatus = "failed",
+                        consecutiveFailures = 4,
+                    ),
+                ),
                 batteryOptimizationIgnored = false,
                 backgroundRestricted = "true",
                 networkType = "wifi",
@@ -490,7 +511,7 @@ class SettingsViewModelTest {
             ),
         ).text
 
-        assertTrue(text.contains("consecutiveFailures=4"))
+        assertTrue(text.contains("  consecutiveFailures=4"))
         assertTrue(text.contains("batteryOptimizationIgnored=false"))
         assertTrue(text.contains("backgroundRestricted=true"))
         assertTrue(text.contains("networkType=wifi"))
@@ -531,6 +552,39 @@ class SettingsViewModelTest {
             ),
         )
         assertTrue(text.contains("deepseek/sha256:777888999000 status=active lastAttempt=none"))
+    }
+
+    @Test
+    fun `diagnostics gives every account its own detail line`() {
+        val text = viewModel.buildDiagnosticsCopyModel(
+            SettingsDiagnosticsInput(
+                accountSummaries = listOf(
+                    DiagnosticsAccountSummary(
+                        providerId = "codex",
+                        accountIdHash = "sha256:aaa111",
+                        status = "active",
+                        lastAttemptStatus = "success",
+                        sessionEnvelopeStatus = "present",
+                        consecutiveFailures = 0,
+                    ),
+                    DiagnosticsAccountSummary(
+                        providerId = "claude",
+                        accountIdHash = "sha256:bbb222",
+                        status = "needs_reauth",
+                        lastAttemptStatus = "failed",
+                        sessionEnvelopeStatus = "missing_or_unreadable",
+                        consecutiveFailures = 3,
+                    ),
+                ),
+            ),
+        ).text
+        val lines = text.lines()
+        val codex = lines.indexOfFirst { it.startsWith("codex/sha256:aaa111 ") }
+        val claude = lines.indexOfFirst { it.startsWith("claude/sha256:bbb222 ") }
+
+        assertTrue(text.contains("accountCount=2"))
+        assertEquals("  sessionEnvelopeStatus=present consecutiveFailures=0", lines[codex + 1])
+        assertEquals("  sessionEnvelopeStatus=missing_or_unreadable consecutiveFailures=3", lines[claude + 1])
     }
 
     @Test
@@ -652,7 +706,7 @@ class SettingsViewModelTest {
         private val accounts: List<ProviderAccount>,
     ) : AccountListUseCase {
         override suspend fun loadAccounts(): AccountListResult =
-            AccountListResult(accounts = accounts, currentAccountId = accounts.firstOrNull()?.localAccountId)
+            AccountListResult(accounts = accounts)
     }
 
     private fun account(

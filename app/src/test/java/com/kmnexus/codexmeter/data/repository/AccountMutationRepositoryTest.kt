@@ -3,10 +3,7 @@ package com.kmnexus.codexmeter.data.repository
 import androidx.room.Room
 import com.kmnexus.codexmeter.data.local.db.CodexMeterDatabase
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
 import com.kmnexus.codexmeter.domain.account.AccountStateRepublisher
-import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.model.LocalAccountId
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
 import com.kmnexus.codexmeter.domain.model.ProviderId
@@ -15,9 +12,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -29,55 +24,8 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class AccountMutationRepositoryTest {
     @Test
-    fun `switching existing account persists current selection`() = runTest {
-        val refreshRequester = RecordingAccountSwitchRefreshRequester()
-        withRepository(
-            accountSwitchRefreshRequester = refreshRequester,
-        ) { db, currentAccountStore, repository ->
-            db.providerAccountDao().upsert(account("local-1"))
-            db.providerAccountDao().upsert(account("local-2"))
-
-            val switched = repository.switchCurrentAccount(ProviderId("codex"), LocalAccountId("local-2"))
-
-            assertTrue(switched)
-            assertEquals(
-                CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-2")),
-                currentAccountStore.currentAccountSelection(),
-            )
-            assertEquals(
-                LocalAccountId("local-2"),
-                AccountListRepository(
-                    providerAccountDao = db.providerAccountDao(),
-                    quotaSnapshotDao = db.quotaSnapshotDao(),
-                    currentAccountReader = currentAccountStore,
-                )
-                    .loadAccounts()
-                    .currentAccountId,
-            )
-            assertEquals(listOf(LocalAccountId("local-2")), refreshRequester.requestedAccountIds)
-        }
-    }
-
-    @Test
-    fun `switching missing account does not mutate current selection`() = runTest {
-        withRepository { _, currentAccountStore, repository ->
-            currentAccountStore.updateCurrentAccountSelection(
-                CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1")),
-            )
-
-            val switched = repository.switchCurrentAccount(ProviderId("codex"), LocalAccountId("missing"))
-
-            assertFalse(switched)
-            assertEquals(
-                CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-1")),
-                currentAccountStore.currentAccountSelection(),
-            )
-        }
-    }
-
-    @Test
     fun `renaming existing account persists display name avatar initial and updated time`() = runTest {
-        withRepository { db, _, repository ->
+        withRepository { db, repository ->
             db.providerAccountDao().upsert(account("local-1", displayName = "Codex Main"))
 
             val renamed = repository.renameAccount(
@@ -104,7 +52,7 @@ class AccountMutationRepositoryTest {
         val republisher = RecordingAccountStateRepublisher()
         withRepository(
             accountStateRepublisher = republisher,
-        ) { db, _, repository ->
+        ) { db, repository ->
             db.providerAccountDao().upsert(account("local-1", displayName = "Codex Main"))
 
             repository.renameAccount(
@@ -119,30 +67,8 @@ class AccountMutationRepositoryTest {
     }
 
     @Test
-    fun `renaming an account other than the stored selection still republishes it`() = runTest {
-        val republisher = RecordingAccountStateRepublisher()
-        withRepository(
-            accountStateRepublisher = republisher,
-        ) { db, currentAccountStore, repository ->
-            db.providerAccountDao().upsert(account("local-1", displayName = "Codex Main"))
-            db.providerAccountDao().upsert(account("local-2", displayName = "Backup"))
-            currentAccountStore.updateCurrentAccountSelection(
-                CurrentAccountSelection(ProviderId("codex"), LocalAccountId("local-2")),
-            )
-
-            repository.renameAccount(
-                providerId = ProviderId("codex"),
-                localAccountId = LocalAccountId("local-1"),
-                displayName = "Work",
-            )
-
-            assertEquals(listOf(LocalAccountId("local-1")), republisher.republishedAccountIds)
-        }
-    }
-
-    @Test
     fun `renaming missing account returns null`() = runTest {
-        withRepository { _, _, repository ->
+        withRepository { _, repository ->
             val renamed = repository.renameAccount(
                 providerId = ProviderId("codex"),
                 localAccountId = LocalAccountId("missing"),
@@ -154,37 +80,23 @@ class AccountMutationRepositoryTest {
     }
 
     private suspend fun withRepository(
-        accountSwitchRefreshRequester: AccountSwitchRefreshRequester = RecordingAccountSwitchRefreshRequester(),
         accountStateRepublisher: AccountStateRepublisher = RecordingAccountStateRepublisher(),
-        block: suspend (CodexMeterDatabase, InMemoryCurrentAccountStore, AccountMutationRepository) -> Unit,
+        block: suspend (CodexMeterDatabase, AccountMutationRepository) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
             CodexMeterDatabase::class.java,
         ).build()
-        val currentAccountStore = InMemoryCurrentAccountStore()
         val repository = AccountMutationRepository(
             providerAccountDao = db.providerAccountDao(),
-            currentAccountStore = currentAccountStore,
-            accountSwitchRefreshRequester = accountSwitchRefreshRequester,
             accountStateRepublisher = accountStateRepublisher,
             clock = Clock.fixed(UPDATED_AT, ZoneOffset.UTC),
         )
 
         try {
-            block(db, currentAccountStore, repository)
+            block(db, repository)
         } finally {
             db.close()
-        }
-    }
-
-    private class RecordingAccountSwitchRefreshRequester : AccountSwitchRefreshRequester {
-        val requestedAccounts = mutableListOf<ProviderAccount>()
-        val requestedAccountIds: List<LocalAccountId>
-            get() = requestedAccounts.map { it.localAccountId }
-
-        override suspend fun requestAccountSwitchRefresh(account: ProviderAccount) {
-            requestedAccounts += account
         }
     }
 
@@ -195,16 +107,6 @@ class AccountMutationRepositoryTest {
 
         override suspend fun republishAccountState(account: ProviderAccount) {
             republishedAccounts += account
-        }
-    }
-
-    private class InMemoryCurrentAccountStore : CurrentAccountStore {
-        private var selection: CurrentAccountSelection? = null
-
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
-
-        override suspend fun updateCurrentAccountSelection(selection: CurrentAccountSelection?) {
-            this.selection = selection
         }
     }
 

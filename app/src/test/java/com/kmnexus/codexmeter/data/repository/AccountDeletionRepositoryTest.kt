@@ -6,8 +6,6 @@ import com.kmnexus.codexmeter.data.local.entity.AlertStateEntity
 import com.kmnexus.codexmeter.data.local.entity.ProviderAccountEntity
 import com.kmnexus.codexmeter.data.local.entity.QuotaSnapshotEntity
 import com.kmnexus.codexmeter.data.local.entity.RefreshAttemptEntity
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountSelection
-import com.kmnexus.codexmeter.data.preferences.CurrentAccountStore
 import com.kmnexus.codexmeter.data.secure.FakeSecureSessionStore
 import com.kmnexus.codexmeter.data.secure.ProviderSessionEnvelope
 import com.kmnexus.codexmeter.data.secure.SecureSessionStore
@@ -61,41 +59,13 @@ class AccountDeletionRepositoryTest {
     }
 
     @Test
-    fun `deleting current account moves selection to next account`() = runTest {
-        withRepository { db, _, repository ->
-            seedAccountGraph(db, localAccountId = "target")
-            seedAccountGraph(db, localAccountId = "other")
-            val currentAccountStore = repository.currentAccountStore
-            currentAccountStore.updateCurrentAccountSelection(selection(localAccountId = "target"))
-
-            repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
-
-            assertEquals(selection(localAccountId = "other"), currentAccountStore.currentAccountSelection())
-        }
-    }
-
-    @Test
-    fun `deleting only current account clears selection`() = runTest {
-        withRepository { db, _, repository ->
-            seedAccountGraph(db, localAccountId = "target")
-            val currentAccountStore = repository.currentAccountStore
-            currentAccountStore.updateCurrentAccountSelection(selection(localAccountId = "target"))
-
-            repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
-
-            assertNull(currentAccountStore.currentAccountSelection())
-        }
-    }
-
-    @Test
-    fun `secure session delete failure leaves account data and current selection intact`() = runTest {
+    fun `secure session delete failure leaves account data intact`() = runTest {
         val widgetStateCleaner = RecordingDeletedAccountStateCleaner()
         withRepository(
             sessionStore = ThrowingSecureSessionStore(IllegalStateException("delete failed")),
             deletedAccountStateCleaner = widgetStateCleaner,
         ) { db, _, repository ->
             seedAccountGraph(db, localAccountId = "target")
-            repository.currentAccountStore.updateCurrentAccountSelection(selection(localAccountId = "target"))
 
             val result = runCatching {
                 repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
@@ -103,29 +73,8 @@ class AccountDeletionRepositoryTest {
 
             assertEquals("delete failed", result.exceptionOrNull()?.message)
             assertAccountGraphPresent(db, localAccountId = "target")
-            assertEquals(selection(localAccountId = "target"), repository.currentAccountStore.currentAccountSelection())
-            assertEquals(listOf(selection(localAccountId = "target")), widgetStateCleaner.clearedAccounts)
-            assertEquals(listOf(selection(localAccountId = "target")), widgetStateCleaner.restoredAccounts)
-        }
-    }
-
-    @Test
-    fun `current selection update failure leaves account data intact`() = runTest {
-        val currentAccountStore = ThrowingCurrentAccountStore(
-            initialSelection = selection(localAccountId = "target"),
-            exception = IllegalStateException("selection failed"),
-        )
-        withRepository(currentAccountStore = currentAccountStore) { db, _, repository ->
-            seedAccountGraph(db, localAccountId = "target")
-            seedAccountGraph(db, localAccountId = "other")
-
-            val result = runCatching {
-                repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
-            }
-
-            assertEquals("selection failed", result.exceptionOrNull()?.message)
-            assertAccountGraphPresent(db, localAccountId = "target")
-            assertAccountGraphPresent(db, localAccountId = "other")
+            assertEquals(listOf(deleted(localAccountId = "target")), widgetStateCleaner.clearedAccounts)
+            assertEquals(listOf(deleted(localAccountId = "target")), widgetStateCleaner.restoredAccounts)
         }
     }
 
@@ -137,16 +86,15 @@ class AccountDeletionRepositoryTest {
 
             repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
 
-            assertEquals(listOf(selection(localAccountId = "target")), widgetStateCleaner.clearedAccounts)
+            assertEquals(listOf(deleted(localAccountId = "target")), widgetStateCleaner.clearedAccounts)
         }
     }
 
     @Test
-    fun `widget state cleaner failure leaves account data and current selection intact`() = runTest {
+    fun `widget state cleaner failure leaves account data intact`() = runTest {
         val widgetStateCleaner = ThrowingDeletedAccountStateCleaner(IllegalStateException("widget failed"))
         withRepository(deletedAccountStateCleaner = widgetStateCleaner) { db, _, repository ->
             seedAccountGraph(db, localAccountId = "target")
-            repository.currentAccountStore.updateCurrentAccountSelection(selection(localAccountId = "target"))
 
             val result = runCatching {
                 repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
@@ -154,12 +102,11 @@ class AccountDeletionRepositoryTest {
 
             assertEquals("widget failed", result.exceptionOrNull()?.message)
             assertAccountGraphPresent(db, localAccountId = "target")
-            assertEquals(selection(localAccountId = "target"), repository.currentAccountStore.currentAccountSelection())
         }
     }
 
     @Test
-    fun `local data delete failure after session delete restores session current selection and widget state`() = runTest {
+    fun `local data delete failure after session delete restores session and widget state`() = runTest {
         val widgetStateCleaner = RecordingDeletedAccountStateCleaner()
         val sessionStore = FakeSecureSessionStore()
         sessionStore.save(sessionEnvelope(localAccountId = "target"))
@@ -169,7 +116,6 @@ class AccountDeletionRepositoryTest {
             localDataDeleter = ThrowingAccountLocalDataDeleter(IllegalStateException("local delete failed")),
         ) { db, _, repository ->
             seedAccountGraph(db, localAccountId = "target")
-            repository.currentAccountStore.updateCurrentAccountSelection(selection(localAccountId = "target"))
 
             val result = runCatching {
                 repository.deleteAccount(providerId = ProviderId("codex"), localAccountId = LocalAccountId("target"))
@@ -182,9 +128,8 @@ class AccountDeletionRepositoryTest {
             assertArrayEquals(byteArrayOf(1), restoredSession?.payloadCiphertext)
             assertArrayEquals(byteArrayOf(2), restoredSession?.payloadNonce)
             assertAccountGraphPresent(db, localAccountId = "target")
-            assertEquals(selection(localAccountId = "target"), repository.currentAccountStore.currentAccountSelection())
-            assertEquals(listOf(selection(localAccountId = "target")), widgetStateCleaner.clearedAccounts)
-            assertEquals(listOf(selection(localAccountId = "target")), widgetStateCleaner.restoredAccounts)
+            assertEquals(listOf(deleted(localAccountId = "target")), widgetStateCleaner.clearedAccounts)
+            assertEquals(listOf(deleted(localAccountId = "target")), widgetStateCleaner.restoredAccounts)
         }
     }
 
@@ -247,11 +192,10 @@ class AccountDeletionRepositoryTest {
 
     private suspend fun withRepository(
         sessionStore: SecureSessionStore = FakeSecureSessionStore(),
-        currentAccountStore: CurrentAccountStore = InMemoryCurrentAccountStore(),
         deletedAccountStateCleaner: DeletedAccountStateCleaner = NoopDeletedAccountStateCleaner,
         localDataDeleter: AccountLocalDataDeleter? = null,
         sessionRevoker: SessionRevoker = SessionRevoker { RemoteRevocation.NotSupported },
-        block: suspend (CodexMeterDatabase, SecureSessionStore, RepositoryHarness) -> Unit,
+        block: suspend (CodexMeterDatabase, SecureSessionStore, AccountDeletionRepository) -> Unit,
     ) {
         val db = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
@@ -260,14 +204,13 @@ class AccountDeletionRepositoryTest {
         val repository = AccountDeletionRepository(
             database = db,
             secureSessionStore = sessionStore,
-            currentAccountStore = currentAccountStore,
             deletedAccountStateCleaner = deletedAccountStateCleaner,
             localDataDeleter = localDataDeleter ?: RoomAccountLocalDataDeleter(db),
             sessionRevoker = sessionRevoker,
         )
 
         try {
-            block(db, sessionStore, RepositoryHarness(repository, currentAccountStore))
+            block(db, sessionStore, repository)
         } finally {
             db.close()
         }
@@ -366,29 +309,9 @@ class AccountDeletionRepositoryTest {
             updatedAt = "2026-05-22T00:00:00Z",
         )
 
-    private fun selection(localAccountId: String): CurrentAccountSelection =
-        CurrentAccountSelection(
-            providerId = ProviderId("codex"),
-            localAccountId = LocalAccountId(localAccountId),
-        )
+    private data class DeletedAccount(val providerId: ProviderId, val localAccountId: LocalAccountId)
 
-    private class RepositoryHarness(
-        private val repository: AccountDeletionRepository,
-        val currentAccountStore: CurrentAccountStore,
-    ) {
-        suspend fun deleteAccount(providerId: ProviderId, localAccountId: LocalAccountId): RemoteRevocation =
-            repository.deleteAccount(providerId = providerId, localAccountId = localAccountId)
-    }
-
-    private class InMemoryCurrentAccountStore : CurrentAccountStore {
-        private var selection: CurrentAccountSelection? = null
-
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
-
-        override suspend fun updateCurrentAccountSelection(selection: CurrentAccountSelection?) {
-            this.selection = selection
-        }
-    }
+    private fun deleted(localAccountId: String) = DeletedAccount(ProviderId("codex"), LocalAccountId(localAccountId))
 
     private class ThrowingSecureSessionStore(
         private val exception: Throwable,
@@ -402,34 +325,18 @@ class AccountDeletionRepositoryTest {
         }
     }
 
-    private class ThrowingCurrentAccountStore(
-        initialSelection: CurrentAccountSelection?,
-        private val exception: Throwable,
-    ) : CurrentAccountStore {
-        private var selection = initialSelection
-
-        override suspend fun currentAccountSelection(): CurrentAccountSelection? = selection
-
-        override suspend fun updateCurrentAccountSelection(selection: CurrentAccountSelection?) {
-            throw exception
-        }
-    }
-
     private class RecordingDeletedAccountStateCleaner : DeletedAccountStateCleaner {
-        val clearedAccounts = mutableListOf<CurrentAccountSelection>()
-        val restoredAccounts = mutableListOf<CurrentAccountSelection>()
+        val clearedAccounts = mutableListOf<DeletedAccount>()
+        val restoredAccounts = mutableListOf<DeletedAccount>()
 
         override suspend fun clearDeletedAccountState(
             providerId: ProviderId,
             localAccountId: LocalAccountId,
         ): DeletedAccountStateCleanup {
-            val selection = CurrentAccountSelection(
-                providerId = providerId,
-                localAccountId = localAccountId,
-            )
-            clearedAccounts += selection
+            val account = DeletedAccount(providerId, localAccountId)
+            clearedAccounts += account
             return DeletedAccountStateCleanup {
-                restoredAccounts += selection
+                restoredAccounts += account
             }
         }
     }
