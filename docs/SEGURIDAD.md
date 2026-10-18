@@ -121,9 +121,9 @@ Fuera de AndroidX, Kotlin, kotlinx y OkHttp no hay librerías de terceros: el ef
     `user:profile`, así que **no debe considerarse un token de solo lectura**: es una credencial de
     la cuenta de Claude.
   - Claude Code (2.1.292) solo consulta el uso cuando su token tiene `user:inference` **y**
-    `user:profile`; que el servidor acepte un token con solo `user:profile` para el endpoint de uso
-    está pendiente de comprobar con una cuenta real (ver `docs/INFORME-PRUEBAS.md`). Si no lo
-    acepta, la app lo dice al conectar y no guarda nada.
+    `user:profile`. Con una cuenta real (versión 1.0.1, ver `docs/INFORME-PRUEBAS.md`), el
+    endpoint de uso aceptó un token con solo `user:profile`. Si Anthropic dejara de aceptarlo, la
+    app lo dice al conectar y no guarda nada.
 - **Cliente OAuth:** el cliente público de Claude Code (`9d1c250a-e61b-44d9-88ed-5944d1962f5e`); la
   página de autorización lo mostrará como “Claude Code”.
 - **Desconectar:** Anthropic no publica un endpoint de revocación y Claude Code también borra solo sus
