@@ -11,7 +11,8 @@ import java.util.Locale
 /** [shortMomentText] with the phone's locale, time zone and 12/24-hour setting. */
 @Composable
 fun shortMomentFormatter(): (Instant) -> String {
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    // Never Locale.getDefault(): only the configuration's locale recomposes when the app language changes.
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.ROOT
     val use24Hour = DateFormat.is24HourFormat(LocalContext.current)
     val zone = ZoneId.systemDefault()
     val now = Instant.now()
