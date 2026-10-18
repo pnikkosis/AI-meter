@@ -105,7 +105,9 @@ def tap_label(labels, what, required=True, timeout=15, scroll=True):
         node = find(labels, timeout=timeout)
         if node is not None:
             x1, y1, x2, y2 = bounds(node)
-            if y2 > y1 and y2 <= height - 40:
+            # The middle is what gets tapped: a bottom tab reaches the screen edge on devices without
+            # a navigation bar, so its bottom edge alone says nothing about whether it is on screen.
+            if y2 > y1 and (y1 + y2) // 2 <= height - 40:
                 adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
                 time.sleep(2)
                 print(f"  tapped {what}")
