@@ -96,15 +96,15 @@ APK firmado se puede comparar con uno compilado por cualquiera desde el mismo co
 
 ```bash
 entradas() { unzip -v "$1" | awk '$7 ~ /^[0-9a-f]{8}$/ {print $7, $8}' | sort -k2; }
-diff <(entradas app-release-unsigned.apk) <(entradas AIMeter-1.1.0.apk) && echo "mismo contenido"
-unzip -p AIMeter-1.1.0.apk META-INF/version-control-info.textproto   # commit de origen
+diff <(entradas app-release-unsigned.apk) <(entradas AIMeter-1.1.1.apk) && echo "mismo contenido"
+unzip -p AIMeter-1.1.1.apk META-INF/version-control-info.textproto   # commit de origen
 ```
 
 ## Verificar un APK
 
 ```bash
-sha256sum AIMeter-1.1.0.apk
-apksigner verify --verbose --print-certs AIMeter-1.1.0.apk
+sha256sum AIMeter-1.1.1.apk
+apksigner verify --verbose --print-certs AIMeter-1.1.1.apk
 ```
 
 La huella SHA-256 del certificado de firma de este fork es:
@@ -125,14 +125,14 @@ pero con minSdk 31 solo se verifica la v3, que es la que usa Android 12 o poster
 
 Desde 1.1.0 el APK se llama `AIMeter-<versión>.apk`; hasta 1.0.2, `AIUsageWidget-<versión>.apk`.
 
-| Dato | 1.1.0 (actual) | 1.0.2 | 1.0.1 | 1.0.0 |
-| --- | --- | --- | --- | --- |
-| Commit de compilación | `69d75f082fb143643feeb606e50bfd3d879439ac` | `d0c28d718a69a3f6b3955e01bb18904bc452b676` | `e5a37954844f57f8970d7be144164114ddf03e45` | `d0d3d0651573012e321f6bad15dde643d7a26b9d` |
-| Ejecución de exportación | n.º 5 (run `39083934120`) | n.º 4 (run `39045893487`) | n.º 3 (run `39040667471`) | n.º 2 (run `39023263155`) |
-| SHA-256 del APK sin firmar | `8e773777a0910c75c344a1b5031c3351af70a8353513627bb7635e1dced5234a` | `7175085e142648e88fb300f19f083b1aeae5e9461b4bc8621b6fc5c713eb54a3` | `d2dd62a49594ddf045e36b46aeb1400a912adb1438a5b90ac16fcfd6e8e80045` | `f4b3534aecf273773084d9ca7e11a58adc1fe3ff1ab11ce7424c38b2ea1ba472` |
-| SHA-256 del APK firmado | `e635a841d2b2b961a3080cabfc36a987165aa01c752bb2e8d2abdbe0d09188a2` | `d8ed32ff167039fbfcfd3917e3a1d3fb51a4938461433553893e8e613e2fe605` | `250c231b4286f5ca25297a2b14e4c1312aa01321b2d69cbcef042802908181c0` | `c17d3e26b6d7029a4b80472c0c2271479bf6caeb17d4e55cd99a830e69ca4581` |
+| Dato | 1.1.1 (actual) | 1.1.0 | 1.0.2 | 1.0.1 | 1.0.0 |
+| --- | --- | --- | --- | --- | --- |
+| Commit de compilación | `f6353d1f43f6904366539ac671a4bfb1ea5b17b0` | `69d75f082fb143643feeb606e50bfd3d879439ac` | `d0c28d718a69a3f6b3955e01bb18904bc452b676` | `e5a37954844f57f8970d7be144164114ddf03e45` | `d0d3d0651573012e321f6bad15dde643d7a26b9d` |
+| Ejecución de exportación | n.º 6 (run `39087777923`) | n.º 5 (run `39083934120`) | n.º 4 (run `39045893487`) | n.º 3 (run `39040667471`) | n.º 2 (run `39023263155`) |
+| SHA-256 del APK sin firmar | `63b26a06442a810c7e0c132dc2f0702bd805fa19bfb7da4f3264d92b7f60b274` | `8e773777a0910c75c344a1b5031c3351af70a8353513627bb7635e1dced5234a` | `7175085e142648e88fb300f19f083b1aeae5e9461b4bc8621b6fc5c713eb54a3` | `d2dd62a49594ddf045e36b46aeb1400a912adb1438a5b90ac16fcfd6e8e80045` | `f4b3534aecf273773084d9ca7e11a58adc1fe3ff1ab11ce7424c38b2ea1ba472` |
+| SHA-256 del APK firmado | `a2bdb7d8f8a13661241c1a9aff140b504feb2aef19623af6e9ff6c7b53b1eb81` | `e635a841d2b2b961a3080cabfc36a987165aa01c752bb2e8d2abdbe0d09188a2` | `d8ed32ff167039fbfcfd3917e3a1d3fb51a4938461433553893e8e613e2fe605` | `250c231b4286f5ca25297a2b14e4c1312aa01321b2d69cbcef042802908181c0` | `c17d3e26b6d7029a4b80472c0c2271479bf6caeb17d4e55cd99a830e69ca4581` |
 
-En las cuatro versiones, `apksigner.jar` de build-tools 37.0.0 tiene SHA-256
+En las cinco versiones, `apksigner.jar` de build-tools 37.0.0 tiene SHA-256
 `2defad215d7ff52968a409cde528cdaef7918b115e276b8e3378ca7a178e4180`, y el mismo SHA-256 sin firmar
 salió también de la CI y de las corridas del emulador del mismo commit.
 
@@ -141,8 +141,9 @@ salió también de la CI y de las corridas del emulador del mismo commit.
 - Archivo: `aiusagewidget-release.p12` (PKCS12, RSA 4096, SHA256withRSA, válida hasta 2056, alias
   `aiusagewidget`) y su archivo `aiusagewidget-release.properties` con la contraseña.
 - La clave se generó para la versión 1.0.0 fuera del repositorio, en el entorno temporal donde se
-  firmó el APK, y se entregó a su dueño junto con el archivo de propiedades; la 1.0.1, la 1.0.2 y la
-  1.1.0 se firmaron con la misma (el nombre del archivo y el alias siguen siendo los de entonces). No está en GitHub: ningún workflow la recibe (el CI y la exportación solo producen APK
+  firmó el APK, y se entregó a su dueño junto con el archivo de propiedades; la 1.0.1, la 1.0.2, la
+  1.1.0 y la 1.1.1 se firmaron con la misma (el nombre del archivo y el alias siguen siendo los de
+  entonces). No está en GitHub: ningún workflow la recibe (el CI y la exportación solo producen APK
   sin firmar).
 - Nunca se suben al repositorio (`.gitignore` excluye `*.p12`, `*.jks`, `*.keystore` y el archivo de
   propiedades) ni aparecen en registros: los scripts pasan las contraseñas a `apksigner` por

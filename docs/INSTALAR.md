@@ -4,9 +4,9 @@ Requisitos: Android 12 o posterior. No hace falta computadora, servidor ni servi
 
 ## 1. Instalar el APK
 
-1. Copiar `AIMeter-1.1.0.apk` al teléfono (o descargarlo desde donde lo guardes). Si ya está
-   instalada una versión anterior (1.0.x, que se llamaba “AI Usage Widget”), la 1.1.0 se instala
-   encima como actualización y conserva cuentas, sesiones e historial.
+1. Copiar `AIMeter-1.1.1.apk` al teléfono (o descargarlo desde donde lo guardes). Si ya está
+   instalada una versión anterior (1.1.0, o 1.0.x, que se llamaba “AI Usage Widget”), la 1.1.1 se
+   instala encima como actualización y conserva cuentas, sesiones e historial.
 2. Opcional, recomendado: comprobar el SHA-256 del archivo con el que figura en el `.sha256` que
    acompaña al APK y en `docs/COMPILAR.md`.
 3. Abrirlo desde el administrador de archivos. Android pedirá permitir “Instalar apps desconocidas”
@@ -158,7 +158,7 @@ mostrar la cuenta enseguida.
 Instalar encima el APK nuevo firmado con la misma clave. Los datos se conservan. Un APK firmado con
 otra clave no se instala encima (habría que desinstalar primero, perdiendo las cuentas conectadas).
 
-Al pasar de 1.0.x a 1.1.0:
+Al pasar de 1.0.x a 1.1.x:
 
 - Si la notificación seguía “la cuenta actual”, ahora muestra todas las cuentas visibles; si tenía
   una cuenta elegida, la conserva.

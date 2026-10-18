@@ -1,9 +1,8 @@
 # Changelog
 
-## [1.1.1] - sin publicar
+## [1.1.1] - 2026-10-18
 
-Arreglos encontrados al revisar 1.1.0 en el emulador, más una limpieza interna. Todavía no se
-compiló ni se probó en Android (ver `docs/INFORME-PRUEBAS.md`).
+Arreglos encontrados al revisar 1.1.0 en el emulador, más una limpieza interna.
 
 - Widget **Cuenta**: la línea de estado es “estado · hora” en todos los tamaños, y en 3×2 va debajo
   del nombre de la cuenta. En 1.1.0, compartiendo renglón, un estado largo dejaba el nombre sin
