@@ -93,6 +93,7 @@ class WidgetScreenshotTest {
         }
         return linkedMapOf(
             "en" to context(Locale.US, night = false),
+            "en_night" to context(Locale.US, night = true),
             "es" to context(Locale.forLanguageTag("es-AR"), night = false),
             "es_night" to context(Locale.forLanguageTag("es-AR"), night = true),
         )
@@ -144,7 +145,7 @@ class WidgetScreenshotTest {
             fetchedAgo = Duration.ofMinutes(4),
         )
         val claudeWork = state(
-            "claude", "Trabajo",
+            "claude", "Studio",
             listOf(
                 window("claude_5h_window", used = 33, resetIn = Duration.ofMinutes(95), seconds = 5 * 3600),
                 window("claude_7d_window", used = 78, resetIn = Duration.ofDays(4), seconds = 7 * 86400),
@@ -152,11 +153,11 @@ class WidgetScreenshotTest {
             fetchedAgo = Duration.ofMinutes(2),
         )
         val codexOffline = state(
-            "codex", "Equipo",
+            "codex", "Acme",
             listOf(window("five_hour", used = 46, resetIn = Duration.ofMinutes(40), seconds = 5 * 3600)),
             fetchedAgo = Duration.ofHours(3),
         ).copy(status = CurrentQuotaStatus.ErrorWithLastKnownGood, error = QuotaError.Network(diagnosticsDigest = "d"))
-        val claudeSignedOut = state("claude", "Personal", emptyList(), fetchedAgo = Duration.ofDays(1)).copy(
+        val claudeSignedOut = state("claude", "Lab", emptyList(), fetchedAgo = Duration.ofDays(1)).copy(
             status = CurrentQuotaStatus.AuthRequired,
             snapshot = null,
             error = QuotaError.AuthRequired(httpStatus = 401, diagnosticsDigest = "d"),
@@ -186,7 +187,7 @@ class WidgetScreenshotTest {
                 .copy(availability = QuotaWindowAvailability.Depleted),
             window("claude_7d_sonnet_window", used = 20, resetIn = Duration.ofDays(4), seconds = 7 * 86400),
         )
-        val codexFresh = state("codex", "Codex personal", codexWindows, fetchedAgo = Duration.ofMinutes(3))
+        val codexFresh = state("codex", "Personal", codexWindows, fetchedAgo = Duration.ofMinutes(3))
         val claudeFresh = state("claude", "Claude Max", claudeWindows, fetchedAgo = Duration.ofMinutes(2))
         fun failed(base: CurrentQuotaState, error: QuotaError) =
             base.copy(status = CurrentQuotaStatus.ErrorWithLastKnownGood, error = error)
@@ -228,7 +229,7 @@ class WidgetScreenshotTest {
             Spec(
                 "codex_expired_yesterday_4x1", WidgetLayoutVariant.FourByOne, 340, 110,
                 factory.create(
-                    state("codex", "Codex personal", codexWindows, fetchedAgo = Duration.ofHours(26))
+                    state("codex", "Personal", codexWindows, fetchedAgo = Duration.ofHours(26))
                         .copy(status = CurrentQuotaStatus.Expired),
                 ),
             ),
