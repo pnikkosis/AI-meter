@@ -136,7 +136,7 @@ private fun FourByOneContent(context: Context, state: WidgetQuotaState) {
 private fun ThreeByTwoContent(context: Context, state: WidgetQuotaState) {
     val fields = state.displayedFields(WidgetLayoutVariant.ThreeByTwo)
     Column(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.Vertical.CenterVertically) {
-        AccountHeaderRow(context, state)
+        AccountHeaderStack(context, state)
         // One column per window keeps every container within Glance's ten-children limit.
         fields.forEach { field ->
             Column(modifier = GlanceModifier.fillMaxWidth().padding(top = 7.dp)) {
@@ -198,11 +198,33 @@ private fun AccountIdentity(context: Context, state: WidgetQuotaState, modifier:
         Spacer(GlanceModifier.height(2.dp))
         // Narrow layouts have height to spare but not width: a long status wraps instead of
         // hiding the time of the data.
-        WidgetRefreshStatus(context, state.statusLine(context, compact = true), state.statusColor(), maxLines = 2)
+        WidgetRefreshStatus(context, state.statusLine(context), state.statusColor(), maxLines = 2)
     }
 }
 
-/** One line for the taller layouts: provider and account on the left, the status on the right. */
+/**
+ * Two lines for the narrow tall layout: provider and account, then the status. On one shared line
+ * a status such as "Used up · 12:57 AM" left the account name no room at all.
+ */
+@Composable
+private fun AccountHeaderStack(context: Context, state: WidgetQuotaState) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Vertical.CenterVertically) {
+            WidgetProviderLabel(state.providerName)
+            Spacer(GlanceModifier.width(6.dp))
+            Text(
+                text = state.ownAccountName().orEmpty(),
+                modifier = GlanceModifier.defaultWeight(),
+                style = TextStyle(color = WidgetColors.primary, fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                maxLines = 1,
+            )
+        }
+        Spacer(GlanceModifier.height(2.dp))
+        WidgetRefreshStatus(context, state.statusLine(context), state.statusColor())
+    }
+}
+
+/** One line for the wide tall layout: provider and account on the left, the status on the right. */
 @Composable
 private fun AccountHeaderRow(context: Context, state: WidgetQuotaState) {
     // A row measures its unweighted children first, in order: the provider label is never cut, the
@@ -217,7 +239,7 @@ private fun AccountHeaderRow(context: Context, state: WidgetQuotaState) {
             maxLines = 1,
         )
         Spacer(GlanceModifier.width(6.dp))
-        WidgetRefreshStatus(context, state.statusLine(context, compact = false), state.statusColor())
+        WidgetRefreshStatus(context, state.statusLine(context), state.statusColor())
     }
 }
 
@@ -318,14 +340,13 @@ private fun WidgetQuotaState.ownAccountName(): String? =
     accountName?.takeIf { it.isNotBlank() && it != providerName }
 
 /**
- * "Normal · Updated 14:05"; just the status word when there is no data yet. [compact] layouts drop
- * "Updated" ("Normal · 14:05") so the time of the data still fits.
+ * "Normal · 14:05": the status and the time of the data, without "Updated", which left a narrow
+ * widget no room for the account name. Just the status word when there is no data yet.
  */
-private fun WidgetQuotaState.statusLine(context: Context, compact: Boolean): String {
+private fun WidgetQuotaState.statusLine(context: Context): String {
     val status = context.getString(statusLabelResId())
     val updated = lastUpdatedAt ?: return status
-    val format = if (compact) R.string.widget_status_compact_format else R.string.widget_status_updated_format
-    return context.getString(format, status, updated.formatWidgetTime(context))
+    return context.getString(R.string.widget_status_compact_format, status, updated.formatWidgetTime(context))
 }
 
 private fun WidgetQuotaState.statusColor(): ColorProvider =

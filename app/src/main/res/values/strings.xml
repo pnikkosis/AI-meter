@@ -379,7 +379,6 @@
     <string name="account_disconnected_revoke_failed">%1$s: the data on this device was deleted, but the provider did not confirm the revocation (no connection or an error answer). On the provider\'s side the sign-in may stay valid until it expires.</string>
     <string name="account_disconnected_ok">OK</string>
     <string name="quota_window_remaining_format">%1$s · left</string>
-    <string name="widget_status_updated_format">%1$s · Updated %2$s</string>
     <!-- Narrow widget layouts: status and the time of the data, without "Updated". -->
     <string name="widget_status_compact_format" translatable="false">%1$s · %2$s</string>
     <string name="widget_refresh_content_description">Refresh now</string>

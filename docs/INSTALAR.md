@@ -105,7 +105,7 @@ Hay dos widgets. Se agregan manteniendo presionado el fondo de la pantalla de in
 1. Al soltarlo se abre **Widget de una cuenta**: elegir la **Cuenta** y los **Campos visibles**
    (ventanas de límite) y **Guardar**.
 2. Tamaños: 3×1 muestra 1 campo, 4×1 dos, 3×2 tres y 4×2 cuatro (con su reinicio).
-3. Línea de estado: estado y hora de los datos, por ejemplo `Normal · Actualizado 14:05`. Los estados
+3. Línea de estado: estado y hora de los datos, por ejemplo `Normal · 14:05`. Los estados
    con datos al día usan las mismas palabras que Inicio (`Normal`, `Atención`, `Escaso`,
    `Agotado`); con una falla dicen por qué (`Sin conexión`, `Límite de peticiones`, `Error del
    proveedor`, `Datos ilegibles`, `Sesión vencida`) y las cifras se atenúan.

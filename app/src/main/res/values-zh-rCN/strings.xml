@@ -367,7 +367,6 @@
     <string name="account_disconnected_revoke_failed">%1$s：本设备上的数据已删除，但服务商未确认撤销（无网络连接或返回错误）。在服务商一侧，该登录在过期前可能仍然有效。</string>
     <string name="account_disconnected_ok">确定</string>
     <string name="quota_window_remaining_format">%1$s · 剩余</string>
-    <string name="widget_status_updated_format">%1$s · %2$s 更新</string>
     <string name="widget_refresh_content_description">立即刷新</string>
     <string name="widget_status_offline">无网络连接</string>
     <string name="widget_status_rate_limited">请求受限</string>

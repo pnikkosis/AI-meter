@@ -164,6 +164,8 @@ class WidgetScreenshotTest {
         val all = accountsFactory.create(listOf(codexSpent, claudeWork, codexOffline, claudeSignedOut), hasAccounts = true)
         return listOf(
             AccountsSpec("3x2", 252, 210, all),
+            // Below 250dp each account shows only its limiting figure; 3 columns on many phones.
+            AccountsSpec("3x2_narrow", 230, 210, all),
             AccountsSpec("4x2", 340, 210, all),
             AccountsSpec("4x3", 340, 300, all),
             AccountsSpec("5x2", 400, 210, all),
@@ -196,12 +198,19 @@ class WidgetScreenshotTest {
             Spec("codex_fresh_3x1", WidgetLayoutVariant.ThreeByOne, 252, 110, factory.create(codexFresh)),
             Spec("claude_fresh_4x2", WidgetLayoutVariant.FourByTwo, 340, 210, factory.create(claudeFresh)),
             Spec("claude_fresh_3x2", WidgetLayoutVariant.ThreeByTwo, 252, 210, factory.create(claudeFresh)),
+            // The narrowest boxes each tall layout gets: the account name must still show.
+            Spec("claude_fresh_3x2_narrow", WidgetLayoutVariant.ThreeByTwo, 190, 190, factory.create(claudeFresh)),
+            Spec("claude_fresh_4x2_narrow", WidgetLayoutVariant.FourByTwo, 300, 200, factory.create(claudeFresh)),
             Spec(
                 "codex_offline_4x1", WidgetLayoutVariant.FourByOne, 340, 110,
                 factory.create(failed(codexFresh, QuotaError.Network(diagnosticsDigest = "d"))),
             ),
             Spec(
                 "claude_rate_limited_3x2", WidgetLayoutVariant.ThreeByTwo, 252, 210,
+                factory.create(failed(claudeFresh, QuotaError.RateLimited(diagnosticsDigest = "d"))),
+            ),
+            Spec(
+                "claude_rate_limited_3x2_narrow", WidgetLayoutVariant.ThreeByTwo, 190, 190,
                 factory.create(failed(claudeFresh, QuotaError.RateLimited(diagnosticsDigest = "d"))),
             ),
             Spec(
