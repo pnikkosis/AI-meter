@@ -118,6 +118,15 @@ def tap_label(labels, what, required=True, timeout=15, scroll=True):
         timeout = 3
     message = f"{what}: none of {labels} reachable on screen"
     print(f"  {message}")
+    # What uiautomator does see near the bottom, so a miss can be told from a layout change.
+    for node in nodes():
+        label = (node.get("text") or node.get("content-desc") or "").strip()
+        _, y1, _, y2 = bounds(node)
+        if (label or node.get("clickable") == "true") and y2 > height * 0.75:
+            print(
+                f"    seen: {label!r} {node.get('bounds')} class={node.get('class')} "
+                f"clickable={node.get('clickable')} (screen height {height})",
+            )
     if required:
         failures.append(message)
     return False
