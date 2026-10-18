@@ -1,7 +1,7 @@
 # De app personal a producto: Google Play y términos de los proveedores
 
-Investigación del 17 de octubre de 2026, para decidir si AI Usage Widget puede publicarse en Google
-Play y qué habría que cambiar. Las citas son textuales. Cuando una página no se pudo abrir desde el
+Investigación del 17 de octubre de 2026, para decidir si la app (entonces AI Usage Widget, desde 1.1.0
+AIMeter) puede publicarse en Google Play y qué habría que cambiar. Las citas son textuales. Cuando una página no se pudo abrir desde el
 entorno de trabajo (openai.com, support.google.com y play.google.com estaban bloqueados), el texto
 viene de extractos de buscadores y está marcado **(extracto)**. Lo que es interpretación propia está
 marcado **(interpretación)**. No es asesoramiento legal.
@@ -17,6 +17,8 @@ marcado **(interpretación)**. No es asesoramiento legal.
 - **Lo que sí se puede hacer ya:** el rediseño (todas las cuentas a la vez, widgets de varias
   cuentas), sacar logos de terceros y el permiso de batería, y preparar el empaquetado para Play.
   En paralelo, pedir acceso oficial a OpenAI y permiso a Anthropic.
+- **Estado en 1.1.0 (18/10/2026):** el rediseño, los logos y el permiso de batería ya están (puntos
+  2 y 3 de la sección 4). Sigue bloqueando la publicación el acceso oficial de los proveedores.
 
 ## 2. Términos de los proveedores
 
@@ -89,12 +91,15 @@ Además: declaraciones obligatorias de funciones financieras y de salud aunque l
 ## 4. Cambios en la app para una versión publicable
 
 1. Inicio de sesión con acceso oficial de cada proveedor (o sin ese proveedor) y sin presentarse como
-   Codex CLI ni Claude Code.
+   Codex CLI ni Claude Code. **Pendiente:** depende de OpenAI y Anthropic.
 2. Sin logos de OpenAI ni Anthropic; nombre e ícono propios; aclaración de que no está afiliada.
-3. Sin `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
-4. App Bundle, Play App Signing con la clave actual y una clave de subida nueva.
-5. Política de privacidad y formulario de Seguridad de los datos.
-6. Modo de demostración para la revisión, si Google lo acepta.
+   **Hecho en 1.1.0:** nombre AIMeter, ícono propio, proveedores nombrados con texto, aviso en
+   Ajustes → Acerca de.
+3. Sin `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`. **Hecho en 1.1.0:** el aviso abre la lista de apps
+   optimizadas del sistema.
+4. App Bundle, Play App Signing con la clave actual y una clave de subida nueva. **Pendiente.**
+5. Política de privacidad y formulario de Seguridad de los datos. **Pendiente.**
+6. Modo de demostración para la revisión, si Google lo acepta. **Pendiente.**
 
 ## 5. Plan propuesto
 
@@ -102,13 +107,19 @@ Además: declaraciones obligatorias de funciones financieras y de salud aunque l
    permiso a Anthropic. Mientras tanto la app sigue como APK personal.
 2. **Rediseño (sirve en cualquier caso):** todas las cuentas a la vez en Inicio, sin “cuenta actual”;
    mostrar, ocultar, ordenar y renombrar cuentas; nueva tipografía y estética; widgets de varias
-   cuentas; notificación con varias cuentas; sin logos de terceros.
+   cuentas; notificación con varias cuentas; sin logos de terceros. **Hecho en 1.1.0.**
 3. **Preparación para Play:** los puntos de la sección 4 que no dependen de los proveedores.
+   **En curso:** hechos el 2 y el 3; faltan el 4, el 5 y el 6.
 4. **Publicación:** prueba cerrada con 12 testers durante 14 días, ficha de la tienda y producción.
 
-## 6. Decisiones pendientes del dueño
+## 6. Decisiones del dueño
 
-- Dirección visual del rediseño (propuestas A, B y C).
-- Nombre y marca del producto.
-- Gratis y de código abierto, o pago (cambia el camino con OpenAI).
+Tomadas después de esta investigación:
+
+- Dirección visual: A, “Sobria” (descripta en `DESIGN.md`).
+- Nombre: **AIMeter**.
+- Gratis y de código abierto. Para eso falta hacer público el repositorio (hoy es privado).
+
+Pendiente:
+
 - Si se piden los accesos oficiales a OpenAI y Anthropic, y con qué textos.
