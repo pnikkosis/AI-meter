@@ -1,8 +1,8 @@
 package com.kmnexus.codexmeter.ui.settings
 
 import android.provider.Settings
-import android.net.Uri
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,10 +13,10 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class SettingsBatteryOptimizationTargetTest {
     @Test
-    fun `request exemption opens the system ignore-battery-optimization dialog for this package`() {
-        val intent = SettingsBatteryOptimizationTarget.requestExemptionIntent("com.kmnexus.codexmeter")
+    fun `battery hint opens the system list of optimized apps, not the exemption request`() {
+        val intent = SettingsBatteryOptimizationTarget.batterySettingsIntent()
 
-        assertEquals(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, intent.action)
-        assertEquals(Uri.parse("package:com.kmnexus.codexmeter"), intent.data)
+        assertEquals(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS, intent.action)
+        assertNull(intent.data)
     }
 }

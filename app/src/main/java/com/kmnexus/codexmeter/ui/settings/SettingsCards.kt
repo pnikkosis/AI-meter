@@ -524,6 +524,11 @@ internal fun AboutCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
+                text = stringResource(R.string.settings_about_not_affiliated),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
                 text = stringResource(R.string.settings_about_based_on),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

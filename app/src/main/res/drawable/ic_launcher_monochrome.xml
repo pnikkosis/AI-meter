@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome layer for themed icons (Android 13+): the same gauge; only alpha counts.
+  The launcher tints it with the user's theme colors.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M39.504,71.496A20.5,20.5 0 1,1 68.496,71.496"
+        android:strokeAlpha="0.32"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="7" />
+    <path
+        android:pathData="M39.504,71.496A20.5,20.5 0 0,1 64.25,39.247"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="7" />
+    <path
+        android:pathData="M54,57L60,46.608"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="5" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,57m-4.5,0a4.5,4.5 0 1,1 9,0a4.5,4.5 0 1,1 -9,0" />
+</vector>

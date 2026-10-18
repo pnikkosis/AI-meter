@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="18 18 72 72">
+  <!-- AIMeter icon, same geometry as app/src/main/res/drawable/ic_launcher_foreground.xml. -->
+  <rect x="18" y="18" width="72" height="72" fill="#2F6BEF"/>
+  <path d="M39.504,71.496A20.5,20.5 0 1,1 68.496,71.496" fill="none" stroke="#FFFFFF" stroke-opacity="0.32" stroke-width="7" stroke-linecap="round"/>
+  <path d="M39.504,71.496A20.5,20.5 0 0,1 64.25,39.247" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+  <path d="M54,57L60,46.608" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="54" cy="57" r="4.5" fill="#FFFFFF"/>
+</svg>

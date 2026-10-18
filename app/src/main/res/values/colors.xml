@@ -4,7 +4,7 @@
     <color name="codexmeter_background">#F4F5F7</color>
     <color name="codexmeter_accent">#2F6BEF</color>
     <color name="codexmeter_background_dark">#0E1013</color>
-    <color name="ic_launcher_background">#F5F7FB</color>
+    <color name="ic_launcher_background">#2F6BEF</color>
     <!-- Widget placeholder and picker-preview colors; values-night holds the dark ones. Both equal the Sobria palette. -->
     <color name="widget_surface">#FFFFFF</color>
     <color name="widget_text_primary">#14171C</color>

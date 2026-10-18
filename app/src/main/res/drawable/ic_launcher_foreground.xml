@@ -1,3 +1,30 @@
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@mipmap/ic_launcher_foreground"
-    android:gravity="center" />
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AIMeter icon: a 270-degree gauge, partly filled, with its needle. Drawn inside the 66dp safe zone
+  of the 108dp adaptive-icon canvas so circle and squircle masks keep it whole.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M39.504,71.496A20.5,20.5 0 1,1 68.496,71.496"
+        android:strokeAlpha="0.32"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="7" />
+    <path
+        android:pathData="M39.504,71.496A20.5,20.5 0 0,1 64.25,39.247"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="7" />
+    <path
+        android:pathData="M54,57L60,46.608"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="5" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,57m-4.5,0a4.5,4.5 0 1,1 9,0a4.5,4.5 0 1,1 -9,0" />
+</vector>

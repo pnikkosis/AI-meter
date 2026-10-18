@@ -242,7 +242,7 @@ fun SettingsRoute(
         onBatteryOptimizationClick = {
             runCatching {
                 batteryOptimizationLauncher.launch(
-                    SettingsBatteryOptimizationTarget.requestExemptionIntent(context.packageName),
+                    SettingsBatteryOptimizationTarget.batterySettingsIntent(),
                 )
             }
         },
@@ -481,6 +481,12 @@ private fun LicensesDialog(onDismiss: () -> Unit) {
                 )
                 Text(
                     text = stringResource(R.string.settings_about_third_party_libraries),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // The font's license must travel with every copy of the font, so it is shown in full.
+                Text(
+                    text = stringResource(R.string.license_geist_ofl),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
