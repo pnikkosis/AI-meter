@@ -17,7 +17,7 @@ Rediseño completo y primeros pasos hacia una versión publicable. La app pasa a
   ventana; marca datos posiblemente viejos, fallas al actualizar y cuentas para reconectar, y una
   cuenta sin datos lo dice en lugar de mostrar un número. Se puede fijar una sola cuenta en
   Ajustes; ya no se elige una “ventana” para la notificación.
-- Ajustes: “Según la cuenta actual” pasa a “Todas las cuentas visibles”; el último resultado de la
+- Ajustes: “Según la cuenta actual” pasa a “Todas las visibles”; el último resultado de la
   actualización en segundo plano resume todas las cuentas; se quitó “Borrar el historial de la
   cuenta actual” (queda borrar todo el historial).
 

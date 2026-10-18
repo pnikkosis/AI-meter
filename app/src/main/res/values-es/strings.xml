@@ -138,7 +138,7 @@
     <string name="settings_group_appearance">Apariencia</string>
     <string name="settings_appearance_light">Claro</string>
     <string name="settings_appearance_dark">Oscuro</string>
-    <string name="settings_appearance_system">Según el sistema</string>
+    <string name="settings_appearance_system">Sistema</string>
     <string name="settings_appearance_widget_hint">Se aplica a la app. Los widgets de la pantalla de inicio siempre siguen el tema claro u oscuro del sistema.</string>
     <string name="settings_group_persistent_notification">Notificación persistente</string>
     <string name="settings_group_alerts">Alertas</string>
@@ -153,7 +153,7 @@
     <string name="settings_notifications_blocked_hint">Android tiene bloqueadas las notificaciones de esta app. Activar el interruptor para permitirlas.</string>
     <string name="settings_notification_account_title">Cuentas en la notificación</string>
     <string name="settings_notification_account_description">Cuenta que muestra la notificación persistente.</string>
-    <string name="settings_notification_account_all_visible">Todas las cuentas visibles</string>
+    <string name="settings_notification_account_all_visible">Todas las visibles</string>
     <string name="settings_notification_display_quota_description">Ventana de límite que muestra la notificación persistente.</string>
     <string name="settings_quota_alerts_title">Alertas de límite</string>
     <string name="settings_quota_alerts_description">Avisar cuando la ventana principal quede escasa o agotada.</string>

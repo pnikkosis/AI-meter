@@ -138,7 +138,7 @@
     <string name="settings_group_appearance">Appearance</string>
     <string name="settings_appearance_light">Light</string>
     <string name="settings_appearance_dark">Dark</string>
-    <string name="settings_appearance_system">Follow system</string>
+    <string name="settings_appearance_system">System</string>
     <string name="settings_appearance_widget_hint">This applies to the app. Home-screen widgets always follow the system light/dark theme.</string>
     <string name="settings_group_persistent_notification">Persistent notification</string>
     <string name="settings_group_alerts">Alerts</string>
@@ -153,7 +153,7 @@
     <string name="settings_notifications_blocked_hint">Android is blocking this app\'s notifications. Turn the switch on to allow them.</string>
     <string name="settings_notification_account_title">Accounts in the notification</string>
     <string name="settings_notification_account_description">Choose which account the persistent notification displays.</string>
-    <string name="settings_notification_account_all_visible">All visible accounts</string>
+    <string name="settings_notification_account_all_visible">All visible</string>
     <string name="settings_notification_display_quota_description">Choose the quota window shown in the persistent notification.</string>
     <string name="settings_quota_alerts_title">Quota alerts</string>
     <string name="settings_quota_alerts_description">Notify on tight and exhausted states for the primary quota window.</string>
