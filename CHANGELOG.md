@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.1] - sin publicar
+
+Arreglos encontrados al revisar 1.1.0 en el emulador, más una limpieza interna. Todavía no se
+compiló ni se probó en Android (ver `docs/INFORME-PRUEBAS.md`).
+
+- Widget **Cuenta**: la línea de estado es “estado · hora” en todos los tamaños, y en 3×2 va debajo
+  del nombre de la cuenta. En 1.1.0, compartiendo renglón, un estado largo dejaba el nombre sin
+  lugar (en español desaparecía) o se cortaba él mismo.
+- Ajustes, en español: “Según el sistema” pasa a “Sistema” (no entraba en su botón) y “Todas las
+  cuentas visibles” a “Todas las visibles” (partía “Cuentas en la notificación” en tres renglones).
+  En inglés, “System” y “All visible”.
+- Interno: la app ya no guarda una “cuenta actual” ni siquiera internamente; al actualizar se borra
+  la que dejaron 1.0.x y 1.1.0 en sus preferencias. El diagnóstico que se copia desde Ajustes da el
+  mismo detalle de cada cuenta (sesión guardada, fallas seguidas, último intento), con cada
+  identificador reemplazado por un hash, en lugar de una sección “CURRENT ACCOUNT”.
+- Versión 1.1.1 (código 5).
+
 ## [1.1.0] AIMeter - 2026-10-18
 
 Rediseño completo y primeros pasos hacia una versión publicable. La app pasa a llamarse **AIMeter**
@@ -17,7 +34,7 @@ Rediseño completo y primeros pasos hacia una versión publicable. La app pasa a
   ventana; marca datos posiblemente viejos, fallas al actualizar y cuentas para reconectar, y una
   cuenta sin datos lo dice en lugar de mostrar un número. Se puede fijar una sola cuenta en
   Ajustes; ya no se elige una “ventana” para la notificación.
-- Ajustes: “Según la cuenta actual” pasa a “Todas las visibles”; el último resultado de la
+- Ajustes: “Según la cuenta actual” pasa a “Todas las cuentas visibles”; el último resultado de la
   actualización en segundo plano resume todas las cuentas; se quitó “Borrar el historial de la
   cuenta actual” (queda borrar todo el historial).
 
@@ -29,8 +46,6 @@ Rediseño completo y primeros pasos hacia una versión publicable. La app pasa a
 - Widget **Cuenta** (el de 1.0.x): mismos tamaños, rediseñado. Una ventana en 0 % ahora dice
   “Agotado” como en Inicio (antes “Escaso”). El diálogo se abre al colocarlo y arranca en la primera
   cuenta de Inicio; ya no menciona una cuenta actual.
-- La línea de estado de los widgets es “estado · hora” en todos los tamaños, y en 3×2 va debajo del
-  nombre de la cuenta: compartiendo renglón, un estado largo lo dejaba sin lugar.
 - Vistas previas propias en el selector de widgets del launcher, y nombres “Cuenta” y “Cuentas”.
 
 ### Diseño
@@ -52,12 +67,6 @@ Rediseño completo y primeros pasos hacia una versión publicable. La app pasa a
   pantalla de licencias muestra completa la SIL Open Font License de Geist (también en
   `licenses/Geist-OFL.txt`).
 - Requisitos de Play y términos de cada proveedor estudiados en `docs/PRODUCTO-Y-PLAY-STORE.md`.
-
-### Interno
-- La app ya no guarda una “cuenta actual” ni siquiera internamente: al actualizar se borra la que
-  dejó 1.0.x en sus preferencias. El diagnóstico que se copia desde Ajustes da el mismo detalle de
-  cada cuenta (sesión guardada, fallas seguidas, último intento), con cada identificador reemplazado
-  por un hash, en lugar de una sección “CURRENT ACCOUNT”.
 
 ### Sin cambios
 - Inicio de sesión, cifrado de sesiones, hosts permitidos, borrado al desconectar y revocación remota

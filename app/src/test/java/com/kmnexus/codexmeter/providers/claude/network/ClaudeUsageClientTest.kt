@@ -37,7 +37,7 @@ class ClaudeUsageClientTest {
         assertEquals("/api/oauth/usage", request.url.encodedPath)
         assertEquals("Bearer synthetic-access-token", request.headers["Authorization"])
         assertEquals("oauth-2025-04-20", request.headers["anthropic-beta"])
-        assertEquals("AIMeter/1.1.0 (Android)", request.headers["User-Agent"])
+        assertEquals("AIMeter/1.1.1 (Android)", request.headers["User-Agent"])
         assertFalse(request.headers["User-Agent"].orEmpty().contains("claude", ignoreCase = true))
     }
 
