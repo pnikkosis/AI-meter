@@ -1,4 +1,4 @@
-# Seguridad y privacidad de AI Usage Widget
+# Seguridad y privacidad de AIMeter
 
 Este documento describe qué guarda la app, a dónde se conecta, qué permisos pide a cada proveedor
 y qué pasa al desconectar una cuenta. Describe el código de este repositorio; no es una auditoría
@@ -65,11 +65,13 @@ Los únicos sockets que abre la app son los receptores del retorno del inicio de
 mientras se espera ese retorno: escuchan en `127.0.0.1` y `::1` (nunca en la red Wi-Fi), Claude en
 un puerto efímero y Codex en el 1455 (o el 1457 si está ocupado), los puertos de Codex CLI.
 
-Las peticiones se identifican con el User-Agent propio `AIUsageWidget/<versión> (Android)` (por
-ejemplo `AIUsageWidget/1.0.2 (Android)`); la app no se hace pasar por Codex CLI ni por Claude Code.
+Las peticiones se identifican con el User-Agent propio `AIMeter/<versión> (Android)` (por
+ejemplo `AIMeter/1.1.0 (Android)`; hasta 1.0.2 era `AIUsageWidget/…`); la app no se hace pasar por
+Codex CLI ni por Claude Code.
 
-La única librería de terceros fuera de AndroidX/Kotlin/OkHttp es `com.qmdeve.liquidglass:core`
-(efecto visual, MIT): 16 clases, sin permisos y sin código de red.
+Fuera de AndroidX, Kotlin, kotlinx y OkHttp no hay librerías de terceros: el efecto de vidrio de
+1.0.x (`com.qmdeve.liquidglass:core`) se quitó en 1.1.0. La tipografía Geist es un archivo de fuente
+(sin código) bajo la SIL Open Font License.
 
 ## Codex (OpenAI)
 
@@ -145,7 +147,7 @@ la cuenta. La pantalla de conexión lo advierte antes de abrir el navegador.
 Alternativas sin ese riesgo:
 
 1. No conectar Claude en la app y ver el consumo en la app oficial de Claude o en claude.ai
-   (Ajustes → Uso). Los widgets de Codex funcionan igual.
+   (Ajustes → Uso). Las cuentas de Codex funcionan igual.
 2. Usar solo Codex en los widgets.
 
 ## Lo que la app no hace

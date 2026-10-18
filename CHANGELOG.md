@@ -1,5 +1,63 @@
 # Changelog
 
+## [1.1.0] AIMeter - 2026-10-18
+
+Rediseño completo y primeros pasos hacia una versión publicable. La app pasa a llamarse **AIMeter**
+(el identificador `io.github.pnikkosis.aiusagewidget` no cambia, para que se instale encima).
+
+### Todas las cuentas a la vez
+- Ya no hay “cuenta actual”. Inicio muestra todas las cuentas visibles, cada una con sus ventanas de
+  límite (lo disponible en número y barra), su reinicio y si los datos están al día; el botón ↻ o
+  deslizar hacia abajo actualiza todas.
+- En Cuentas cada cuenta se puede mostrar u ocultar en Inicio y subir o bajar. El orden y lo oculto
+  se usan en Inicio, la notificación y el widget de cuentas. Siguen renombrar, volver a iniciar
+  sesión y desconectar.
+- Notificación persistente con varias cuentas: el título da lo disponible de la ventana que limita a
+  cada cuenta (“Disponible: Codex 0% · Claude 67%”) y el cuerpo una línea por cuenta con cada
+  ventana; marca datos posiblemente viejos, fallas al actualizar y cuentas para reconectar, y una
+  cuenta sin datos lo dice en lugar de mostrar un número. Se puede fijar una sola cuenta en
+  Ajustes; ya no se elige una “ventana” para la notificación.
+- Ajustes: “Según la cuenta actual” pasa a “Todas las cuentas visibles”; el último resultado de la
+  actualización en segundo plano resume todas las cuentas; se quitó “Borrar el historial de la
+  cuenta actual” (queda borrar todo el historial).
+
+### Widgets
+- Nuevo widget **Cuentas**: varias cuentas en uno, por defecto todas las visibles en Inicio o las que
+  se elijan para ese widget (también ocultas). En angosto, cada cuenta con la cifra que la limita y
+  su barra; en ancho, cada ventana con su barra, sin dejar afuera nunca la que limita. Hasta 8
+  filas según el alto, con “+N” si no entran. Funciona sin configurarlo.
+- Widget **Cuenta** (el de 1.0.x): mismos tamaños, rediseñado. Una ventana en 0 % ahora dice
+  “Agotado” como en Inicio (antes “Escaso”). El diálogo se abre al colocarlo y arranca en la primera
+  cuenta de Inicio; ya no menciona una cuenta actual.
+- Vistas previas propias en el selector de widgets del launcher, y nombres “Cuenta” y “Cuentas”.
+
+### Diseño
+- Estilo “Sobria”: superficies planas con borde fino, paleta neutra con un azul de acento y modo
+  claro y oscuro. Los niveles (normal, atención, escaso, agotado) usan las mismas palabras y colores
+  en la app, la notificación y los widgets.
+- Tipografía Geist con cifras tabulares; se quitaron JetBrains Mono, Inter y Geist Mono.
+- Gris terciario y colores de estado ajustados para un contraste mínimo AA (4,5:1) sobre las
+  tarjetas y los widgets, en claro y en oscuro.
+- Sin efecto de vidrio ni brillos, y sin logos de OpenAI ni Anthropic: los proveedores se nombran
+  con texto.
+- Ícono nuevo: un medidor con su aguja, con capa monocromática para los íconos temáticos de Android
+  13+; el ícono de la barra de estado usa el mismo dibujo.
+
+### Preparación para Google Play
+- Sin el permiso `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: el aviso de batería abre la lista de apps
+  optimizadas del sistema, donde se puede quitar la optimización a AIMeter.
+- “Acerca de” aclara que AIMeter es independiente y no está afiliada a OpenAI ni a Anthropic, y la
+  pantalla de licencias muestra completa la SIL Open Font License de Geist (también en
+  `licenses/Geist-OFL.txt`).
+- Requisitos de Play y términos de cada proveedor estudiados en `docs/PRODUCTO-Y-PLAY-STORE.md`.
+
+### Sin cambios
+- Inicio de sesión, cifrado de sesiones, hosts permitidos, borrado al desconectar y revocación remota
+  de Codex: igual que en 1.0.2.
+- Versión 1.1.0 (código 4): se instala encima de 1.0.x y conserva cuentas, sesiones e historial. Un
+  widget ya colocado conserva su cuenta y campos; hasta la primera actualización puede verse con las
+  cifras atenuadas.
+
 ## [1.0.2] - 2026-10-17
 
 Correcciones tras la segunda prueba en el teléfono.

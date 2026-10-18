@@ -4,11 +4,21 @@ This repository is the Android project for **CodexMeter** (`codexbar-apk`): a se
 
 This file is the canonical operating guide for AI agents and human maintainers working in this repo. `CLAUDE.md` must stay aligned with this file.
 
-> **Fork note (AI Usage Widget).** This repository is a personal fork of CodexMeter 0.2.4 that keeps
-> only Codex and Claude. Where the upstream guides and docs disagree with the fork's own docs
-> (`CHANGELOG.md`, `docs/SEGURIDAD.md`, `docs/INSTALAR.md`), the fork's docs describe the code. In
-> particular, Claude and (since 1.0.2) Codex sign in through the external browser with OAuth PKCE and
-> a loopback receiver on 127.0.0.1; Codex's device-code flow stays available as an alternative.
+> **Fork note (AIMeter).** This repository is AIMeter (called "AI Usage Widget" up to 1.0.2), a fork
+> of CodexMeter 0.2.4 that keeps only Codex and Claude. Where the upstream guides and docs disagree
+> with the fork's own docs (`CHANGELOG.md`, `DESIGN.md`, `docs/SEGURIDAD.md`, `docs/INSTALAR.md`),
+> the fork's docs describe the code. In particular:
+>
+> - Claude and (since 1.0.2) Codex sign in through the external browser with OAuth PKCE and a
+>   loopback receiver on 127.0.0.1; Codex's device-code flow stays available as an alternative.
+> - Since 1.1.0 the user has no "current account": Home lists every account visible on Home, in the
+>   order set in the Accounts tab (where accounts are also shown or hidden); the status notification
+>   and the accounts widget follow the visible accounts unless the user picks accounts for them. The
+>   upstream rules about a current-account summary and account switching no longer apply. Some
+>   internal plumbing still keeps a current-account selection (set on sign-in, moved on deletion,
+>   reported in diagnostics); it is not offered as a choice in the UI.
+> - `DESIGN.md` was rewritten for the "Sobria" style (Geist, flat neutral surfaces, one accent
+>   blue); the upstream Air Glass Dashboard rules no longer apply.
 
 ## 1. Mandatory reading order
 
