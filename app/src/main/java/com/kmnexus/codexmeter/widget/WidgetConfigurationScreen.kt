@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.kmnexus.codexmeter.R
 import com.kmnexus.codexmeter.domain.model.ProviderAccount
+import com.kmnexus.codexmeter.providers.ProviderRegistry
 import com.kmnexus.codexmeter.ui.quota.quotaWindowLabelText
 import com.kmnexus.codexmeter.ui.theme.CodexMeterShapes
 import com.kmnexus.codexmeter.ui.theme.CodexMeterSpacing
@@ -70,7 +71,6 @@ internal data class WidgetConfigurationScreenState(
     val selectedLocalAccountId: String? = null,
     val selectedWindowIds: List<String> = emptyList(),
     val defaultWindowId: String = FIVE_HOUR_WINDOW_ID,
-    val currentAccountId: String? = null,
     val windowOptionsByAccount: Map<String, List<WidgetWindowOption>> = emptyMap(),
 ) {
     val selectedAccount: WidgetConfigurationAccountSelection?
@@ -117,7 +117,7 @@ internal fun WidgetConfigurationRoute(
 
     val currentState = state
     if (currentState == null) {
-        LoadingConfigurationScreen()
+        WidgetConfigurationLoading()
     } else {
         WidgetConfigurationScreen(
             state = currentState,
@@ -157,7 +157,7 @@ internal fun WidgetConfigurationRoute(
 }
 
 @Composable
-private fun LoadingConfigurationScreen() {
+internal fun WidgetConfigurationLoading() {
     WidgetConfigurationDialogContainer {
         Column(
             verticalArrangement = Arrangement.spacedBy(CodexMeterSpacing.md),
@@ -218,7 +218,6 @@ private fun WidgetConfigurationScreen(
                                 account = account,
                                 selected = account.providerId.value == state.selectedProviderId &&
                                     account.localAccountId.value == state.selectedLocalAccountId,
-                                current = account.localAccountId.value == state.currentAccountId,
                                 onClick = { onAccountSelected(account) },
                             )
                         }
@@ -272,7 +271,7 @@ private fun WidgetConfigurationScreen(
 }
 
 @Composable
-private fun WidgetConfigurationDialogContainer(content: @Composable () -> Unit) {
+internal fun WidgetConfigurationDialogContainer(content: @Composable () -> Unit) {
     Surface(color = androidx.compose.ui.graphics.Color.Transparent) {
         Box(
             modifier = Modifier
@@ -368,7 +367,6 @@ private fun WidgetConfigurationScreenState.fieldsSummary(): String {
 private fun AccountOptionRow(
     account: ProviderAccount,
     selected: Boolean,
-    current: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -387,11 +385,7 @@ private fun AccountOptionRow(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = if (current) {
-                    stringResource(R.string.widget_config_account_current)
-                } else {
-                    account.providerId.value
-                },
+                text = ProviderRegistry.displayNameFor(account.providerId),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -419,7 +413,7 @@ private fun FieldOptionRow(label: String, checked: Boolean, enabled: Boolean, on
 
 private val WIDGET_CONFIG_DIALOG_MIN_WIDTH = 300.dp
 private val WIDGET_CONFIG_DIALOG_MAX_WIDTH = 420.dp
-private val WIDGET_CONFIG_DIALOG_MAX_HEIGHT = 560.dp
+internal val WIDGET_CONFIG_DIALOG_MAX_HEIGHT = 560.dp
 private val WIDGET_CONFIG_DIALOG_OUTER_PADDING = 12.dp
 private const val FIVE_HOUR_WINDOW_ID = "five_hour"
 private const val WEEKLY_WINDOW_ID = "weekly"

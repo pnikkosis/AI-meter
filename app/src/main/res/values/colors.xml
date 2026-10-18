@@ -1,8 +1,16 @@
 <resources>
-    <color name="codexmeter_primary">#17181C</color>
+    <color name="codexmeter_primary">#14171C</color>
     <color name="codexmeter_surface">#FFFFFF</color>
-    <color name="codexmeter_background">#F5F7FB</color>
-    <color name="codexmeter_accent">#0071E3</color>
-    <color name="codexmeter_background_dark">#0E1218</color>
+    <color name="codexmeter_background">#F4F5F7</color>
+    <color name="codexmeter_accent">#2F6BEF</color>
+    <color name="codexmeter_background_dark">#0E1013</color>
     <color name="ic_launcher_background">#F5F7FB</color>
+    <!-- Widget placeholder and picker-preview colors; values-night holds the dark ones. Both equal the Sobria palette. -->
+    <color name="widget_surface">#FFFFFF</color>
+    <color name="widget_text_primary">#14171C</color>
+    <color name="widget_text_secondary">#5B6472</color>
+    <color name="widget_text_tertiary">#8A93A0</color>
+    <color name="widget_accent">#2F6BEF</color>
+    <color name="widget_danger">#D9452F</color>
+    <color name="widget_track">#E3E7ED</color>
 </resources>

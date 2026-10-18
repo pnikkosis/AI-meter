@@ -23,6 +23,7 @@ import com.kmnexus.codexmeter.domain.model.SnapshotId
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaFreshness
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
+import com.kmnexus.codexmeter.domain.quota.QuotaLevelThresholds
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshot
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshotSource
 import com.kmnexus.codexmeter.domain.quota.QuotaWindow
@@ -38,9 +39,10 @@ import java.time.Instant
 import java.util.Locale
 
 /**
- * Renders the real widget pipeline (WidgetQuotaStateFactory + the Glance layout) for each state the
- * widget must tell apart, in English and Spanish, and writes PNGs to `files/widget-shots/` of the
- * app under test. Run on an emulator or device; the emulator workflow pulls them with `run-as`.
+ * Renders the real widget pipelines (the state factories + the Glance layouts) for each state the
+ * account and accounts widgets must tell apart, in English and Spanish by day and Spanish by night,
+ * and writes PNGs to `files/widget-shots/` of the app under test. Run on an emulator or device; the
+ * emulator workflow pulls them with `run-as`.
  */
 @RunWith(AndroidJUnit4::class)
 class WidgetScreenshotTest {
@@ -56,37 +58,118 @@ class WidgetScreenshotTest {
     private val factory = WidgetQuotaStateFactory()
     private val now: Instant = Instant.now()
 
-    @OptIn(ExperimentalGlanceRemoteViewsApi::class)
     @Test
     fun renderWidgetStates() = runBlocking {
-        val appContext = ApplicationProvider.getApplicationContext<Context>()
-        val outDir = File(appContext.filesDir, "widget-shots").apply { mkdirs() }
-        val glance = GlanceRemoteViews()
-        for (locale in listOf(Locale.US, Locale.forLanguageTag("es-AR"))) {
-            val configuration = Configuration(appContext.resources.configuration).apply { setLocale(locale) }
-            val context = appContext.createConfigurationContext(configuration)
+        for (context in contexts()) {
             for (spec in specs()) {
-                val size = DpSize(spec.widthDp.dp, spec.heightDp.dp)
-                val remoteViews = glance.compose(context, size) {
-                    CodexMeterWidgetContent(context, spec.state, size, spec.variant)
-                }.remoteViews
-                val density = context.resources.displayMetrics.density
-                val widthPx = (spec.widthDp * density).toInt()
-                val heightPx = (spec.heightDp * density).toInt()
-                val view = remoteViews.apply(context, FrameLayout(context))
-                view.measure(
-                    View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
-                    View.MeasureSpec.makeMeasureSpec(heightPx, View.MeasureSpec.EXACTLY),
-                )
-                view.layout(0, 0, widthPx, heightPx)
-                val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
-                // Wallpaper-like backdrop so any transparent area is visible.
-                Canvas(bitmap).apply { drawColor(Color.rgb(60, 64, 72)) }.also { view.draw(it) }
-                FileOutputStream(File(outDir, "widget_${locale.language}_${spec.name}.png")).use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                render(context.value, "widget_${context.key}_${spec.name}", spec.widthDp, spec.heightDp) { size ->
+                    CodexMeterWidgetContent(context.value, spec.state, size, spec.variant)
                 }
             }
         }
+    }
+
+    @Test
+    fun renderAccountsWidgetStates() = runBlocking {
+        for (context in contexts()) {
+            for (spec in accountsSpecs()) {
+                render(context.value, "accounts_${context.key}_${spec.name}", spec.widthDp, spec.heightDp) { size ->
+                    AccountsWidgetContent(context.value, spec.state, size)
+                }
+            }
+        }
+    }
+
+    /** English and Spanish by day, Spanish by night: the launcher swaps the widget colors itself. */
+    private fun contexts(): Map<String, Context> {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        fun context(locale: Locale, night: Boolean): Context {
+            val configuration = Configuration(appContext.resources.configuration).apply {
+                setLocale(locale)
+                uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                    if (night) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
+            }
+            return appContext.createConfigurationContext(configuration)
+        }
+        return linkedMapOf(
+            "en" to context(Locale.US, night = false),
+            "es" to context(Locale.forLanguageTag("es-AR"), night = false),
+            "es_night" to context(Locale.forLanguageTag("es-AR"), night = true),
+        )
+    }
+
+    @OptIn(ExperimentalGlanceRemoteViewsApi::class)
+    private suspend fun render(
+        context: Context,
+        name: String,
+        widthDp: Int,
+        heightDp: Int,
+        content: @androidx.compose.runtime.Composable (DpSize) -> Unit,
+    ) {
+        val outDir = File(context.filesDir, "widget-shots").apply { mkdirs() }
+        val size = DpSize(widthDp.dp, heightDp.dp)
+        val remoteViews = GlanceRemoteViews().compose(context, size) { content(size) }.remoteViews
+        val density = context.resources.displayMetrics.density
+        val widthPx = (widthDp * density).toInt()
+        val heightPx = (heightDp * density).toInt()
+        val view = remoteViews.apply(context, FrameLayout(context))
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(heightPx, View.MeasureSpec.EXACTLY),
+        )
+        view.layout(0, 0, widthPx, heightPx)
+        val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        // Wallpaper-like backdrop so the widget's own corners and surface are visible.
+        Canvas(bitmap).apply { drawColor(Color.rgb(60, 64, 72)) }.also { view.draw(it) }
+        FileOutputStream(File(outDir, "$name.png")).use {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+    }
+
+    private data class AccountsSpec(
+        val name: String,
+        val widthDp: Int,
+        val heightDp: Int,
+        val state: AccountsWidgetState,
+    )
+
+    private fun accountsSpecs(): List<AccountsSpec> {
+        val accountsFactory = AccountsWidgetStateFactory(QuotaLevelThresholds())
+        val codexSpent = state(
+            "codex", "Personal",
+            listOf(
+                window("weekly", used = 100, resetIn = Duration.ofDays(2), seconds = 7 * 86400)
+                    .copy(availability = QuotaWindowAvailability.Depleted),
+            ),
+            fetchedAgo = Duration.ofMinutes(4),
+        )
+        val claudeWork = state(
+            "claude", "Trabajo",
+            listOf(
+                window("claude_5h_window", used = 33, resetIn = Duration.ofMinutes(95), seconds = 5 * 3600),
+                window("claude_7d_window", used = 78, resetIn = Duration.ofDays(4), seconds = 7 * 86400),
+            ),
+            fetchedAgo = Duration.ofMinutes(2),
+        )
+        val codexOffline = state(
+            "codex", "Equipo",
+            listOf(window("five_hour", used = 46, resetIn = Duration.ofMinutes(40), seconds = 5 * 3600)),
+            fetchedAgo = Duration.ofHours(3),
+        ).copy(status = CurrentQuotaStatus.ErrorWithLastKnownGood, error = QuotaError.Network(diagnosticsDigest = "d"))
+        val claudeSignedOut = state("claude", "Personal", emptyList(), fetchedAgo = Duration.ofDays(1)).copy(
+            status = CurrentQuotaStatus.AuthRequired,
+            snapshot = null,
+            error = QuotaError.AuthRequired(httpStatus = 401, diagnosticsDigest = "d"),
+        )
+        val all = accountsFactory.create(listOf(codexSpent, claudeWork, codexOffline, claudeSignedOut), hasAccounts = true)
+        return listOf(
+            AccountsSpec("3x2", 252, 210, all),
+            AccountsSpec("4x2", 340, 210, all),
+            AccountsSpec("4x3", 340, 300, all),
+            AccountsSpec("5x2", 400, 210, all),
+            AccountsSpec("no_accounts_3x2", 252, 210, AccountsWidgetState()),
+            AccountsSpec("nothing_chosen_3x2", 252, 210, AccountsWidgetState(hasAccounts = true)),
+        )
     }
 
     private fun specs(): List<Spec> {
@@ -186,12 +269,12 @@ class WidgetScreenshotTest {
     ): CurrentQuotaState {
         val fetchedAt = now.minus(fetchedAgo)
         val account = ProviderAccount(
-            localAccountId = LocalAccountId("acc-$provider"),
+            localAccountId = LocalAccountId("acc-$provider-$accountName"),
             providerId = ProviderId(provider),
             providerAccountId = ProviderAccountId("p-$provider"),
             displayName = accountName,
             avatarInitial = accountName.take(1),
-            avatarColorKey = "acc-$provider",
+            avatarColorKey = "acc-$provider-$accountName",
             status = AccountStatus.Active,
             createdAt = fetchedAt,
             updatedAt = fetchedAt,

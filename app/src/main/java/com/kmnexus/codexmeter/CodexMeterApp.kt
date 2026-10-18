@@ -29,6 +29,7 @@ import com.kmnexus.codexmeter.refresh.RefreshWorkScheduler
 import com.kmnexus.codexmeter.ui.account.AccountQuotaAlertEvaluationRequester
 import com.kmnexus.codexmeter.ui.settings.SettingsBackgroundRefreshStatusReader
 import com.kmnexus.codexmeter.ui.settings.SettingsDiagnosticsReader
+import com.kmnexus.codexmeter.widget.AccountsWidgetStateLoader
 import com.kmnexus.codexmeter.widget.WidgetQuotaStateLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,6 +107,9 @@ class CodexMeterApp :
 
     val widgetQuotaStateLoader: WidgetQuotaStateLoader
         get() = appContainer.widgetQuotaStateLoader
+
+    val accountsWidgetStateLoader: AccountsWidgetStateLoader
+        get() = appContainer.accountsWidgetStateLoader
 
     val claudeConnect: ClaudeConnect
         get() = appContainer.claudeConnect

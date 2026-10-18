@@ -10,6 +10,7 @@ import com.kmnexus.codexmeter.domain.model.SnapshotId
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaFreshness
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshot
 import com.kmnexus.codexmeter.domain.quota.QuotaSnapshotSource
 import com.kmnexus.codexmeter.domain.quota.QuotaWindow
@@ -54,27 +55,27 @@ class WidgetQuotaStateFactoryTest {
     }
 
     @Test
-    fun `balance tone follows balance thresholds`() {
+    fun `balance level follows balance thresholds`() {
         val preferences = NotificationPreferences(
             balanceCautionThreshold = 10.0,
             balanceWarningThreshold = 2.0,
         )
 
-        // 镜像 Home 的余额档位：耗尽与紧张同为 Danger（与百分比路径的简化一致），注意为 Warning，健康为 Success。
-        assertEquals(WidgetQuotaTone.Danger, balanceTone("0.00", preferences))
-        assertEquals(WidgetQuotaTone.Danger, balanceTone("1.50", preferences))
-        assertEquals(WidgetQuotaTone.Warning, balanceTone("9.00", preferences))
-        assertEquals(WidgetQuotaTone.Success, balanceTone("42.00", preferences))
+        // The same bands Home uses for balances.
+        assertEquals(QuotaLevel.Depleted, balanceLevel("0.00", preferences))
+        assertEquals(QuotaLevel.Warning, balanceLevel("1.50", preferences))
+        assertEquals(QuotaLevel.Caution, balanceLevel("9.00", preferences))
+        assertEquals(QuotaLevel.Normal, balanceLevel("42.00", preferences))
     }
 
     @Test
-    fun `unreadable balance amount stays neutral`() {
+    fun `unreadable balance amount has no level`() {
         val preferences = NotificationPreferences(
             balanceCautionThreshold = 10.0,
             balanceWarningThreshold = 2.0,
         )
 
-        assertEquals(WidgetQuotaTone.Neutral, balanceTone("N/A", preferences))
+        assertEquals(QuotaLevel.Unknown, balanceLevel("N/A", preferences))
     }
 
     @Test
@@ -114,13 +115,29 @@ class WidgetQuotaStateFactoryTest {
     }
 
     @Test
-    fun `a spent window is shown as zero left in danger instead of being hidden`() {
+    fun `a spent window is shown as zero left and used up instead of being hidden`() {
         val depleted = percentWindow("five_hour", usedPercent = 100).copy(availability = QuotaWindowAvailability.Depleted)
         val result = factory.create(freshState(windows = listOf(depleted)), selectedWindowIds = listOf("five_hour"))
 
         val field = result.fields.single()
         assertEquals(0, field.percent)
-        assertEquals(WidgetQuotaTone.Danger, field.tone)
+        assertEquals(QuotaLevel.Depleted, field.level)
+        assertEquals(QuotaLevel.Depleted, result.level)
+    }
+
+    @Test
+    fun `the widget takes the level of the shown window with the least left`() {
+        val state = freshState(
+            windows = listOf(
+                percentWindow("five_hour", usedPercent = 13),
+                percentWindow("weekly", usedPercent = 75),
+                percentWindow("monthly", usedPercent = 95),
+            ),
+        )
+
+        assertEquals(QuotaLevel.Caution, factory.create(state, selectedWindowIds = listOf("five_hour", "weekly")).level)
+        assertEquals(QuotaLevel.Warning, factory.create(state).level)
+        assertEquals(QuotaLevel.Normal, factory.create(state, selectedWindowIds = listOf("five_hour")).level)
     }
 
     @Test
@@ -134,12 +151,13 @@ class WidgetQuotaStateFactoryTest {
         val fresh = factory.create(base, selectedWindowIds = listOf("five_hour"))
         val stale = factory.create(offline, selectedWindowIds = listOf("five_hour"))
 
-        assertEquals(WidgetQuotaTone.Success, fresh.fields.single().tone)
+        assertEquals(QuotaLevel.Normal, fresh.fields.single().level)
         assertEquals(Instant.parse("2026-06-02T10:00:00Z"), fresh.lastUpdatedAt)
         assertEquals(null, fresh.errorMessageKey)
         assertEquals(WidgetQuotaStatus.ErrorWithLastKnownGood, stale.status)
         assertEquals(90, stale.fields.single().percent)
-        assertEquals(WidgetQuotaTone.Neutral, stale.fields.single().tone)
+        assertEquals(QuotaLevel.Unknown, stale.fields.single().level)
+        assertEquals(QuotaLevel.Unknown, stale.level)
         assertEquals("error_network", stale.errorMessageKey)
         assertEquals(Instant.parse("2026-06-02T10:00:00Z"), stale.lastUpdatedAt)
     }
@@ -238,12 +256,12 @@ class WidgetQuotaStateFactoryTest {
         displayKind = QuotaWindowDisplayKind.Balance, balanceAmount = amount, balanceCurrency = currency,
     )
 
-    private fun balanceTone(amount: String, preferences: NotificationPreferences): WidgetQuotaTone {
+    private fun balanceLevel(amount: String, preferences: NotificationPreferences): QuotaLevel {
         val state = freshState(windows = listOf(balanceWindow("balance", amount = amount, currency = "USD")))
         return factory.create(
             state,
             notificationPreferences = preferences,
             selectedWindowIds = listOf("balance"),
-        ).fields.single().tone
+        ).fields.single().level
     }
 }

@@ -28,7 +28,7 @@ class CurrentQuotaNotificationPublisher(
     private val clock: Clock,
     private val currencyPreferenceReader: CurrencyPreferenceReader = NoopCurrencyPreferenceReader,
     private val exchangeRateReader: ExchangeRateReader = NoopExchangeRateReader,
-) : CurrentQuotaStatePublisher, StatusNotificationRefresher {
+) : CurrentQuotaStatePublisher {
     // Accounts refresh in parallel and each publish rebuilds the status from storage. Building one
     // at a time means the last post always read the newest data, so an older read never wins.
     private val statusMutex = Mutex()
@@ -99,7 +99,8 @@ class CurrentQuotaNotificationPublisher(
         accountErrorRequests.forEach(notificationSink::post)
     }
 
-    override suspend fun refreshStatusNotification() {
+    /** Rebuilds only the status notification, for changes that alter what it shows but not quota. */
+    suspend fun refreshStatusNotification() {
         postOrCancelStatus(optionsReader.currentOptions())
     }
 
@@ -170,11 +171,6 @@ class NotificationPreferenceQuotaAlertWindowReader(
             }
             .toSet()
     }
-}
-
-fun interface StatusNotificationRefresher {
-    /** Rebuilds only the status notification, for changes that alter what it shows but not quota. */
-    suspend fun refreshStatusNotification()
 }
 
 fun interface StatusNotificationStatesLoader {

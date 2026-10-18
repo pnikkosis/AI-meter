@@ -42,7 +42,20 @@
         <activity
             android:name=".widget.CodexMeterWidgetConfigurationActivity"
             android:exported="true"
-            android:theme="@style/Theme.CodexMeter.WidgetConfigurationDialog" />
+            android:theme="@style/Theme.CodexMeter.WidgetConfigurationDialog">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".widget.AccountsWidgetConfigurationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CodexMeter.WidgetConfigurationDialog">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
 
         <receiver
             android:name=".notification.DeviceCodeLoginCopyCodeReceiver"
@@ -50,13 +63,26 @@
 
         <receiver
             android:name=".widget.CodexMeterWidgetReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:label="@string/widget_label_account">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/codexmeter_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.AccountsWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_label_accounts">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/accounts_widget_info" />
         </receiver>
     </application>
 </manifest>

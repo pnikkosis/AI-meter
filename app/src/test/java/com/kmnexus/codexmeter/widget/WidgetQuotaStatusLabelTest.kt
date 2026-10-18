@@ -1,48 +1,35 @@
 package com.kmnexus.codexmeter.widget
 
 import com.kmnexus.codexmeter.R
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetQuotaStatusLabelTest {
     @Test
-    fun `fresh widget label follows header tone`() {
-        assertEquals(
-            R.string.home_quota_status_normal,
-            freshState(tone = WidgetQuotaTone.Success).statusLabelResId(),
-        )
-        assertEquals(
-            R.string.home_quota_status_caution,
-            freshState(tone = WidgetQuotaTone.Warning).statusLabelResId(),
-        )
-        assertEquals(
-            R.string.home_quota_status_warning,
-            freshState(tone = WidgetQuotaTone.Danger).statusLabelResId(),
-        )
-        assertEquals(
-            R.string.home_quota_status_unavailable,
-            freshState(tone = WidgetQuotaTone.Neutral).statusLabelResId(),
-        )
+    fun `fresh widget label uses the same words as Home for each level`() {
+        assertEquals(R.string.home_quota_status_normal, freshState(QuotaLevel.Normal).statusLabelResId())
+        assertEquals(R.string.home_quota_status_caution, freshState(QuotaLevel.Caution).statusLabelResId())
+        assertEquals(R.string.home_quota_status_warning, freshState(QuotaLevel.Warning).statusLabelResId())
+        assertEquals(R.string.home_window_depleted, freshState(QuotaLevel.Depleted).statusLabelResId())
+        assertEquals(R.string.home_quota_status_unavailable, freshState(QuotaLevel.Unknown).statusLabelResId())
     }
 
     @Test
-    fun `fresh balance account follows tone status labels`() {
-        // 余额阈值档位同步到微件后，余额账户与额度账户一样按 tone 出状态词
-        // （正常 / 注意 / 紧张），不再固定显示特殊标签或误示「暂不可用」。
+    fun `fresh balance account follows the same level words`() {
         assertEquals(
             R.string.home_quota_status_normal,
-            freshState(tone = WidgetQuotaTone.Success).copy(fields = listOf(balanceField())).statusLabelResId(),
+            freshState(QuotaLevel.Normal).copy(fields = listOf(balanceField())).statusLabelResId(),
         )
         assertEquals(
             R.string.home_quota_status_warning,
-            freshState(tone = WidgetQuotaTone.Danger).copy(fields = listOf(balanceField())).statusLabelResId(),
+            freshState(QuotaLevel.Warning).copy(fields = listOf(balanceField())).statusLabelResId(),
         )
     }
 
     @Test
     fun `fresh quota account with unreadable percent still reads unavailable`() {
-        val state = freshState(tone = WidgetQuotaTone.Neutral)
+        val state = freshState(QuotaLevel.Unknown)
             .copy(fields = listOf(balanceField(isBalance = false)))
 
         assertEquals(R.string.home_quota_status_unavailable, state.statusLabelResId())
@@ -83,22 +70,8 @@ class WidgetQuotaStatusLabelTest {
         )
     }
 
-    @Test
-    fun `compact status rail glow stays narrow and uses semantic accent`() {
-        val style = WidgetStatusGlowRenderer.styleSpec(WidgetQuotaTone.Success)
-
-        assertEquals(0xFF5CF2A6.toInt(), style.accentArgb)
-        assertEquals(0x335CF2A6, style.outerGlowArgb)
-        assertTrue(style.outerGlowWidthDp in 6.5f..8.0f)
-        assertTrue(style.innerGlowWidthDp in 4.0f..5.2f)
-        assertEquals(3.0f, style.coreWidthDp)
-        assertTrue(style.outerBlurRadiusDp <= 3.0f)
-        assertTrue(style.innerBlurRadiusDp <= 1.8f)
-        assertTrue(style.innerGlowCenterAlpha <= 82)
-    }
-
-    private fun freshState(tone: WidgetQuotaTone): WidgetQuotaState =
-        stateWith(status = WidgetQuotaStatus.Fresh, tone = tone)
+    private fun freshState(level: QuotaLevel): WidgetQuotaState =
+        stateWith(status = WidgetQuotaStatus.Fresh, level = level)
 
     private fun balanceField(isBalance: Boolean = true): WidgetField =
         WidgetField(
@@ -108,12 +81,12 @@ class WidgetQuotaStatusLabelTest {
             balanceAmount = null,
             balanceCurrency = null,
             resetAt = null,
-            tone = WidgetQuotaTone.Neutral,
+            level = QuotaLevel.Unknown,
         )
 
     private fun stateWith(
         status: WidgetQuotaStatus,
-        tone: WidgetQuotaTone = WidgetQuotaTone.Neutral,
+        level: QuotaLevel = QuotaLevel.Unknown,
     ): WidgetQuotaState =
         WidgetQuotaState(
             status = status,
@@ -121,7 +94,7 @@ class WidgetQuotaStatusLabelTest {
             providerId = "codex",
             localAccountId = "local-1",
             accountName = "Codex Main",
-            tone = tone,
+            level = level,
             clickTarget = WidgetClickTarget.Home,
         )
 }

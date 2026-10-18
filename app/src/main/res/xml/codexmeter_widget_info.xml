@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One account in detail. The dialog opens on placement: the widget needs an account to show. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:configure="com.kmnexus.codexmeter.widget.CodexMeterWidgetConfigurationActivity"
     android:description="@string/widget_description"
     android:initialLayout="@layout/codexmeter_widget_loading"
+    android:previewLayout="@layout/widget_preview_account"
     android:minWidth="180dp"
     android:minHeight="40dp"
     android:minResizeWidth="180dp"
@@ -13,5 +15,5 @@
     android:targetCellWidth="3"
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
-    android:widgetFeatures="reconfigurable|configuration_optional"
+    android:widgetFeatures="reconfigurable"
     android:widgetCategory="home_screen" />

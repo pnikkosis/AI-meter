@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import java.time.Instant
 
 internal fun Preferences.toWidgetQuotaState(): WidgetQuotaState {
@@ -15,7 +16,7 @@ internal fun Preferences.toWidgetQuotaState(): WidgetQuotaState {
         providerId = providerId,
         localAccountId = this[WidgetQuotaPreferenceKeys.localAccountId],
         accountName = this[WidgetQuotaPreferenceKeys.accountName],
-        tone = enumValue(WidgetQuotaPreferenceKeys.tone, WidgetQuotaTone.Neutral),
+        level = enumValue(WidgetQuotaPreferenceKeys.level, QuotaLevel.Unknown),
         // Default a never-written widget to Home, not the retired provider-selection deep-link.
         clickTarget = enumValue(WidgetQuotaPreferenceKeys.clickTarget, WidgetClickTarget.Home),
         fields = readFields(),
@@ -54,7 +55,7 @@ internal fun MutablePreferences.writeWidgetQuotaState(state: WidgetQuotaState) {
     putOrRemove(WidgetQuotaPreferenceKeys.providerId, state.providerId)
     putOrRemove(WidgetQuotaPreferenceKeys.localAccountId, state.localAccountId)
     putOrRemove(WidgetQuotaPreferenceKeys.accountName, state.accountName)
-    this[WidgetQuotaPreferenceKeys.tone] = state.tone.name
+    this[WidgetQuotaPreferenceKeys.level] = state.level.name
     this[WidgetQuotaPreferenceKeys.clickTarget] = state.clickTarget.name
     this[WidgetQuotaPreferenceKeys.isUnconfigured] = state.isUnconfigured
     this[WidgetQuotaPreferenceKeys.hasAccounts] = state.hasAccounts
@@ -81,7 +82,7 @@ internal fun MutablePreferences.clearWidgetQuotaStateIfAccountMatches(
                 providerId = null,
                 localAccountId = null,
                 accountName = null,
-                tone = WidgetQuotaTone.Neutral,
+                level = QuotaLevel.Unknown,
                 clickTarget = WidgetClickTarget.Home,
                 fields = emptyList(),
                 isUnconfigured = true,
@@ -112,7 +113,7 @@ private fun Preferences.readFields(): List<WidgetField> {
             balanceAmount = this[WidgetQuotaPreferenceKeys.fieldBalanceAmount(i)],
             balanceCurrency = this[WidgetQuotaPreferenceKeys.fieldBalanceCurrency(i)],
             resetAt = this[WidgetQuotaPreferenceKeys.fieldResetAt(i)]?.toInstantOrNull(),
-            tone = enumValue(WidgetQuotaPreferenceKeys.fieldTone(i), WidgetQuotaTone.Neutral),
+            level = enumValue(WidgetQuotaPreferenceKeys.fieldLevel(i), QuotaLevel.Unknown),
             limitWindowSeconds = this[WidgetQuotaPreferenceKeys.fieldLimitWindowSeconds(i)],
             labelName = this[WidgetQuotaPreferenceKeys.fieldLabelName(i)],
         )
@@ -131,7 +132,7 @@ private fun MutablePreferences.writeFields(fields: List<WidgetField>) {
             remove(WidgetQuotaPreferenceKeys.fieldBalanceAmount(i))
             remove(WidgetQuotaPreferenceKeys.fieldBalanceCurrency(i))
             remove(WidgetQuotaPreferenceKeys.fieldResetAt(i))
-            remove(WidgetQuotaPreferenceKeys.fieldTone(i))
+            remove(WidgetQuotaPreferenceKeys.fieldLevel(i))
             remove(WidgetQuotaPreferenceKeys.fieldLimitWindowSeconds(i))
             remove(WidgetQuotaPreferenceKeys.fieldLabelName(i))
         } else {
@@ -141,7 +142,7 @@ private fun MutablePreferences.writeFields(fields: List<WidgetField>) {
             putOrRemove(WidgetQuotaPreferenceKeys.fieldBalanceAmount(i), field.balanceAmount)
             putOrRemove(WidgetQuotaPreferenceKeys.fieldBalanceCurrency(i), field.balanceCurrency)
             putOrRemove(WidgetQuotaPreferenceKeys.fieldResetAt(i), field.resetAt?.toString())
-            this[WidgetQuotaPreferenceKeys.fieldTone(i)] = field.tone.name
+            this[WidgetQuotaPreferenceKeys.fieldLevel(i)] = field.level.name
             putOrRemove(WidgetQuotaPreferenceKeys.fieldLimitWindowSeconds(i), field.limitWindowSeconds)
             putOrRemove(WidgetQuotaPreferenceKeys.fieldLabelName(i), field.labelName)
         }
@@ -170,7 +171,7 @@ internal object WidgetQuotaPreferenceKeys {
     val providerId = stringPreferencesKey("widget_provider_id")
     val localAccountId = stringPreferencesKey("widget_local_account_id")
     val accountName = stringPreferencesKey("widget_account_name")
-    val tone = stringPreferencesKey("widget_tone")
+    val level = stringPreferencesKey("widget_level")
     val clickTarget = stringPreferencesKey("widget_click_target")
     val isUnconfigured = booleanPreferencesKey("widget_is_unconfigured")
     val hasAccounts = booleanPreferencesKey("widget_has_accounts")
@@ -187,7 +188,7 @@ internal object WidgetQuotaPreferenceKeys {
     fun fieldBalanceAmount(i: Int) = stringPreferencesKey("widget_field_${i}_balance_amount")
     fun fieldBalanceCurrency(i: Int) = stringPreferencesKey("widget_field_${i}_balance_currency")
     fun fieldResetAt(i: Int) = stringPreferencesKey("widget_field_${i}_reset_at")
-    fun fieldTone(i: Int) = stringPreferencesKey("widget_field_${i}_tone")
+    fun fieldLevel(i: Int) = stringPreferencesKey("widget_field_${i}_level")
     fun fieldLimitWindowSeconds(i: Int) = intPreferencesKey("widget_field_${i}_limit_window_seconds")
     fun fieldLabelName(i: Int) = stringPreferencesKey("widget_field_${i}_label_name")
 }

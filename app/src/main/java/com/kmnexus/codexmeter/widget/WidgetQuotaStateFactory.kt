@@ -2,7 +2,12 @@ package com.kmnexus.codexmeter.widget
 
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.quota.CurrentQuotaStatus
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
+import com.kmnexus.codexmeter.domain.quota.QuotaLevelThresholds
 import com.kmnexus.codexmeter.domain.quota.QuotaWindow
+import com.kmnexus.codexmeter.domain.quota.mostUrgent
+import com.kmnexus.codexmeter.domain.quota.quotaLevel
+import com.kmnexus.codexmeter.domain.quota.quotaLevelThresholds
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowAvailability
 import com.kmnexus.codexmeter.domain.quota.QuotaWindowDisplayKind
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
@@ -20,7 +25,7 @@ class WidgetQuotaStateFactory(
             providerId = null,
             localAccountId = null,
             accountName = null,
-            tone = WidgetQuotaTone.Neutral,
+            level = QuotaLevel.Unknown,
             // Tapping an unconfigured widget opens the app's Home tab (where the no-account state already
             // surfaces an add-account entry). It must not deep-link to the retired provider-selection
             // screen; the no-accounts hint still tells the user to add an account in-app first.
@@ -39,17 +44,17 @@ class WidgetQuotaStateFactory(
         if (account == null) {
             return unconfigured(hasAccounts = false)
         }
-        val fields = state.buildFields(selectedWindowIds, notificationPreferences)
+        val isCurrent = state.status == CurrentQuotaStatus.Fresh || state.status == CurrentQuotaStatus.Loading
+        val fields = state.buildFields(selectedWindowIds, notificationPreferences.quotaLevelThresholds())
             // Values that are not current are drawn muted so they never read as live usage.
-            .let { built -> if (state.status == CurrentQuotaStatus.Fresh) built else built.map { it.copy(tone = WidgetQuotaTone.Neutral) } }
-        val firstField = fields.firstOrNull()
+            .let { built -> if (isCurrent) built else built.map { it.copy(level = QuotaLevel.Unknown) } }
         return WidgetQuotaState(
-            status = state.status.toWidgetStatus(),
+            status = state.status.toWidgetQuotaStatus(),
             providerName = ProviderRegistry.displayNameFor(account.providerId),
             providerId = account.providerId.value,
             localAccountId = account.localAccountId.value,
             accountName = account.displayName,
-            tone = state.headerTone(firstField),
+            level = if (isCurrent) fields.map { it.level }.mostUrgent() else QuotaLevel.Unknown,
             clickTarget = WidgetClickTarget.Home,
             fields = fields,
             isUnconfigured = false,
@@ -61,7 +66,7 @@ class WidgetQuotaStateFactory(
 
     private fun CurrentQuotaState.buildFields(
         selectedWindowIds: List<String>,
-        notificationPreferences: NotificationPreferences,
+        thresholds: QuotaLevelThresholds,
     ): List<WidgetField> {
         val windows = snapshot?.windows.orEmpty()
         val selected = if (selectedWindowIds.isEmpty()) {
@@ -81,60 +86,11 @@ class WidgetQuotaStateFactory(
                     balanceAmount = if (isBalance) window.balanceAmount else null,
                     balanceCurrency = if (isBalance) window.balanceCurrency else null,
                     resetAt = window.resetAt,
-                    tone = window.percentTone(notificationPreferences),
+                    level = window.quotaLevel(thresholds),
                     limitWindowSeconds = window.limitWindowSeconds,
                     labelName = quotaWindowLabelName(window.windowId.value, window.subLabel),
                 )
             }
-    }
-
-    private fun CurrentQuotaStatus.toWidgetStatus(): WidgetQuotaStatus =
-        when (this) {
-            CurrentQuotaStatus.Unauthenticated -> WidgetQuotaStatus.NoAccount
-            CurrentQuotaStatus.Loading,
-            CurrentQuotaStatus.Fresh -> WidgetQuotaStatus.Fresh
-            CurrentQuotaStatus.PossiblyStale -> WidgetQuotaStatus.PossiblyStale
-            CurrentQuotaStatus.Expired -> WidgetQuotaStatus.Expired
-            CurrentQuotaStatus.AuthRequired -> WidgetQuotaStatus.AuthRequired
-            CurrentQuotaStatus.ErrorWithLastKnownGood -> WidgetQuotaStatus.ErrorWithLastKnownGood
-            CurrentQuotaStatus.NoData -> WidgetQuotaStatus.NoData
-        }
-
-    private fun CurrentQuotaState.headerTone(firstField: WidgetField?): WidgetQuotaTone =
-        when (status) {
-            CurrentQuotaStatus.Unauthenticated,
-            CurrentQuotaStatus.PossiblyStale,
-            CurrentQuotaStatus.Expired,
-            CurrentQuotaStatus.NoData -> WidgetQuotaTone.Neutral
-            CurrentQuotaStatus.AuthRequired -> WidgetQuotaTone.Danger
-            CurrentQuotaStatus.ErrorWithLastKnownGood -> WidgetQuotaTone.Warning
-            CurrentQuotaStatus.Loading,
-            CurrentQuotaStatus.Fresh -> firstField?.tone ?: WidgetQuotaTone.Neutral
-        }
-
-    private fun QuotaWindow.percentTone(notificationPreferences: NotificationPreferences): WidgetQuotaTone {
-        if (displayKind == QuotaWindowDisplayKind.Balance) {
-            // Mirror Home's balance bands, in the converted display currency (the repository converts
-            // before mapping fields). Exhausted (<= 0) shares Danger with the warning band, matching
-            // the quota path above where both severe bands read the same label.
-            val amount = balanceAmount?.toDoubleOrNull()
-            return when {
-                availability != QuotaWindowAvailability.Available || amount == null -> WidgetQuotaTone.Neutral
-                amount <= 0.0 -> WidgetQuotaTone.Danger
-                amount <= notificationPreferences.balanceWarningThreshold -> WidgetQuotaTone.Danger
-                amount <= notificationPreferences.balanceCautionThreshold -> WidgetQuotaTone.Warning
-                else -> WidgetQuotaTone.Success
-            }
-        }
-        val percent = displayPercent
-        return when {
-            availability == QuotaWindowAvailability.Depleted -> WidgetQuotaTone.Danger
-            availability != QuotaWindowAvailability.Available || percent == null -> WidgetQuotaTone.Neutral
-            percent <= notificationPreferences.limitThreshold -> WidgetQuotaTone.Danger
-            percent <= notificationPreferences.warningThreshold -> WidgetQuotaTone.Danger
-            percent <= notificationPreferences.cautionThreshold -> WidgetQuotaTone.Warning
-            else -> WidgetQuotaTone.Success
-        }
     }
 
     private fun QuotaWindow.isDisplayable(): Boolean =

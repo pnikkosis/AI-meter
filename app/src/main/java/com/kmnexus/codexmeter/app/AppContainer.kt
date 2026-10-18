@@ -32,6 +32,7 @@ import com.kmnexus.codexmeter.domain.account.AccountDeleteUseCase
 import com.kmnexus.codexmeter.domain.account.AccountListUseCase
 import com.kmnexus.codexmeter.domain.account.AccountRenameUseCase
 import com.kmnexus.codexmeter.domain.account.AccountStateRepublisher
+import com.kmnexus.codexmeter.domain.account.AccountSurfacesRefresher
 import com.kmnexus.codexmeter.domain.account.AccountSwitchRefreshRequester
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginController
 import com.kmnexus.codexmeter.domain.auth.DeviceCodeLoginDiagnosticsReader
@@ -52,7 +53,6 @@ import com.kmnexus.codexmeter.notification.AndroidNotificationSink
 import com.kmnexus.codexmeter.notification.AccountErrorEventReader
 import com.kmnexus.codexmeter.notification.AccountErrorPolicy
 import com.kmnexus.codexmeter.notification.CurrentQuotaNotificationPublisher
-import com.kmnexus.codexmeter.notification.StatusNotificationRefresher
 import com.kmnexus.codexmeter.notification.NotificationPreferenceAlertThresholdsReader
 import com.kmnexus.codexmeter.notification.NotificationPreferenceQuotaAlertWindowReader
 import com.kmnexus.codexmeter.providers.codex.CodexRefreshProvider
@@ -100,6 +100,8 @@ import com.kmnexus.codexmeter.ui.settings.SettingsBackgroundRefreshStatusReader
 import com.kmnexus.codexmeter.ui.settings.SettingsDiagnosticsReader
 import com.kmnexus.codexmeter.widget.WidgetDeletedAccountStateCleaner
 import com.kmnexus.codexmeter.widget.WidgetQuotaStateUpdater
+import com.kmnexus.codexmeter.widget.AccountsWidgetStateLoader
+import com.kmnexus.codexmeter.widget.AccountsWidgetUpdater
 import com.kmnexus.codexmeter.widget.WidgetQuotaStateLoader
 import java.time.Clock
 import java.time.Instant
@@ -132,6 +134,7 @@ class AppContainer private constructor(
     val backgroundRefreshStatusReader: SettingsBackgroundRefreshStatusReader,
     val settingsDiagnosticsReader: SettingsDiagnosticsReader,
     val widgetQuotaStateLoader: WidgetQuotaStateLoader,
+    val accountsWidgetStateLoader: AccountsWidgetStateLoader,
     val startupMaintenance: StartupMaintenance,
     val claudeConnect: ClaudeConnect,
     val codexBrowserConnect: CodexBrowserConnect,
@@ -295,6 +298,38 @@ class AppContainer private constructor(
                 currencyPreferenceReader = currencyPreferences,
                 exchangeRateReader = exchangeRateRepository,
             )
+            val widgetUpdater = WidgetQuotaStateUpdater(
+                context = appContext,
+                notificationPreferenceReader = notificationPreferences,
+                widgetQuotaStateLoader = widgetQuotaStateRepository,
+            )
+            val accountsWidgetStateRepository = AccountsWidgetStateRepository(
+                accounts = HomeAccountsRepository(
+                    states = currentQuotaStateRepository::loadAllAccountStates,
+                    displayPreferences = storedDisplayPreferences,
+                ),
+                notificationPreferences = notificationPreferences,
+            )
+            val accountsWidgetUpdater = AccountsWidgetUpdater(
+                context = appContext,
+                stateLoader = accountsWidgetStateRepository,
+            )
+            val accountSurfacesRefresher = AccountSurfacesRefresher {
+                // Each surface is redrawn even if another fails; the next refresh retries that one.
+                listOf<suspend () -> Unit>(
+                    notificationPublisher::refreshStatusNotification,
+                    widgetUpdater::refreshAll,
+                    accountsWidgetUpdater::refreshAll,
+                ).forEach { redraw ->
+                    try {
+                        redraw()
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (_: Exception) {
+                        // Presentation only; stored data is unaffected.
+                    }
+                }
+            }
             return fromDatabase(
                 appContext = appContext,
                 database = database,
@@ -314,14 +349,7 @@ class AppContainer private constructor(
                     notificationSink = AndroidNotificationSink(appContext),
                 ),
                 currentQuotaStatePublisher = CompositeCurrentQuotaStatePublisher(
-                    listOf(
-                        WidgetQuotaStateUpdater(
-                            context = appContext,
-                            notificationPreferenceReader = notificationPreferences,
-                            widgetQuotaStateLoader = widgetQuotaStateRepository,
-                        ),
-                        notificationPublisher,
-                    ),
+                    listOf(widgetUpdater, accountsWidgetUpdater, notificationPublisher),
                 ),
                 currentQuotaStateRepository = currentQuotaStateRepository,
                 accountListRepository = AccountListRepository(
@@ -357,9 +385,10 @@ class AppContainer private constructor(
                 exchangeRateRefresher = ExchangeRateRefresher { },
                 accountDisplayPreferences = RepublishingAccountDisplayPreferenceStore(
                     delegate = storedDisplayPreferences,
-                    statusNotificationRefresher = notificationPublisher,
+                    accountSurfacesRefresher = accountSurfacesRefresher,
                 ),
-                statusNotificationRefresher = notificationPublisher,
+                accountSurfacesRefresher = accountSurfacesRefresher,
+                accountsWidgetStateLoader = accountsWidgetStateRepository,
             )
         }
 
@@ -396,7 +425,8 @@ class AppContainer private constructor(
             exchangeRateRepository: ExchangeRateRepository,
             exchangeRateRefresher: ExchangeRateRefresher,
             accountDisplayPreferences: AccountDisplayPreferenceStore,
-            statusNotificationRefresher: StatusNotificationRefresher,
+            accountSurfacesRefresher: AccountSurfacesRefresher,
+            accountsWidgetStateLoader: AccountsWidgetStateLoader,
         ): AppContainer {
             // Shared by both providers: commits account, first snapshot and encrypted session together
             // and rolls back the session file and current-account choice if the database write fails.
@@ -541,15 +571,7 @@ class AppContainer private constructor(
                     accountDeletionRepository.deleteAccount(
                         providerId = providerId,
                         localAccountId = localAccountId,
-                    ).also {
-                        try {
-                            statusNotificationRefresher.refreshStatusNotification()
-                        } catch (exception: CancellationException) {
-                            throw exception
-                        } catch (_: Exception) {
-                            // The account is gone either way; the notification catches up on the next refresh.
-                        }
-                    }
+                    ).also { accountSurfacesRefresher.refreshAccountSurfaces() }
                 },
                 accountRenameUseCase = accountMutationRepository,
                 accountQuotaAlertEvaluationRequester = AccountQuotaAlertEvaluationRequester { providerId, localAccountId, windowId ->
@@ -583,6 +605,7 @@ class AppContainer private constructor(
                 backgroundRefreshStatusReader = backgroundRefreshStatusRepository,
                 settingsDiagnosticsReader = settingsDiagnosticsReader,
                 widgetQuotaStateLoader = widgetQuotaStateRepository,
+                accountsWidgetStateLoader = accountsWidgetStateLoader,
                 startupMaintenance = StartupMaintenance(
                     retentionPreferenceReader = retentionPreferences,
                     retentionCleanup = retentionCleanupRepository,

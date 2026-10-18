@@ -89,6 +89,15 @@ object NoopAccountStateRepublisher : AccountStateRepublisher {
     override suspend fun republishAccountState(account: ProviderAccount) = Unit
 }
 
+/**
+ * Redraws the places that list accounts (the status notification and the widgets) after a change
+ * that did not refresh quota, such as hiding, reordering or removing an account. It never posts a
+ * quota alert or an account error again.
+ */
+fun interface AccountSurfacesRefresher {
+    suspend fun refreshAccountSurfaces()
+}
+
 interface DeletedAccountStateCleaner {
     suspend fun clearDeletedAccountState(
         providerId: ProviderId,

@@ -10,8 +10,8 @@ import com.kmnexus.codexmeter.domain.currency.CurrencyPreferences
 import com.kmnexus.codexmeter.domain.currency.ExchangeRates
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceReader
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import com.kmnexus.codexmeter.widget.WidgetQuotaConfiguration
-import com.kmnexus.codexmeter.widget.WidgetQuotaTone
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -114,8 +114,8 @@ class WidgetQuotaStateRepositoryTest {
             val field = state.fields.single()
             assertEquals("9.00", field.balanceAmount)
             assertEquals("USD", field.balanceCurrency)
-            assertEquals(WidgetQuotaTone.Warning, field.tone)
-            assertEquals(WidgetQuotaTone.Warning, state.tone)
+            assertEquals(QuotaLevel.Caution, field.level)
+            assertEquals(QuotaLevel.Caution, state.level)
         }
     }
 

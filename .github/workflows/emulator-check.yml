@@ -140,7 +140,7 @@ jobs:
           adb shell am instrument -w \
             -e class com.kmnexus.codexmeter.widget.WidgetScreenshotTest,com.kmnexus.codexmeter.providers.codex.auth.CodexDeviceCodeExpiryTest \
             "$PKG.debug.test/androidx.test.runner.AndroidJUnitRunner" | tee "$RUNNER_TEMP/instrument.log"
-          grep -q "^OK (3 tests)" "$RUNNER_TEMP/instrument.log"
+          grep -q "^OK (4 tests)" "$RUNNER_TEMP/instrument.log"
           mkdir -p shots/widget
           for f in $(adb shell run-as "$PKG.debug" ls files/widget-shots | tr -d '\r'); do
             adb exec-out run-as "$PKG.debug" cat "files/widget-shots/$f" > "shots/widget/$f"

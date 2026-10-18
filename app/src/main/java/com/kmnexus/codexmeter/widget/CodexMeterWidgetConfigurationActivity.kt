@@ -86,11 +86,15 @@ class CodexMeterWidgetConfigurationActivity : ComponentActivity() {
             )
             val configuration = preferences.toWidgetQuotaConfiguration()
             val accounts = app.accountListUseCase.loadAccounts()
-            val selectableAccounts = accounts.accounts.filterNot { it.status == AccountStatus.Deleted }
+            val display = app.accountDisplayPreferenceStore.accountDisplayPreferences()
+            // Home's order; a new widget starts on the first account Home shows.
+            val selectableAccounts = display.arrange(
+                accounts.accounts.filterNot { it.status == AccountStatus.Deleted },
+            ) { it.localAccountId }
             val selectedAccount = selectableAccounts.firstOrNull {
                 configuration.providerId == it.providerId.value &&
                     configuration.localAccountId == it.localAccountId.value
-            } ?: selectableAccounts.firstOrNull { it.localAccountId == accounts.currentAccountId }
+            } ?: selectableAccounts.firstOrNull { !display.isHidden(it.localAccountId) }
                 ?: selectableAccounts.firstOrNull()
 
             val windowOptionsByAccount = selectableAccounts.associate { account ->
@@ -122,7 +126,6 @@ class CodexMeterWidgetConfigurationActivity : ComponentActivity() {
                 selectedLocalAccountId = selectedAccount?.localAccountId?.value,
                 selectedWindowIds = initialSelection,
                 defaultWindowId = defaultWindowId,
-                currentAccountId = accounts.currentAccountId?.value,
                 windowOptionsByAccount = windowOptionsByAccount,
             )
         }

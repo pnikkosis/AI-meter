@@ -55,6 +55,14 @@ class QuotaLevelTest {
     }
 
     @Test
+    fun `the most urgent level wins and unknown only when nothing is known`() {
+        assertEquals(QuotaLevel.Depleted, listOf(QuotaLevel.Normal, QuotaLevel.Depleted, QuotaLevel.Warning).mostUrgent())
+        assertEquals(QuotaLevel.Warning, listOf(QuotaLevel.Caution, QuotaLevel.Warning).mostUrgent())
+        assertEquals(QuotaLevel.Normal, listOf(QuotaLevel.Unknown, QuotaLevel.Normal).mostUrgent())
+        assertEquals(QuotaLevel.Unknown, emptyList<QuotaLevel>().mostUrgent())
+    }
+
+    @Test
     fun `headline window is the one with the least left`() {
         val fiveHour = percent(id = "five_hour", used = 0)
         val weekly = percent(id = "weekly", used = 100, availability = QuotaWindowAvailability.Depleted)

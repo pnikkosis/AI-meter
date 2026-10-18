@@ -1,5 +1,6 @@
 package com.kmnexus.codexmeter.widget
 
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import java.time.Instant
 
 enum class WidgetQuotaStatus {
@@ -10,13 +11,6 @@ enum class WidgetQuotaStatus {
     AuthRequired,
     ErrorWithLastKnownGood,
     NoData,
-}
-
-enum class WidgetQuotaTone {
-    Neutral,
-    Success,
-    Warning,
-    Danger,
 }
 
 enum class WidgetClickTarget {
@@ -32,7 +26,8 @@ data class WidgetField(
     val balanceAmount: String?,
     val balanceCurrency: String?,
     val resetAt: Instant?,
-    val tone: WidgetQuotaTone,
+    /** The shared band for this window; [QuotaLevel.Unknown] also mutes figures that are not current. */
+    val level: QuotaLevel,
     // Provider-reported window duration. Positional ids (Codex "five_hour"/"weekly") pick their
     // label from this instead of the slot they arrived in.
     val limitWindowSeconds: Int? = null,
@@ -46,7 +41,8 @@ data class WidgetQuotaState(
     val providerId: String?,
     val localAccountId: String?,
     val accountName: String?,
-    val tone: WidgetQuotaTone,
+    /** The most urgent level among the shown windows while the figures are current, else Unknown. */
+    val level: QuotaLevel,
     val clickTarget: WidgetClickTarget,
     val fields: List<WidgetField> = emptyList(),
     // true = 微件未选账号，渲染引导态而非数据。

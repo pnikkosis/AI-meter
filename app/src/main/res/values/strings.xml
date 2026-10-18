@@ -205,10 +205,12 @@
     <string name="notification_auth_login_failed_body">Return to AIMeter to retry. Safe reason: %1$s.</string>
     <string name="notification_auth_login_validation_failed_title">%1$s quota validation failed</string>
     <string name="notification_auth_login_validation_failed_body">Authorization finished, but quota validation did not pass. Safe reason: %1$s.</string>
-    <string name="widget_description">Codex and Claude usage limits</string>
+    <string name="widget_description">One account in detail</string>
     <string name="widget_loading">Loading usage…</string>
     <string name="widget_percent_format">%1$d%%</string>
     <string name="widget_percent_unavailable">--</string>
+    <string name="widget_left_suffix_short">left</string>
+    <string name="widget_used_up_suffix">used up</string>
     <string name="widget_account_line_format">%1$s · %2$s</string>
     <string name="widget_reset_line_format">Reset %1$s · %2$s</string>
     <string name="widget_last_refresh_line_format">Refreshed %1$s · %2$s</string>
@@ -222,21 +224,40 @@
     <string name="widget_status_auth_required">Sign in again</string>
     <string name="widget_status_refresh_failed">Refresh failed</string>
     <string name="widget_status_no_data">No data yet</string>
-    <string name="widget_config_title">Configure AIMeter</string>
+    <string name="widget_config_title">Account widget</string>
     <string name="widget_config_description">Choose the account and which quota fields to show. The widget shows the first 1–4 fields based on its size.</string>
     <string name="widget_config_loading">Loading widget settings…</string>
     <string name="widget_config_account_section">Account</string>
     <string name="widget_config_no_accounts">No saved account yet. Add an account in AIMeter first.</string>
     <string name="widget_config_account_none">No account selected</string>
-    <string name="widget_config_account_current">Current account</string>
     <string name="widget_config_fields_section">Display fields</string>
     <string name="widget_config_fields_limit">Show up to %1$d fields (by widget size)</string>
-    <string name="widget_no_more_fields">No more fields</string>
-    <string name="widget_no_more_fields_hint">Resize smaller, or select more fields</string>
     <string name="widget_unconfigured_title">Not configured</string>
     <string name="widget_unconfigured_hint">Choose account &amp; fields</string>
     <string name="widget_no_accounts_hint">Add an account first</string>
     <string name="widget_long_press_to_configure">Long-press to configure</string>
+    <string name="widget_label_account">Account</string>
+    <string name="widget_label_accounts">Accounts</string>
+    <string name="accounts_widget_description">Every account at a glance</string>
+    <string name="accounts_widget_empty_title">No accounts yet</string>
+    <string name="accounts_widget_empty_hint">Tap to connect one</string>
+    <string name="accounts_widget_nothing_title">No accounts to show</string>
+    <string name="accounts_widget_nothing_hint">Long-press to choose accounts</string>
+    <string name="accounts_widget_config_title">Accounts widget</string>
+    <string name="accounts_widget_config_description">Show every account visible on Home, or only the ones you choose.</string>
+    <string name="accounts_widget_config_choose">Choose accounts</string>
+    <string name="accounts_widget_config_hidden_format">%1$s · hidden on Home</string>
+    <string name="widget_preview_account_personal">Personal</string>
+    <string name="widget_preview_account_work">Work</string>
+    <string name="widget_preview_status">Normal · 14:05</string>
+    <string name="accounts_widget_more_format" translatable="false">+%1$d</string>
+    <string name="accounts_widget_status_after_provider_format" translatable="false">· %1$s</string>
+    <string name="widget_preview_provider_codex" translatable="false">CODEX</string>
+    <string name="widget_preview_provider_claude" translatable="false">CLAUDE</string>
+    <string name="widget_preview_percent_high" translatable="false" formatted="false">67%</string>
+    <string name="widget_preview_percent_mid" translatable="false" formatted="false">42%</string>
+    <string name="widget_preview_percent_none" translatable="false" formatted="false">0%</string>
+    <string name="widget_preview_time" translatable="false">14:05</string>
     <string name="widget_config_save">Save</string>
     <string name="widget_config_saving">Saving…</string>
     <string name="widget_config_cancel">Cancel</string>

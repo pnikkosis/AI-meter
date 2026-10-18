@@ -1,0 +1,9 @@
+<resources>
+    <color name="widget_surface">#171A1F</color>
+    <color name="widget_text_primary">#EDEFF3</color>
+    <color name="widget_text_secondary">#A3ABB7</color>
+    <color name="widget_text_tertiary">#747C88</color>
+    <color name="widget_accent">#6E9BFF</color>
+    <color name="widget_danger">#FF7A66</color>
+    <color name="widget_track">#2A3039</color>
+</resources>

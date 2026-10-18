@@ -49,6 +49,18 @@ fun QuotaWindow.quotaLevel(thresholds: QuotaLevelThresholds): QuotaLevel {
     }
 }
 
+/** The level that needs attention first; [QuotaLevel.Unknown] only when no level is known. */
+fun Iterable<QuotaLevel>.mostUrgent(): QuotaLevel =
+    maxByOrNull { URGENCY_ORDER.indexOf(it) } ?: QuotaLevel.Unknown
+
+private val URGENCY_ORDER = listOf(
+    QuotaLevel.Unknown,
+    QuotaLevel.Normal,
+    QuotaLevel.Caution,
+    QuotaLevel.Warning,
+    QuotaLevel.Depleted,
+)
+
 /** Claude's extra usage is a spend meter, not a limit that stops you; it never headlines. */
 const val EXTRA_USAGE_WINDOW_ID = "claude_extra_usage"
 

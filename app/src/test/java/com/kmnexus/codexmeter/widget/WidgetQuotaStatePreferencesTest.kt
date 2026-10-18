@@ -1,6 +1,7 @@
 package com.kmnexus.codexmeter.widget
 
 import androidx.datastore.preferences.core.mutablePreferencesOf
+import com.kmnexus.codexmeter.domain.quota.QuotaLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,11 +17,11 @@ class WidgetQuotaStatePreferencesTest {
             providerId = "codex",
             localAccountId = "acc-1",
             accountName = "个人号",
-            tone = WidgetQuotaTone.Success,
+            level = QuotaLevel.Caution,
             clickTarget = WidgetClickTarget.Home,
             fields = listOf(
-                WidgetField("five_hour", false, 87, null, null, Instant.parse("2026-06-02T14:30:00Z"), WidgetQuotaTone.Success, limitWindowSeconds = 604800),
-                WidgetField("balance", true, null, "8.50", "USD", null, WidgetQuotaTone.Neutral),
+                WidgetField("five_hour", false, 87, null, null, Instant.parse("2026-06-02T14:30:00Z"), QuotaLevel.Normal, limitWindowSeconds = 604800),
+                WidgetField("balance", true, null, "8.50", "USD", null, QuotaLevel.Unknown),
             ),
             isUnconfigured = false,
             hasAccounts = true,
@@ -42,6 +43,8 @@ class WidgetQuotaStatePreferencesTest {
         assertEquals(2, restored.fields.size)
         assertEquals("five_hour", restored.fields[0].windowId)
         assertEquals(87, restored.fields[0].percent)
+        assertEquals(QuotaLevel.Normal, restored.fields[0].level)
+        assertEquals(QuotaLevel.Caution, restored.level)
         // The widget renders from these preferences, so the window duration must survive the round
         // trip or duration-based labels regress on the home-screen surface.
         assertEquals(604800, restored.fields[0].limitWindowSeconds)
@@ -59,7 +62,7 @@ class WidgetQuotaStatePreferencesTest {
             providerId = null,
             localAccountId = null,
             accountName = null,
-            tone = WidgetQuotaTone.Neutral,
+            level = QuotaLevel.Unknown,
             clickTarget = WidgetClickTarget.Home,
             fields = emptyList(),
             isUnconfigured = true,
@@ -105,9 +108,9 @@ class WidgetQuotaStatePreferencesTest {
             providerId = "codex",
             localAccountId = "acc-1",
             accountName = "个人号",
-            tone = WidgetQuotaTone.Success,
+            level = QuotaLevel.Normal,
             clickTarget = WidgetClickTarget.Home,
-            fields = listOf(WidgetField("five_hour", false, 87, null, null, null, WidgetQuotaTone.Success)),
+            fields = listOf(WidgetField("five_hour", false, 87, null, null, null, QuotaLevel.Normal)),
         )
         val prefs = mutablePreferencesOf().apply {
             writeWidgetQuotaState(state)

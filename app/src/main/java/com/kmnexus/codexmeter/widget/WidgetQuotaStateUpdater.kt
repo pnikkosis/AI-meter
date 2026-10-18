@@ -8,6 +8,8 @@ import com.kmnexus.codexmeter.domain.quota.CurrentQuotaState
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferenceReader
 import com.kmnexus.codexmeter.domain.settings.NotificationPreferences
 import com.kmnexus.codexmeter.refresh.CurrentQuotaStatePublisher
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class WidgetQuotaStateUpdater(
     context: Context,
@@ -19,22 +21,34 @@ class WidgetQuotaStateUpdater(
 ) : CurrentQuotaStatePublisher {
     private val appContext = context.applicationContext
 
+    // Accounts refresh in parallel; one rebuild at a time means the last write read the newest data.
+    private val mutex = Mutex()
+
     override suspend fun publish(state: CurrentQuotaState) {
         val notificationPreferences = notificationPreferenceReader.notificationPreferences()
-        val manager = GlanceAppWidgetManager(appContext)
-        manager.getGlanceIds(CodexMeterWidget::class.java).forEach { glanceId ->
-            updateAppWidgetState(appContext, glanceId) { preferences ->
-                val configuration = preferences.toWidgetQuotaConfiguration()
-                val configuredWidgetState = widgetQuotaStateLoader?.loadWidgetQuotaState(configuration)
-                    ?: factory.create(
-                        state,
-                        notificationPreferences,
-                        configuration.selectedWindowIds,
-                    )
-                preferences.writeWidgetQuotaState(configuredWidgetState)
-            }
+        redraw { configuration ->
+            widgetQuotaStateLoader?.loadWidgetQuotaState(configuration)
+                ?: factory.create(state, notificationPreferences, configuration.selectedWindowIds)
         }
-        widget.updateAll(appContext)
+    }
+
+    /** Rebuilds every widget from storage, for changes that did not come with a new state. */
+    suspend fun refreshAll() {
+        val loader = widgetQuotaStateLoader ?: return
+        redraw { configuration -> loader.loadWidgetQuotaState(configuration) }
+    }
+
+    private suspend fun redraw(stateFor: suspend (WidgetQuotaConfiguration) -> WidgetQuotaState) {
+        mutex.withLock {
+            val glanceIds = GlanceAppWidgetManager(appContext).getGlanceIds(CodexMeterWidget::class.java)
+            if (glanceIds.isEmpty()) return
+            glanceIds.forEach { glanceId ->
+                updateAppWidgetState(appContext, glanceId) { preferences ->
+                    preferences.writeWidgetQuotaState(stateFor(preferences.toWidgetQuotaConfiguration()))
+                }
+            }
+            widget.updateAll(appContext)
+        }
     }
 }
 
