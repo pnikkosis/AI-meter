@@ -1,4 +1,4 @@
-# Informe de pruebas — AIMeter 1.1.0
+# Informe de pruebas — AIMeter 1.1.1
 
 Qué se comprobó, cómo y qué falta comprobar en un teléfono con cuentas reales. Cada resultado indica
 su tipo:
@@ -11,40 +11,42 @@ su tipo:
   falsos (código, token) para ver cómo responden. No usan ninguna cuenta.
 - **Pendiente (teléfono):** solo se puede comprobar con un teléfono y cuentas reales. **No se hizo.**
 
-Base: commit `69d75f082fb143643feeb606e50bfd3d879439ac` (69d75f0) de la rama `ccr-4fef7446-jet13v`,
-del que se compiló el APK 1.1.0. Los commits posteriores son la 1.1.1, que todavía no se compiló
-(sección 8). Las versiones 1.0.x se llamaban “AI Usage Widget”: la 1.0.2 salió del commit d0c28d7,
-la 1.0.1 del e5a3795 y la 1.0.0 del d0d3d06.
+Base: commit `f6353d1f43f6904366539ac671a4bfb1ea5b17b0` (f6353d1) de la rama `ccr-4fef7446-jet13v`,
+del que se compiló el APK 1.1.1; su último cambio de código es 2a3e7f8 (el número de versión) y
+f6353d1 solo agrega documentación. Los commits posteriores no cambian la app (sección 8). La 1.1.0
+salió del commit 69d75f0. Las versiones 1.0.x se llamaban “AI Usage Widget”: la 1.0.2 salió del
+commit d0c28d7, la 1.0.1 del e5a3795 y la 1.0.0 del d0d3d06.
 
-**En resumen:** el rediseño de 1.1.0 (todas las cuentas a la vez, el widget de varias cuentas, la
-notificación con varias cuentas, el estilo Sobria, el ícono y los permisos) pasó las pruebas
+**En resumen:** 1.1.0 trajo el rediseño (todas las cuentas a la vez, el widget de varias cuentas,
+la notificación con varias cuentas, el estilo Sobria, el ícono y los permisos). 1.1.1 corrige lo que
+la revisión de 1.1.0 en el emulador encontró (el encabezado del widget **Cuenta** 3×2 y dos textos
+de Ajustes) y quita los restos internos de la “cuenta actual”. Las dos versiones pasaron las pruebas
 automáticas, la compilación y lint en GitHub Actions, y el emulador (widgets dibujados por Android y
-recorrido de la app). **Ninguna función nueva se probó todavía en un teléfono ni con cuentas
-reales.** El inicio de sesión, el cifrado, la red y el borrado al desconectar no cambiaron desde
-1.0.2 (salvo el User-Agent, ahora `AIMeter/1.1.0 (Android)`), y esa versión sí se probó en el
-teléfono (sección 5). Revisar el emulador encontró un defecto visible en el widget **Cuenta** 3×2 y
-dos textos de Ajustes que no entran (sección 3); están corregidos para 1.1.1.
+recorrido de la app). **Ninguna función nueva de 1.1.x se probó todavía en un teléfono ni con
+cuentas reales.** El inicio de sesión, el cifrado, la red y el borrado de credenciales al
+desconectar no cambiaron desde 1.0.2 (salvo el User-Agent, ahora `AIMeter/1.1.1 (Android)`), y esa
+versión sí se probó en el teléfono (sección 5).
 
 ## 1. Compilación y análisis (GitHub Actions)
 
 | Comprobación | Resultado |
 | --- | --- |
 | JDK Temurin 21.0.12, Gradle 9.5.1, AGP 9.2.1, SDK 37.0 / build-tools 37.0.0 | Usados en todas las ejecuciones |
-| Pruebas unitarias `:app:testDebugUnitTest` | 776 pruebas en 128 clases, 0 fallos (CI n.º 13 del commit 69d75f0). En el commit 4e7fa99, antes de los últimos ajustes de colores, del nombre de la pestaña y del arreglo de lint: 776 pruebas en 128 clases, 0 fallos (CI n.º 12) |
+| Pruebas unitarias `:app:testDebugUnitTest` | 770 pruebas en 128 clases, 0 fallos (CI n.º 15 del commit f6353d1). Son 6 menos que en 1.1.0 (776 pruebas, 0 fallos, CI n.º 13 del commit 69d75f0): se quitaron 10 que probaban la cuenta actual (guardarla, cambiarla y conservarla al borrar, importar o renombrar cuentas) y se agregaron 4 (la migración de las preferencias y el detalle por cuenta del diagnóstico) |
 | APK debug y release (R8 + `lintVitalRelease`) | Compilan |
-| Lint (`lintDebug`) | 0 errores; 78 advertencias y 2 sugerencias. La CI anterior (n.º 12) encontró un error nuevo, `NonObservableLocale`: el formato de las fechas cortas podía leer `Locale.getDefault()` dentro de un composable, que no se actualiza al cambiar el idioma de la app; se corrigió en 7a54395. Entre las advertencias: 24 textos sin usar, los mismos de 1.0.2 (heredados del original); 7 `SmallSp` por los textos de 10 sp de las vistas previas de los widgets, del mismo tamaño que en el widget; `Typos` señala “sign-in in”, que no es un error; `MissingQuantity` pide la forma `many` en dos plurales en español, que Android reemplaza por `other`; y la `InlinedApi` de siempre por la constante del permiso de notificaciones de Android 13, que solo se pide en Android 13 o posterior. La única relacionada con seguridad, `ExportedContentProvider`, señala `androidx.startup.InitializationProvider`, que en el manifiesto final queda `exported=false`. El resto son versiones de dependencias y estilo |
+| Lint (`lintDebug`) | 0 errores; 78 advertencias y 2 sugerencias, los mismos tipos y cantidades que en 1.1.0. Durante el desarrollo de 1.1.0 la CI n.º 12 encontró un error, `NonObservableLocale`: el formato de las fechas cortas podía leer `Locale.getDefault()` dentro de un composable, que no se actualiza al cambiar el idioma de la app; se corrigió en 7a54395. Entre las advertencias: 24 textos sin usar, los mismos de 1.0.2 (heredados del original); 7 `SmallSp` por los textos de 10 sp de las vistas previas de los widgets, del mismo tamaño que en el widget; `Typos` señala “sign-in in”, que no es un error; `MissingQuantity` pide la forma `many` en dos plurales en español, que Android reemplaza por `other`; y la `InlinedApi` de siempre por la constante del permiso de notificaciones de Android 13, que solo se pide en Android 13 o posterior. La única relacionada con seguridad, `ExportedContentProvider`, señala `androidx.startup.InitializationProvider`, que en el manifiesto final queda `exported=false`. El resto son versiones de dependencias y estilo |
 | Permisos del APK release (`aapt2 dump permissions`) | `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS`, y `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE` que agrega WorkManager, más el permiso propio `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` que AndroidX declara para sus receptores internos. Ya no está `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
 | Componentes del manifiesto final | Los receptores de los dos widgets con `exported=false`; sus dos pantallas de configuración con `exported=true`, porque las abre el launcher. Los demás son los de 1.0.2 (AndroidX y la actividad principal) |
 | Dependencias de ejecución del release | AndroidX, Kotlin/kotlinx, OkHttp/Okio, `listenablefuture` y `jspecify`. Ya no está `com.qmdeve.liquidglass:core` (se quitó con el efecto de vidrio). Ningún SDK de analíticas, publicidad, crash reporting ni Google Play Services |
-| Reproducibilidad | El commit 69d75f0 compilado en cuatro runners distintos (CI, exportación y los dos emuladores) dio el mismo APK sin firmar, `8e773777a0910c75c344a1b5031c3351af70a8353513627bb7635e1dced5234a`. Firmar dos veces da el mismo APK firmado, con las mismas 1004 entradas que el sin firmar |
+| Reproducibilidad | El commit f6353d1 compilado en cuatro runners distintos (CI n.º 15, exportación n.º 6 y los dos emuladores de la corrida 15) dio el mismo APK sin firmar, `63b26a06442a810c7e0c132dc2f0702bd805fa19bfb7da4f3264d92b7f60b274`. Firmar dos veces da el mismo APK firmado, `a2bdb7d8f8a13661241c1a9aff140b504feb2aef19623af6e9ff6c7b53b1eb81`, con las mismas 1004 entradas que el sin firmar. Con 1.1.0 (commit 69d75f0) pasó lo mismo: `8e773777a0910c75c344a1b5031c3351af70a8353513627bb7635e1dced5234a` en los cuatro |
 
 Durante el desarrollo también se usó un arnés JVM local (sin SDK de Android, que no se puede
-descargar en el entorno de trabajo): 690 pruebas, todas correctas salvo 27 que necesitan el runtime
-de Android (Robolectric) y que solo corren en GitHub Actions, donde pasan.
+descargar en el entorno de trabajo): con 1.1.1, 693 pruebas, todas correctas salvo 26 que necesitan
+el runtime de Android (Robolectric) y que solo corren en GitHub Actions, donde pasan.
 
 ## 2. Qué cubren las pruebas automáticas (simulado)
 
-### Novedades de 1.1.0
+### Novedades de 1.1.0 y 1.1.1
 
 - **Inicio con todas las cuentas:** cada cuenta visible es una tarjeta, en el orden elegido; las
   ocultas solo se cuentan. Una cuenta sin datos no muestra cifras (nunca 0 %); una ventana en 0 %
@@ -71,9 +73,15 @@ de Android (Robolectric) y que solo corren en GitHub Actions, donde pasan.
   configuración no deja guardar una elección vacía; lo que el widget guarda se vuelve a leer igual.
 - **Widget Cuenta:** usa los mismos niveles que Inicio (una ventana en 0 % dice “Agotado”, ya no
   “Escaso”); las cifras que no son actuales se atenúan.
-- **Ajustes:** “Todas las cuentas visibles” para la notificación; el último resultado de la
+- **Ajustes:** la notificación puede seguir todas las cuentas visibles; el último resultado de la
   actualización en segundo plano resume todas las cuentas (“Correcta” solo si lo fue la de cada una;
   sin cuentas, lo dice); el aviso de batería abre la lista de optimización de batería del sistema.
+- **Diagnóstico y preferencias (1.1.1):** el diagnóstico que se copia desde Ajustes da a cada cuenta
+  su propia línea de detalle (por ejemplo, si tiene sesión guardada y cuántas fallas seguidas
+  tuvo), con la cuenta identificada por un hash y los secretos tapados, como ya comprobaban las
+  pruebas anteriores; ya no tiene sección de “cuenta actual”. Al actualizar, las preferencias borran
+  la cuenta actual que guardaban las versiones anteriores, también si quedó a medias, y no tocan
+  nada más.
 - **Estilo:** paleta Sobria clara y oscura; colores de los widgets iguales a los de la paleta; la
   licencia de Geist que muestra la app es la del repositorio y nombra el copyright que trae el
   archivo de la fuente; fechas cortas de reinicio (la hora si es hoy, el día de la semana si es
@@ -142,10 +150,70 @@ x86_64 en un runner de GitHub Actions, en dos configuraciones: **Android 15 (API
 con una clave descartable creada en el job, nunca con la de release) y el debug para las pruebas
 instrumentadas.
 
+### Corridas 16 y 17 (script del emulador, sin cambios en la app)
+
+La corrida 16 (commit 7f781a8, solo Android 12) listó lo que uiautomator ve al fondo de la
+pantalla: en ese emulador, sin barra de navegación, el texto de cada pestaña termina 22 px antes
+del borde, y su centro caía dentro del margen de 40 px que el script deja abajo. Desde fe561dc el
+script toca el centro del elemento tocable que contiene el texto (la pestaña entera).
+
+La corrida 17 usó el commit fe561dc, con el mismo código de la app que 1.1.1. Su APK sin firmar
+(`7cfe3312f3f05247f5a11535bcd83ab3b8ffb125d344d93a892dc1ea40c7673a`, igual en los dos emuladores)
+no es el de 1.1.1 porque el APK registra el commit del que sale.
+
+- **Android 15 (API 35) en español y Android 12 (API 31) en inglés:** pruebas instrumentadas
+  correctas (`OK (4 tests)`) y recorrido del release correcto (`SMOKE: OK`) en los dos, sin cierres
+  inesperados y con 0 valores enmascarados en líneas de la app. En Android 12 el script ya toca las
+  pestañas: hay por primera vez capturas de Cuentas y Ajustes en inglés, sin textos cortados ni
+  superpuestos, y ya en Ajustes comprobó que Android 12, que no tiene permiso de notificaciones que
+  pedir, no muestra el aviso de notificaciones bloqueadas.
+- **Navegador de Android 12:** el Chrome que trae la imagen del emulador está desactualizado.
+  claude.ai responde “This page can't be shown because your browser or device software is out of
+  date” y la página de OpenAI falla con un error de JavaScript (“Application Error”); pasa igual en
+  las corridas 15 y 16. La app abrió `claude.ai` y `auth.openai.com`, y su receptor loopback pasó
+  todas las comprobaciones. Con el Chrome de Android 15 aparecen las páginas de inicio de sesión
+  normales (a veces, antes, la verificación de seguridad de Cloudflare). En un teléfono con Chrome
+  actualizado no debería pasar, pero no se probó en un teléfono con Android 12.
+- Las capturas de los widgets usan nombres de cuenta neutros (Personal, Studio, Acme, Lab) y suman
+  el inglés oscuro; de ahí salen las imágenes del README.
+
+### Corrida 15 (versión 1.1.1, commit f6353d1)
+
+La compilación que se entrega. Las dos configuraciones usaron el mismo APK sin firmar que la CI y
+la exportación.
+
+**Android 15 (API 35) en español:** pruebas instrumentadas correctas (`OK (4 tests)`) y recorrido
+del release correcto (`SMOKE: OK`), con las mismas comprobaciones que en la corrida 14 (inicio de
+sesión de Claude y Codex en el navegador, receptor loopback, código de dispositivo, permiso de
+notificaciones y notificación publicada). Sin cierres inesperados y 0 valores enmascarados en
+líneas de la app.
+
+**Android 12 (API 31) en inglés:** pruebas instrumentadas correctas; en el recorrido pasaron todas
+las comprobaciones de inicio de sesión, receptor loopback y código de dispositivo, sin cierres. Los
+5 valores enmascarados en líneas de la app son, como los de Android 15 en la corrida 14, fragmentos
+de identificadores de tareas de WorkManager (UUID) que el filtro confunde con códigos de
+dispositivo; ninguno es una credencial. El script siguió sin tocar las pestañas inferiores (4
+problemas; ver la corrida 17).
+
+**Revisión de las capturas:**
+
+- Widget **Cuenta** 3×2: el proveedor y el nombre de la cuenta van en el primer renglón y el estado
+  debajo (“Límite de peticiones · 1:54 a. m.”, “Used up · 1:54 AM”), sin cortes, también en un
+  tamaño angosto de 190 dp. En 4×2 angosto (300 dp) el estado sigue a la derecha del nombre
+  (“Agotado · 1:54 a. m.”). En todos los tamaños el estado es “estado · hora”.
+- Widget **Cuentas** angosto (230 dp), claro y oscuro: una cifra por cuenta, la de la ventana que la
+  limita; “--” para la cuenta sin datos; “Sin conexión · <fecha>” en ámbar con la cifra sin color; y
+  “Sesión vencida” en rojo.
+- **Ajustes en español:** “Sistema” entra en su segmento del selector de tema y “Cuentas en la
+  notificación” ocupa dos renglones junto a “Todas las visibles”.
+- Comparadas píxel a píxel con las de la corrida 14, las demás capturas difieren en las horas y
+  fechas (dependen del momento de la corrida), el número de versión, el desplazamiento de alguna
+  pantalla y la página del navegador.
+
 ### Corrida 14 (versión 1.1.0, commit 69d75f0)
 
-Primera compilación de 1.1.0, la que se entrega. Las dos configuraciones usaron el mismo APK sin
-firmar que la CI y la exportación.
+La compilación de 1.1.0. Las dos configuraciones usaron el mismo APK sin firmar que la CI y la
+exportación.
 
 **Android 15 (API 35) en español:**
 
@@ -174,8 +242,8 @@ firmar que la CI y la exportación.
   El script marcó 4 problemas porque no tocó las pestañas inferiores: daba por “fuera de pantalla”
   un elemento cuyo borde inferior estuviera a menos de 40 px del final, y en este emulador, sin
   barra de navegación, las pestañas del rediseño llegan justo al borde. La captura muestra las
-  pestañas en su lugar. Por eso no hay capturas de Cuentas ni Ajustes en inglés en Android 12. El
-  script se corrigió (82c251b), pero no se pudo volver a correr (sección 8).
+  pestañas en su lugar. Por eso no hay capturas de Cuentas ni Ajustes en inglés en Android 12. Ese
+  primer arreglo del script (82c251b) no alcanzó; ver la corrida 17.
 
 **Revisión de las capturas:**
 
@@ -184,14 +252,14 @@ firmar que la CI y la exportación.
   en rojo y sin cifras; “+1” cuando no entran todas las filas; sin cuentas, o sin cuentas elegidas,
   un texto que lo explica. Falta una captura del diseño angosto (menos de 250 dp de ancho, una
   cifra por cuenta), que puede tocarle a un widget de 3 columnas: todas las capturas medían 252 dp o
-  más. Se agregó al test para la próxima corrida.
+  más. Se agregó al test y se vio en la corrida 15.
 - Widget **Cuenta** en 3×1, 4×1 y 4×2: correcto. **Defecto en 3×2:** el estado comparte renglón con
   el nombre de la cuenta y lo deja sin lugar (“Cla…” en inglés; en español el nombre desaparece), y
   un estado largo se corta él mismo (“Límite de peticiones · Actualizado '…”). En un teléfono, donde
-  ese tamaño puede medir menos que en la captura, es peor. Corregido para 1.1.1.
+  ese tamaño puede medir menos que en la captura, es peor. Corregido en 1.1.1 (corrida 15).
 - **Ajustes en español:** “Según el sistema” no entra en su segmento del selector de tema (dos
   renglones pegados al borde) y “Todas las cuentas visibles” parte “Cuentas en la notificación” en
-  tres renglones. Textos acortados para 1.1.1.
+  tres renglones. Textos acortados en 1.1.1 (corrida 15).
 - Inicio y Cuentas vacíos, selector de proveedor, avisos de Claude y Codex, Acerca de: sin
   problemas visibles.
 - Como en 1.0.x, las capturas dibujan el layout fuera del launcher: colocar el widget en una
@@ -303,7 +371,7 @@ versión de Android. Correcta en Android 12 y 15 con el código corregido (ver C
 
 ## 4. Servidores reales, sin credenciales
 
-No se repitieron para 1.1.0, porque las peticiones son las mismas de 1.0.2 salvo el User-Agent.
+No se repitieron para 1.1.x, porque las peticiones son las mismas de 1.0.2 salvo el User-Agent.
 
 Hechas desde el entorno de trabajo (Anthropic) y desde GitHub Actions (OpenAI, que el entorno de
 trabajo no alcanza), con el formato exacto de las peticiones de la app y valores falsos o sin
@@ -320,7 +388,7 @@ credenciales:
 
 ## 5. Pruebas en el teléfono (hechas por el dueño)
 
-La versión 1.1.0 **todavía no se probó en el teléfono**. Lo que sigue corresponde a 1.0.x.
+Las versiones 1.1.x **todavía no se probaron en el teléfono**. Lo que sigue corresponde a 1.0.x.
 
 ### Primera prueba (versión 1.0.0)
 
@@ -377,12 +445,13 @@ Según las capturas del dueño:
 
 ## 6. Pendiente: comprobar en el teléfono
 
-Nada de esto se probó con 1.1.0 en un teléfono ni con cuentas reales. Orden sugerido, con el
+Nada de esto se probó con 1.1.x en un teléfono ni con cuentas reales. Orden sugerido, con el
 resultado esperado:
 
-1. **Actualizar encima de 1.0.2:** instalar el APK nuevo sin desinstalar. Esperado: siguen las dos
-   cuentas, sus sesiones y el historial; el ícono y el nombre pasan a AIMeter; los widgets ya
-   colocados toman el diseño nuevo (pueden verse atenuados hasta la primera actualización).
+1. **Actualizar encima de 1.0.2 o de 1.1.0:** instalar el APK nuevo sin desinstalar. Esperado:
+   siguen las dos cuentas, sus sesiones y el historial. Desde 1.0.2, además, el ícono y el nombre
+   pasan a AIMeter y los widgets ya colocados toman el diseño nuevo (pueden verse atenuados hasta la
+   primera actualización).
 2. **Inicio:** las dos cuentas a la vez, cada una con sus ventanas, y ↻ o deslizar hacia abajo
    actualiza ambas. Con la cuenta de Codex agotada: “Agotado” en rojo en esa ventana, sin texto de
    estado en rojo.
@@ -393,7 +462,7 @@ resultado esperado:
    angosto y ancho, y alto suficiente o no (“+N”); luego configurarlo con **Elegir cuentas**; tocar
    ↻ y tocar el resto (abre la app). Ver la vista previa en el selector de widgets.
 5. **Widget Cuenta:** al soltarlo se abre la configuración; probar los cuatro tamaños. En 3×2 el
-   nombre de la cuenta puede no verse (defecto conocido de 1.1.0, sección 3).
+   nombre de la cuenta va arriba y el estado debajo.
 6. **Notificación:** con varias cuentas, el título con lo disponible de cada una y el cuerpo con una
    línea por cuenta; luego elegir una sola cuenta en Ajustes.
 7. **Ajustes → Mejorar la actualización en segundo plano → Abrir ajustes:** debe abrir la lista de
@@ -414,9 +483,6 @@ resultado esperado:
 
 ## 7. Limitaciones conocidas
 
-- **Defectos conocidos de 1.1.0**, corregidos para 1.1.1 (sección 8): en el widget **Cuenta** 3×2 un
-  estado largo deja sin lugar al nombre de la cuenta; en Ajustes, en español, “Según el sistema” no
-  entra en su botón y “Cuentas en la notificación” ocupa tres renglones.
 - **Política de Anthropic:** su documentación de Claude Code dice que no permite a desarrolladores de
   terceros ofrecer el inicio de sesión de Claude.ai ni guardar sus tokens, y que puede aplicarlo sin
   aviso. Esta app usa el cliente de Claude Code y guarda el token; Anthropic podría restringir la
@@ -437,25 +503,9 @@ resultado esperado:
   para otros usos); se puede quitar a mano desde el enlace de Ajustes. Sin eso, el refresco puede
   demorarse con la pantalla apagada.
 
-## 8. Después de 1.1.0: 1.1.1, todavía sin compilar
+## 8. Después de 1.1.1
 
-Commits a779dda a 2a3e7f8: el encabezado del widget **Cuenta** (3×2 en dos renglones, estado
-“estado · hora” en todos los tamaños), los dos textos de Ajustes, la limpieza interna de la “cuenta
-actual” (preferencias, importación, borrado, lista de cuentas y diagnóstico con el mismo detalle
-para cada cuenta) y la versión 1.1.1 (código 5). Ver `CHANGELOG.md`.
-
-Comprobado:
-
-- Arnés JVM local: 693 pruebas, todas correctas salvo 26 que necesitan Robolectric y no corren
-  localmente. Incluye las nuevas: el diagnóstico (detalle por cuenta, sin sección de cuenta actual,
-  secretos tapados) y la migración que borra la cuenta actual guardada por 1.1.0 sin tocar el resto.
-- El código principal, las pruebas y las pruebas instrumentadas compilan contra los stubs locales.
-
-**Pendiente, bloqueado:** GitHub Actions dejó de arrancar trabajos en este repositorio: la CI del
-commit 6b33206 (run `39086235209`) falló dos veces en 2–3 segundos sin que se le asignara un
-runner y sin registros. Es lo que pasa cuando una cuenta agota los minutos de Actions incluidos para
-repositorios privados o tiene un problema de facturación; la causa exacta solo se ve en la página
-de la ejecución y en la facturación de GitHub. Hasta que vuelva a funcionar no se pudieron correr,
-para 1.1.1: las pruebas con Robolectric (entre ellas las de borrado, importación, lista y renombrado
-de cuentas que cambiaron), lint, la compilación release, el emulador (con las capturas nuevas y el
-script corregido) ni la exportación para firmar. Por eso se entrega 1.1.0.
+Los commits posteriores a f6353d1 no cambian la app (`app/src/main` y la configuración de
+compilación quedan iguales): 7f781a8 y fe561dc corrigen el script del emulador, 8fb903a cambia las
+muestras de las capturas de los widgets (nombres de cuenta neutros y una variante oscura en
+inglés) y el resto es documentación.
