@@ -28,6 +28,7 @@ ACTIVITY = f"{PKG}/com.kmnexus.codexmeter.MainActivity"
 FORWARD_PORT = 18765
 failures = []
 step = 0
+parents = {}  # each node of the latest dump -> the node around it
 
 
 def adb(*args, check=True, timeout=120):
@@ -48,12 +49,15 @@ def shot(name):
 
 
 def dump():
+    global parents
     out = ""
     for _ in range(4):
         out = adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", check=False)
         if "dumped to" in out:
             xml = adb("shell", "cat", "/sdcard/ui.xml")
-            return list(ET.fromstring(xml[xml.index("<"):]).iter("node"))
+            root = ET.fromstring(xml[xml.index("<"):])
+            parents = {child: parent for parent in root.iter() for child in parent}
+            return list(root.iter("node"))
         time.sleep(2)
     print(f"  uiautomator dump failed: {out.strip()}")
     return []
@@ -86,6 +90,14 @@ def bounds(node):
     return tuple(map(int, re.findall(r"\d+", node.get("bounds", "[0,0][0,0]"))))
 
 
+def touch_target(node):
+    """The nearest clickable node around `node` (itself when clickable): what a tap on it reaches."""
+    current = node
+    while current is not None and current.get("clickable") != "true":
+        current = parents.get(current)
+    return node if current is None else current
+
+
 def find(labels, timeout=15):
     deadline = time.time() + timeout
     while True:
@@ -104,9 +116,10 @@ def tap_label(labels, what, required=True, timeout=15, scroll=True):
     for _ in range(6 if scroll else 1):
         node = find(labels, timeout=timeout)
         if node is not None:
-            x1, y1, x2, y2 = bounds(node)
-            # The middle is what gets tapped: a bottom tab reaches the screen edge on devices without
-            # a navigation bar, so its bottom edge alone says nothing about whether it is on screen.
+            # The middle of the clickable node around the label gets tapped: on devices without a
+            # navigation bar a bottom tab's label ends a few pixels above the screen edge, while
+            # the tab itself reaches well inside the screen.
+            x1, y1, x2, y2 = bounds(touch_target(node))
             if y2 > y1 and (y1 + y2) // 2 <= height - 40:
                 adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
                 time.sleep(2)
